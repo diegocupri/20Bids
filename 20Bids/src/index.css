@@ -1,0 +1,94 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+@theme {
+  --font-mono: "JetBrains Mono", monospace;
+  --font-sans: "Outfit", sans-serif;
+
+  /* Semantic Colors */
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-bg-tertiary: var(--bg-tertiary);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-border-primary: var(--border-primary);
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-secondary: var(--accent-secondary);
+
+  /* Legacy/Specific Colors (mapped to vars) */
+  --color-bloomberg-black: var(--bg-primary);
+  --color-bloomberg-dark: var(--bg-secondary);
+  --color-bloomberg-border: var(--border-primary);
+  --color-bloomberg-orange: var(--accent-primary);
+  --color-bloomberg-blue: var(--accent-secondary);
+  --color-terminal-green: #10b981;
+}
+
+@layer base {
+  :root {
+    /* Dark Mode (Default) */
+    --bg-primary: #09090b;
+    /* Zinc 950 */
+    --bg-secondary: #18181b;
+    /* Zinc 900 */
+    --bg-tertiary: #27272a;
+    /* Zinc 800 */
+    --text-primary: #e4e4e7;
+    /* Zinc 200 */
+    --text-secondary: #a1a1aa;
+    /* Zinc 400 */
+    --border-primary: #27272a;
+    /* Zinc 800 */
+    --accent-primary: #f59e0b;
+    /* Amber 500 */
+    --accent-secondary: #3b82f6;
+    /* Blue 500 */
+  }
+
+  :root[data-theme="light"] {
+    /* Light Mode */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f4f4f5;
+    /* Zinc 100 */
+    --bg-tertiary: #e4e4e7;
+    /* Zinc 200 */
+    --text-primary: #18181b;
+    /* Zinc 900 */
+    --text-secondary: #52525b;
+    /* Zinc 600 */
+    --border-primary: #e4e4e7;
+    /* Zinc 200 */
+    --accent-primary: #d97706;
+    /* Amber 600 (Darker for contrast) */
+    --accent-secondary: #2563eb;
+    /* Blue 600 */
+  }
+
+  body {
+    @apply bg-bg-primary text-text-primary antialiased font-sans transition-colors duration-300;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-bg-secondary/80 backdrop-blur-md border border-border-primary;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-bg-secondary;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-bg-tertiary border border-bg-secondary;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-border-primary;
+}
