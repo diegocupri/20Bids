@@ -189,6 +189,10 @@ export function UploadPage() {
                         El resto de datos (sector, nombre, etc.) se obtendrán automáticamente de Polygon API.
                     </p>
                 </div>
+
+                <div className="mt-8 text-[10px] text-text-secondary font-mono opacity-50 text-center">
+                    Debug: API_URL = {import.meta.env.VITE_API_URL || 'Using Localhost Fallback'}
+                </div>
             </div>
         </div>
     );
