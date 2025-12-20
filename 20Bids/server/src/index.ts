@@ -10,7 +10,11 @@ const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
 const API_KEY = process.env.UPLOAD_API_KEY || 'dev-api-key-change-in-production';
 
-app.use(cors());
+app.use(cors({
+    origin: '*', // Allow all origins (for now)
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key']
+}));
 app.use(express.json());
 app.use(express.text({ type: 'text/csv', limit: '10mb' }));
 
