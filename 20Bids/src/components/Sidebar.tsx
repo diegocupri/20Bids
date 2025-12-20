@@ -228,8 +228,11 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                         <>
                             <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
                             <div className="absolute bottom-full left-0 mb-2 w-full bg-bg-secondary border border-border-primary rounded-lg shadow-xl p-1 z-50 animate-in fade-in zoom-in-95 duration-200">
-                                <button className="w-full flex items-center gap-2 p-2 rounded-md text-sm text-text-secondary hover:bg-bg-tertiary hover:text-text-primary transition-colors">
-                                    <Settings className="h-4 w-4" /> Settings
+                                <button
+                                    onClick={() => navigate('/upload')}
+                                    className="w-full flex items-center gap-2 p-2 rounded-md text-sm text-text-secondary hover:bg-bg-tertiary hover:text-text-primary transition-colors"
+                                >
+                                    <Settings className="h-4 w-4" /> Upload Data
                                 </button>
                                 <button className="w-full flex items-center gap-2 p-2 rounded-md text-sm text-red-400 hover:bg-red-500/10 transition-colors">
                                     <LogOut className="h-4 w-4" /> Log Out
