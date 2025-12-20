@@ -37,8 +37,6 @@ export function UploadPage() {
             });
 
             const data = await uploadRecommendations(formData);
-            const response = { ok: !data.error, json: async () => data }; // Mocking response object to match previous logic flow or adjusting logic.
-            // Actually, let's adjust the logic to match the new client function return.
 
             if (!data.error) {
                 setResult(data);
