@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export async function fetchDates(): Promise<Date[]> {
     const res = await fetch(`${API_URL}/dates`);
