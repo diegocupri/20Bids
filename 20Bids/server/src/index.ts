@@ -14,6 +14,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.text({ type: 'text/csv', limit: '10mb' }));
 
+// Health Check for Render
+app.get('/', (req, res) => {
+    res.send('20Bids API is running');
+});
+
 // --- Mock Data Generation Logic (Ported from frontend) ---
 const TICKERS = [
     { symbol: 'AAPL', name: 'Apple Inc.', sector: 'Technology', marketCap: 2.8 },
