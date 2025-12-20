@@ -1,66 +1,243 @@
-import { Search } from 'lucide-react';
+import { MoreHorizontal, User, Settings, LogOut, BarChart2, PieChart } from 'lucide-react';
+import { format, isWeekend } from 'date-fns';
 import { cn } from '../lib/utils';
-import { format, parseISO } from 'date-fns';
-import { ThemeToggle } from './ThemeToggle';
+import { useState, useEffect } from 'react';
+import { fetchDates, fetchMvsoHistory } from '../api/client';
+import { ThemeSelector } from './ThemeSelector';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface SidebarProps {
-    dates: string[];
-    selectedDate: string;
-    onSelectDate: (date: string) => void;
-    searchQuery: string;
-    onSearch: (query: string) => void;
+    selectedDate?: Date;
+    onDateSelect?: (date: Date) => void;
+    mvsoThreshold?: number;
 }
 
-export function Sidebar({ dates, selectedDate, onSelectDate, searchQuery, onSearch }: SidebarProps) {
-    return (
-        <div className="w-64 bg-bg-primary border-r border-border-primary h-screen flex flex-col fixed left-0 top-0 font-mono text-sm transition-colors duration-300">
-            <div className="p-4 border-b border-border-primary">
-                <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-accent-primary" />
-                    <input
-                        type="text"
-                        placeholder="SEARCH >>"
-                        value={searchQuery}
-                        onChange={(e) => onSearch(e.target.value)}
-                        className="w-full bg-bg-secondary text-accent-primary placeholder:text-text-secondary pl-9 pr-4 py-2 border border-border-primary focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary uppercase tracking-wider text-xs rounded-none"
-                    />
-                </div>
-            </div>
+export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: SidebarProps) {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const isAnalysis = location.pathname === '/analysis';
 
-            <div className="flex-1 overflow-y-auto py-2">
-                <div className="px-3 mb-2 text-[10px] font-bold text-accent-secondary uppercase tracking-widest border-b border-border-primary pb-1 mx-2">
-                    Daily Reports
+    const [dates, setDates] = useState<Date[]>([]);
+    const [mvsoHistory, setMvsoHistory] = useState<Record<string, number[]>>({});
+    const [showUserMenu, setShowUserMenu] = useState(false);
+
+    useEffect(() => {
+        if (!isAnalysis) {
+            fetchDates().then(setDates);
+        }
+        fetchMvsoHistory().then(setMvsoHistory);
+    }, [isAnalysis]);
+
+    const getAccuracy = (date: Date) => {
+        const dateStr = format(date, 'yyyy-MM-dd');
+        const mvsos = mvsoHistory[dateStr] || [];
+        if (mvsos.length === 0) return null;
+
+        const hits = mvsos.filter(m => m >= mvsoThreshold).length;
+        const accuracy = Math.round((hits / mvsos.length) * 100);
+        return { accuracy, count: mvsos.length, hits };
+    };
+
+    const [selectedPeriod, setSelectedPeriod] = useState<'7D' | 'MTD' | '1M' | 'YTD' | '1Y'>('7D');
+
+    const calculatePeriodStats = (period: '7D' | 'MTD' | '1M' | 'YTD' | '1Y') => {
+        const now = new Date();
+        let startDate = new Date();
+
+        switch (period) {
+            case '7D':
+                startDate.setDate(now.getDate() - 7);
+                break;
+            case 'MTD':
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                break;
+            case '1M':
+                startDate.setDate(now.getDate() - 30);
+                break;
+            case 'YTD':
+                startDate = new Date(now.getFullYear(), 0, 1);
+                break;
+            case '1Y':
+                startDate.setFullYear(now.getFullYear() - 1);
+                break;
+        }
+
+        let totalHits = 0;
+        let totalCount = 0;
+
+        Object.keys(mvsoHistory).forEach(dateStr => {
+            const date = new Date(dateStr);
+            if (date >= startDate && date <= now) {
+                const mvsos = mvsoHistory[dateStr];
+                const hits = mvsos.filter(m => m >= mvsoThreshold).length;
+                totalHits += hits;
+                totalCount += mvsos.length;
+            }
+        });
+
+        if (totalCount === 0) return 0;
+        return Math.round((totalHits / totalCount) * 100);
+    };
+
+    const currentPeriodValue = calculatePeriodStats(selectedPeriod);
+    const periods: ('7D' | 'MTD' | '1M' | 'YTD' | '1Y')[] = ['7D', 'MTD', '1M', 'YTD', '1Y'];
+
+    return (
+        <div className="w-64 bg-bg-secondary border-r border-border-primary flex flex-col h-full transition-colors duration-300">
+            <div className="p-4 border-b border-border-primary">
+                <div className="flex items-center gap-2 mb-6">
+                    <div className="w-8 h-8 bg-accent-primary rounded flex items-center justify-center">
+                        <span className="text-bg-primary font-bold text-xl">20</span>
+                    </div>
+                    <span className="text-xl font-bold text-text-primary tracking-tight">Bids</span>
                 </div>
-                <div className="space-y-0 px-0">
-                    {dates.map((date) => {
-                        const isSelected = date === selectedDate;
-                        return (
+
+                {/* Navigation */}
+                <div className="space-y-1 mb-6">
+                    <button
+                        onClick={() => navigate('/')}
+                        className={cn(
+                            "w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                            !isAnalysis
+                                ? "bg-accent-primary/10 text-accent-primary"
+                                : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
+                        )}
+                    >
+                        <BarChart2 className="w-4 h-4" />
+                        Daily Bids
+                    </button>
+                    <button
+                        onClick={() => navigate('/analysis')}
+                        className={cn(
+                            "w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                            isAnalysis
+                                ? "bg-accent-primary/10 text-accent-primary"
+                                : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
+                        )}
+                    >
+                        <PieChart className="w-4 h-4" />
+                        Analysis
+                    </button>
+                </div>
+
+                {/* Performance Summary Widget */}
+                <div className="bg-bg-tertiary rounded-lg p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                            Avg Performance
+                        </span>
+                        <div className={cn(
+                            "text-lg font-bold font-mono",
+                            currentPeriodValue >= 80 ? "text-emerald-500" :
+                                currentPeriodValue >= 50 ? "text-amber-500" : "text-rose-500"
+                        )}>
+                            {currentPeriodValue}%
+                        </div>
+                    </div>
+
+                    <div className="flex bg-bg-primary/50 rounded-md p-0.5">
+                        {periods.map((p) => (
                             <button
-                                key={date}
-                                onClick={() => onSelectDate(date)}
+                                key={p}
+                                onClick={() => setSelectedPeriod(p)}
                                 className={cn(
-                                    "w-full text-left px-4 py-3 text-xs transition-colors flex items-center gap-3 border-l-2",
-                                    isSelected
-                                        ? "bg-bg-secondary text-accent-primary border-accent-primary font-bold"
-                                        : "text-text-secondary border-transparent hover:bg-bg-secondary hover:text-text-primary"
+                                    "flex-1 text-[10px] font-medium py-1 rounded-sm transition-all",
+                                    selectedPeriod === p
+                                        ? "bg-bg-secondary text-text-primary shadow-sm"
+                                        : "text-text-secondary hover:text-text-primary hover:bg-bg-secondary/50"
                                 )}
                             >
-                                <span className="text-accent-secondary opacity-50">{format(parseISO(date), 'dd')}</span>
-                                <div className="flex flex-col">
-                                    <span className="uppercase tracking-wider">{format(parseISO(date), 'MMM yyyy')}</span>
-                                    <span className="text-[10px] text-text-secondary font-normal uppercase">
-                                        {format(parseISO(date), 'EEEE')}
-                                    </span>
-                                </div>
+                                {p}
                             </button>
-                        );
-                    })}
+                        ))}
+                    </div>
                 </div>
             </div>
 
-            <div className="p-4 border-t border-border-primary flex justify-between items-center bg-bg-secondary/30">
-                <span className="text-[10px] text-text-secondary uppercase tracking-widest">v2.1.0</span>
-                <ThemeToggle />
+            {!isAnalysis && (
+                <div className="flex-1 overflow-y-auto py-4">
+                    <div className="px-4 mb-2 text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                        History (30 Days)
+                    </div>
+                    <div className="space-y-1 px-2">
+                        {dates.map((date) => {
+                            const stats = getAccuracy(date);
+                            const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString();
+                            return (
+                                <button
+                                    key={date.toISOString()}
+                                    onClick={() => onDateSelect?.(date)}
+                                    className={cn(
+                                        "w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors",
+                                        isSelected
+                                            ? "bg-accent-primary/10 text-accent-primary font-medium"
+                                            : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
+                                    )}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <span>{format(date, 'MMM dd, yyyy')}</span>
+                                        {isWeekend(date) && (
+                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-bg-tertiary text-text-secondary border border-border-primary/50">
+                                                WEEKEND
+                                            </span>
+                                        )}
+                                    </div>
+                                    {stats && (
+                                        <>
+                                            <span className={cn(
+                                                "text-xs font-mono font-bold",
+                                                stats.accuracy >= 80 ? "text-emerald-500" :
+                                                    stats.accuracy >= 50 ? "text-amber-500" : "text-rose-500"
+                                            )}>
+                                                ({stats.accuracy}%)
+                                            </span>
+                                            <span className="text-xs font-mono text-text-secondary">
+                                                {stats.count}
+                                            </span>
+                                        </>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            <div className="p-4 border-t border-border-primary space-y-4">
+                <div className="flex items-center justify-between text-text-secondary">
+                    <span className="text-xs">Theme</span>
+                    <ThemeSelector />
+                </div>
+
+                <div className="relative">
+                    <button
+                        onClick={() => setShowUserMenu(!showUserMenu)}
+                        className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-bg-tertiary transition-colors text-left"
+                    >
+                        <div className="w-8 h-8 rounded-full bg-accent-secondary/20 flex items-center justify-center text-accent-secondary">
+                            <User className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1">
+                            <div className="text-sm font-medium text-text-primary">Analyst</div>
+                            <div className="text-xs text-text-secondary">Pro Account</div>
+                        </div>
+                        <MoreHorizontal className="h-4 w-4 text-text-secondary" />
+                    </button>
+
+                    {showUserMenu && (
+                        <>
+                            <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
+                            <div className="absolute bottom-full left-0 mb-2 w-full bg-bg-secondary border border-border-primary rounded-lg shadow-xl p-1 z-50 animate-in fade-in zoom-in-95 duration-200">
+                                <button className="w-full flex items-center gap-2 p-2 rounded-md text-sm text-text-secondary hover:bg-bg-tertiary hover:text-text-primary transition-colors">
+                                    <Settings className="h-4 w-4" /> Settings
+                                </button>
+                                <button className="w-full flex items-center gap-2 p-2 rounded-md text-sm text-red-400 hover:bg-red-500/10 transition-colors">
+                                    <LogOut className="h-4 w-4" /> Log Out
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );

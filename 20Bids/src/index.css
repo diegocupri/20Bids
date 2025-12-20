@@ -26,46 +26,240 @@
 
 @layer base {
   :root {
-    /* Dark Mode (Default) */
+    /* Default: Midnight (Zinc) */
     --bg-primary: #09090b;
-    /* Zinc 950 */
     --bg-secondary: #18181b;
-    /* Zinc 900 */
     --bg-tertiary: #27272a;
-    /* Zinc 800 */
     --text-primary: #e4e4e7;
-    /* Zinc 200 */
     --text-secondary: #a1a1aa;
-    /* Zinc 400 */
     --border-primary: #27272a;
-    /* Zinc 800 */
     --accent-primary: #f59e0b;
-    /* Amber 500 */
+    /* Amber */
     --accent-secondary: #3b82f6;
-    /* Blue 500 */
+    /* Blue */
   }
 
-  :root[data-theme="light"] {
-    /* Light Mode */
+  :root[data-theme="polar"] {
+    /* Polar (Light) */
     --bg-primary: #ffffff;
     --bg-secondary: #f4f4f5;
-    /* Zinc 100 */
     --bg-tertiary: #e4e4e7;
-    /* Zinc 200 */
     --text-primary: #18181b;
-    /* Zinc 900 */
     --text-secondary: #52525b;
-    /* Zinc 600 */
     --border-primary: #e4e4e7;
-    /* Zinc 200 */
     --accent-primary: #d97706;
-    /* Amber 600 (Darker for contrast) */
     --accent-secondary: #2563eb;
-    /* Blue 600 */
+  }
+
+  :root[data-theme="ocean"] {
+    /* Ocean (Deep Blue) */
+    --bg-primary: #0f172a;
+    /* Slate 900 */
+    --bg-secondary: #1e293b;
+    /* Slate 800 */
+    --bg-tertiary: #334155;
+    /* Slate 700 */
+    --text-primary: #f1f5f9;
+    /* Slate 100 */
+    --text-secondary: #94a3b8;
+    /* Slate 400 */
+    --border-primary: #1e293b;
+    --accent-primary: #0ea5e9;
+    /* Sky 500 */
+    --accent-secondary: #6366f1;
+    /* Indigo 500 */
+  }
+
+  :root[data-theme="forest"] {
+    /* Forest (Deep Green) */
+    --bg-primary: #022c22;
+    /* Emerald 950 */
+    --bg-secondary: #064e3b;
+    /* Emerald 900 */
+    --bg-tertiary: #065f46;
+    /* Emerald 800 */
+    --text-primary: #ecfdf5;
+    /* Emerald 50 */
+    --text-secondary: #6ee7b7;
+    /* Emerald 300 */
+    --border-primary: #064e3b;
+    --accent-primary: #10b981;
+    /* Emerald 500 */
+    --accent-secondary: #a7f3d0;
+    /* Emerald 200 */
+  }
+
+  :root[data-theme="sunset"] {
+    /* Sunset (Warm Dark) */
+    --bg-primary: #2a0a18;
+    /* Custom Dark Red/Purple */
+    --bg-secondary: #450a1f;
+    --bg-tertiary: #60152a;
+    --text-primary: #fff1f2;
+    /* Rose 50 */
+    --text-secondary: #fda4af;
+    /* Rose 300 */
+    --border-primary: #450a1f;
+    --accent-primary: #f43f5e;
+    /* Rose 500 */
+    --accent-secondary: #f59e0b;
+    /* Amber 500 */
+  }
+
+  :root[data-theme="cyberpunk"] {
+    /* Cyberpunk (Neon) */
+    --bg-primary: #050505;
+    --bg-secondary: #111111;
+    --bg-tertiary: #1a1a1a;
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    --border-primary: #333333;
+    --accent-primary: #d946ef;
+    /* Fuchsia 500 */
+    --accent-secondary: #06b6d4;
+    /* Cyan 500 */
+  }
+
+  :root[data-theme="coffee"] {
+    /* Coffee (Warm Brown) */
+    --bg-primary: #271c19;
+    /* Custom Dark Brown */
+    --bg-secondary: #43302b;
+    --bg-tertiary: #5c423a;
+    --text-primary: #f5f5f4;
+    /* Stone 100 */
+    --text-secondary: #d6d3d1;
+    /* Stone 300 */
+    --border-primary: #43302b;
+    --accent-primary: #d97706;
+    /* Amber 600 */
+    --accent-secondary: #a8a29e;
+    /* Stone 400 */
+  }
+
+  :root[data-theme="dracula"] {
+    /* Dracula (Classic) */
+    --bg-primary: #282a36;
+    --bg-secondary: #44475a;
+    --bg-tertiary: #6272a4;
+    --text-primary: #f8f8f2;
+    --text-secondary: #bd93f9;
+    --border-primary: #44475a;
+    --accent-primary: #ff79c6;
+    /* Pink */
+    --accent-secondary: #8be9fd;
+    /* Cyan */
+  }
+
+  :root[data-theme="nord"] {
+    /* Nord (Cool Blue-Gray) */
+    --bg-primary: #2e3440;
+    --bg-secondary: #3b4252;
+    --bg-tertiary: #434c5e;
+    --text-primary: #eceff4;
+    --text-secondary: #d8dee9;
+    --border-primary: #3b4252;
+    --accent-primary: #88c0d0;
+    /* Frost Blue */
+    --accent-secondary: #81a1c1;
+    /* Frost Blue Dark */
+  }
+
+  :root[data-theme="monochrome"] {
+    /* Monochrome (High Contrast) */
+    --bg-primary: #000000;
+    --bg-secondary: #1a1a1a;
+    --bg-tertiary: #333333;
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --border-primary: #ffffff;
+    --accent-primary: #ffffff;
+    --accent-secondary: #888888;
+  }
+
+  :root[data-theme="terminal"] {
+    /* Terminal (Bloomberg/TradingView) */
+    --bg-primary: #000000;
+    /* Pure Black */
+    --bg-secondary: #101010;
+    /* Almost Black */
+    --bg-tertiary: #1f1f1f;
+    --text-primary: #fbbf24;
+    /* Amber-400 */
+    --text-secondary: #d97706;
+    /* Amber-600 */
+    --border-primary: #333333;
+    --accent-primary: #fbbf24;
+    /* Amber-400 */
+    --accent-secondary: #22c55e;
+    /* Green-500 */
+  }
+
+  /* Terminal Theme (Retro) */
+  .theme-terminal {
+    --bg-primary: #000000;
+    --bg-secondary: #000000;
+    --bg-tertiary: #111111;
+    --text-primary: #fbbf24;
+    /* Amber-400 */
+    --text-secondary: #d97706;
+    /* Amber-600 */
+    --accent-primary: #fbbf24;
+    --accent-secondary: #f59e0b;
+    --border-primary: #3f3f46;
+    /* Zinc-700 */
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #fbbf24;
+    --info: #3b82f6;
+  }
+
+  /* TradingView Theme (Modern Fintech) */
+  .theme-tradingview {
+    --bg-primary: #131722;
+    --bg-secondary: #1e222d;
+    --bg-tertiary: #2a2e39;
+    --text-primary: #d1d4dc;
+    --text-secondary: #787b86;
+    --accent-primary: #2962ff;
+    /* Brand Blue */
+    --accent-secondary: #1848cc;
+    --border-primary: #2a2e39;
+    --success: #089981;
+    /* Teal */
+    --danger: #f23645;
+    /* Red */
+    --warning: #f0a33d;
+    --info: #2962ff;
+  }
+
+  /* Polar Theme (Ultra Light) */
+  .theme-polar {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f9fafb;
+    /* Gray-50 */
+    --bg-tertiary: #f3f4f6;
+    /* Gray-100 */
+    --text-primary: #111827;
+    /* Gray-900 */
+    --text-secondary: #6b7280;
+    /* Gray-500 */
+    --accent-primary: #2563eb;
+    /* Blue-600 */
+    --accent-secondary: #1d4ed8;
+    --border-primary: #e5e7eb;
+    /* Gray-200 */
+    --success: #059669;
+    /* Emerald-600 */
+    --danger: #dc2626;
+    /* Red-600 */
+    --warning: #d97706;
+    --info: #2563eb;
   }
 
   body {
-    @apply bg-bg-primary text-text-primary antialiased font-sans transition-colors duration-300;
+    @apply bg-bg-primary text-text-primary antialiased transition-colors duration-300;
+    font-family: 'Inter', sans-serif;
   }
 }
 

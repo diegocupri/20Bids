@@ -1,0 +1,52 @@
+import { format } from 'date-fns';
+
+const API_URL = 'http://localhost:3001/api';
+
+export async function fetchDates(): Promise<Date[]> {
+    const res = await fetch(`${API_URL}/dates`);
+    const dates = await res.json();
+    return dates.map((d: string) => new Date(d));
+}
+
+export async function fetchRecommendations(date: Date) {
+    const res = await fetch(`${API_URL}/recommendations?date=${date.toISOString()}`);
+    return res.json();
+}
+
+export async function updateTag(symbol: string, color: string | null) {
+    await fetch(`${API_URL}/tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbol, color })
+    });
+}
+
+export async function fetchPrices() {
+    const res = await fetch(`${API_URL}/prices`);
+    return res.json();
+}
+
+export const fetchSectors = async (date?: Date) => {
+    const dateStr = date ? format(date, 'yyyy-MM-dd') : '';
+    const response = await fetch(`${API_URL}/sectors?date=${dateStr}`);
+    if (!response.ok) throw new Error('Failed to fetch sectors');
+    return response.json();
+};
+
+export const fetchIndices = async () => {
+    const response = await fetch(`${API_URL}/indices`);
+    if (!response.ok) throw new Error('Failed to fetch indices');
+    return response.json();
+};
+
+export const fetchMvsoHistory = async (): Promise<Record<string, number[]>> => {
+    const response = await fetch(`${API_URL}/stats/mvso-history`);
+    if (!response.ok) throw new Error('Failed to fetch MVSO history');
+    return response.json();
+};
+
+export const fetchAnalysis = async () => {
+    const response = await fetch(`${API_URL}/stats/analysis`);
+    if (!response.ok) throw new Error('Failed to fetch analysis data');
+    return response.json();
+};

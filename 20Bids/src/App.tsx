@@ -1,14 +1,17 @@
-import { MainLayout } from './layouts/MainLayout';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Dashboard } from './components/Dashboard';
-import { UserDataProvider } from './context/UserDataContext';
+import { UploadPage } from './components/UploadPage';
+import { AnalysisPage } from './pages/Analysis';
 
 function App() {
   return (
-    <UserDataProvider>
-      <MainLayout>
-        <Dashboard /> {/* selectedDate will be injected by MainLayout */}
-      </MainLayout>
-    </UserDataProvider>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/analysis" element={<AnalysisPage />} />
+        <Route path="/upload" element={<UploadPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

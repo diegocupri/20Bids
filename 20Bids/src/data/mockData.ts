@@ -6,16 +6,15 @@ export interface Recommendation {
     name: string;
     price: number;
     change: number;
-    changePercent: number;
     probability: 'High' | 'Medium' | 'Low';
     type: 'Intraday' | 'Swing' | 'Long';
-    volume: number;
+    volume: string;
     sector: string;
     date: string; // YYYY-MM-DD
     // New fields
     rsi: number;
     relativeVol: number;
-    marketCap: number;
+    marketCap: string;
     beta: number;
     earningsDate: string;
     analystRating: 'Buy' | 'Strong Buy' | 'Hold';
@@ -32,24 +31,13 @@ const PROBS = ['High', 'Medium', 'Low'] as const;
 const RATINGS = ['Buy', 'Strong Buy', 'Hold'] as const;
 const SENTIMENTS = ['Bullish', 'Bearish', 'Neutral'] as const;
 
-export const generateMockData = (dateStr?: string): Recommendation[] => {
+const generateMockData = (): Recommendation[] => {
     const data: Recommendation[] = [];
     const today = new Date();
 
-    // If date is provided, use it. Otherwise generate for last 5 days.
-    // But the original function generated for last 5 days and returned ALL.
-    // The Dashboard calls it with selectedDate.
-    // Let's keep the original logic but filter by date if needed, OR just generate based on the date passed.
-    // The original code generated 5 days worth of data.
-    // Dashboard calls `generateMockData(selectedDate)`.
-    // Wait, the original code ignored arguments and generated 5 days.
-    // I should adapt it to generate for the specific date if passed, or just return the static set.
-    // For simplicity, let's stick to generating a static set for now, but we need to match the interface.
-
-    // Actually, let's just generate the static set as before, but with correct types.
-
+    // Generate data for the last 5 days
     for (let i = 0; i < 5; i++) {
-        const currentDateStr = format(subDays(today, i), 'yyyy-MM-dd');
+        const dateStr = format(subDays(today, i), 'yyyy-MM-dd');
 
         // Simulate "Low Data" day for the oldest date (index 4)
         // Otherwise generate 15-20 items
@@ -60,20 +48,19 @@ export const generateMockData = (dateStr?: string): Recommendation[] => {
             const change = (Math.random() * 10) - 4; // -4% to +6%
 
             data.push({
-                id: `${currentDateStr}-${j}`,
+                id: `${dateStr}-${j}`,
                 ticker: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META', 'AMD', 'NFLX', 'INTC', 'JPM', 'BAC', 'XOM', 'CVX', 'PFE', 'JNJ', 'KO', 'PEP', 'WMT', 'TGT'][Math.floor(Math.random() * 20)],
                 name: 'Company Name Inc.', // Simplified for mock
                 price: price,
                 change: Number(change.toFixed(2)),
-                changePercent: Number(((change / price) * 100).toFixed(2)),
                 probability: PROBS[Math.floor(Math.random() * PROBS.length)],
                 type: TYPES[Math.floor(Math.random() * TYPES.length)],
-                volume: Number((Math.random() * 50 + 1).toFixed(1)) * 1000000, // stored as number
+                volume: `${(Math.random() * 50 + 1).toFixed(1)}M`,
                 sector: SECTORS[Math.floor(Math.random() * SECTORS.length)],
-                date: currentDateStr,
+                date: dateStr,
                 rsi: Math.floor(30 + Math.random() * 50), // 30-80
                 relativeVol: Number((0.5 + Math.random() * 2.5).toFixed(2)),
-                marketCap: Number((Math.random() * 2 + 0.1).toFixed(1)), // Trillions
+                marketCap: `${(Math.random() * 2 + 0.1).toFixed(1)}T`,
                 beta: Number((0.5 + Math.random() * 1.5).toFixed(2)),
                 earningsDate: format(subDays(today, Math.floor(Math.random() * 60) - 30), 'MMM dd'),
                 analystRating: RATINGS[Math.floor(Math.random() * RATINGS.length)],
@@ -83,18 +70,6 @@ export const generateMockData = (dateStr?: string): Recommendation[] => {
             });
         }
     }
-
-    // Filter by date if provided (Dashboard passes selectedDate)
-    if (dateStr) {
-        // Dashboard passes Date object or string? 
-        // Dashboard passes `selectedDate` which comes from MainLayout -> Sidebar.
-        // In MainLayout: `const dates = getUniqueDates(); const [selectedDate, setSelectedDate] = useState(dates[0]);`
-        // So it's a string.
-        // But Dashboard.tsx line 17: `useMemo(() => generateMockData(selectedDate), [selectedDate]);`
-        // So we should filter.
-        return data.filter(d => d.date === dateStr);
-    }
-
     return data;
 };
 

@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  tags      Tag[]
+  watchlist Watchlist[]
+}
+
+model Recommendation {
+  id            String   @id @default(uuid())
+  symbol        String
+  name          String
+  date          DateTime
+  price         Float     // Real-time/closing price
+  open          Float     @default(0) // Opening price
+  high          Float     @default(0) // High price
+  refPrice1020  Float?    // Reference price at 10:20 AM
+  refPrice1120  Float?    // Reference price at 11:20 AM
+  highPost1120  Float?    // Max Excursion after 11:20 AM
+  refPrice1220  Float?    // Reference price at 12:20 PM
+  highPost1220  Float?    // Max Excursion after 12:20 PM
+  changePercent Float
+  volume        Float
+  relativeVol   Float
+  marketCap     Float
+  sector        String
+  type          String
+  probability   String
+  probabilityValue Int @default(70)
+  time          String
+  stopLoss      Float
+  priceTarget   Float
+  thesis        String
+  catalyst      String?
+  rsi           Float
+  beta          Float
+  earningsDate  String?
+  analystRating String
+  sentiment     String
+
+  @@unique([symbol, date])
+}
+
+model Tag {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  symbol    String
+  color     String
+  
+  @@unique([userId, symbol])
+}
+
+model Watchlist {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  symbol    String
+  
+  @@unique([userId, symbol])
+}

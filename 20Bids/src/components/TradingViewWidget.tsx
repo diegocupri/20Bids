@@ -8,14 +8,17 @@ export function TradingViewWidget({ symbol }: { symbol: string }) {
 
     useEffect(() => {
         // Initial theme check
-        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const isLight = currentTheme === 'polar';
         setTheme(isLight ? 'light' : 'dark');
 
         // Observer for theme changes
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
-                    const newTheme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+                    const currentTheme = document.documentElement.getAttribute('data-theme');
+                    // Map 'polar' to 'light', everything else to 'dark'
+                    const newTheme = currentTheme === 'polar' ? 'light' : 'dark';
                     setTheme(newTheme);
                 }
             });

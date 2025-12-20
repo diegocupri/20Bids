@@ -1,194 +1,496 @@
-import { useState, useMemo } from 'react';
-import type { Recommendation } from '../data/mockData';
+import { useState, useEffect } from 'react';
+import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { Filter, ChevronUp, ChevronDown, Star } from 'lucide-react';
-import { useUserData } from '../context/UserDataContext';
+import { fetchRecommendations, fetchPrices, updateTag, fetchIndices } from '../api/client';
+
+const TAG_COLORS = [
+    '#ef4444', // Red
+    '#f97316', // Orange
+    '#eab308', // Yellow
+    '#22c55e', // Green
+    '#06b6d4', // Cyan
+    '#3b82f6', // Blue
+    '#a855f7', // Purple
+];
 
 interface RecommendationsTableProps {
-    data: Recommendation[];
-    onSelect: (rec: Recommendation) => void;
-    selectedId?: string;
+    selectedDate: Date;
+    onRowClick: (rec: any) => void;
+    onDataLoaded?: (data: any[]) => void;
+    mvsoThreshold: number;
+    onMvsoThresholdChange: (value: number) => void;
 }
 
-type SortField = 'ticker' | 'price' | 'changePercent' | 'volume' | 'relativeVol' | 'rsi' | 'marketCap' | 'beta' | 'probability';
-type SortDirection = 'asc' | 'desc';
+// ... (TAG_COLORS)
 
-export function RecommendationsTable({ data, onSelect, selectedId }: RecommendationsTableProps) {
-    const [filterSector, setFilterSector] = useState<string>('All');
-    const [filterType, setFilterType] = useState<string>('All');
-    const [filterProbability, setFilterProbability] = useState<string>('All');
+type SortKey = 'symbol' | 'price' | 'refPrice1020' | 'change' | 'volume' | 'rsi' | 'relativeVol' | 'type' | 'probabilityValue' | 'sector' | 'open' | 'mvso';
 
-    const [sortField, setSortField] = useState<SortField>('relativeVol');
-    const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, mvsoThreshold, onMvsoThresholdChange }: RecommendationsTableProps) {
+    const [recommendations, setRecommendations] = useState<any[]>([]);
+    const [prices, setPrices] = useState<Record<string, { price: number, change: number, refPrice1020?: number, volume?: number, sector?: string, open?: number, high?: number }>>({});
+    const [indices, setIndices] = useState<any[]>([]);
+    const [tagPopover, setTagPopover] = useState<{ symbol: string, x: number, y: number } | null>(null);
+    const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: 'asc' | 'desc' }>({ key: 'probabilityValue', direction: 'desc' });
+    const [minVolume, setMinVolume] = useState<number>(0);
+    const [minOpenPrice, setMinOpenPrice] = useState<number>(0);
 
-    const { getAnnotation } = useUserData();
+    // Fetch Indices
+    useEffect(() => {
+        const loadIndices = async () => {
+            try {
+                const data = await fetchIndices();
+                setIndices(data);
+            } catch (error) {
+                console.error('Failed to load indices:', error);
+            }
+        };
+        loadIndices();
+        const interval = setInterval(loadIndices, 60000); // Poll every minute
+        return () => clearInterval(interval);
+    }, []);
 
-    const sectors = useMemo(() => Array.from(new Set(data.map(r => r.sector))).sort(), [data]);
-    const types = useMemo(() => Array.from(new Set(data.map(r => r.type))).sort(), [data]);
-    const probabilities = ['High', 'Medium', 'Low'];
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const data = await fetchRecommendations(selectedDate);
+                setRecommendations(data);
+                onDataLoaded?.(data);
+            } catch (error) {
+                console.error('Failed to load recommendations:', error);
+            }
+        };
+        loadData();
+    }, [selectedDate, onDataLoaded]);
 
-    const filteredData = useMemo(() => {
-        return data.filter(rec => {
-            const matchSector = filterSector === 'All' || rec.sector === filterSector;
-            const matchType = filterType === 'All' || rec.type === filterType;
-            const matchProb = filterProbability === 'All' || rec.probability === filterProbability;
-            return matchSector && matchType && matchProb;
-        });
-    }, [data, filterSector, filterType, filterProbability]);
-
-    const sortedData = useMemo(() => {
-        return [...filteredData].sort((a, b) => {
-            let valA = a[sortField];
-            let valB = b[sortField];
-
-            // Handle undefined values
-            if (valA === undefined) valA = 0;
-            if (valB === undefined) valB = 0;
-
-            if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-            if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
-            return 0;
-        });
-    }, [filteredData, sortField, sortDirection]);
-
-    const handleSort = (field: SortField) => {
-        if (sortField === field) {
-            setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortField(field);
-            setSortDirection('desc');
+    // Poll for real-time prices every 10 seconds (only if today)
+    useEffect(() => {
+        const isToday = new Date(selectedDate).toDateString() === new Date().toDateString();
+        if (!isToday) {
+            setPrices({}); // Clear live prices for past dates
+            return;
         }
+
+        const pollPrices = async () => {
+            try {
+                const updates = await fetchPrices();
+                setPrices(prev => ({ ...prev, ...updates }));
+            } catch (error) {
+                console.error('Failed to poll prices:', error);
+            }
+        };
+
+        pollPrices(); // Initial poll
+        const interval = setInterval(pollPrices, 10000);
+        return () => clearInterval(interval);
+    }, [selectedDate]);
+
+    const handleTagClick = async (symbol: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        const rect = e.currentTarget.getBoundingClientRect();
+        setTagPopover({ symbol, x: rect.left, y: rect.bottom + 5 });
     };
 
-    if (data.length === 0) {
-        return <div className="p-8 text-[var(--text-muted)] font-mono text-xs uppercase">No recommendations available.</div>;
-    }
+    const handleColorSelect = async (color: string | null) => {
+        if (!tagPopover) return;
+
+        // Optimistic update
+        setRecommendations(prev => prev.map(r =>
+            r.symbol === tagPopover.symbol ? { ...r, userTag: color } : r
+        ));
+
+        try {
+            await updateTag(tagPopover.symbol, color);
+        } catch (error) {
+            console.error('Failed to update tag:', error);
+            // Revert on error
+            const data = await fetchRecommendations(selectedDate);
+            setRecommendations(data);
+        }
+        setTagPopover(null);
+    };
+
+    const handleTradingViewClick = (symbol: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        window.open(`https://www.tradingview.com/chart/?symbol=${symbol}`, '_blank');
+    };
+
+    const handleSort = (key: SortKey) => {
+        setSortConfig(current => ({
+            key,
+            direction: current.key === key && current.direction === 'desc' ? 'asc' : 'desc'
+        }));
+    };
+
+    const sortedData = [...recommendations]
+        .filter(rec => {
+            const update = prices[rec.symbol] || {};
+            const volume = update.volume || rec.volume;
+            const open = update.open || rec.open || 0;
+
+            if (minVolume > 0 && volume < minVolume) return false;
+            if (minOpenPrice > 0 && open < minOpenPrice) return false;
+
+            return true;
+        })
+        .sort((a, b) => {
+            const aUpdate = prices[a.symbol] || {};
+            const bUpdate = prices[b.symbol] || {};
+
+            let aValue: any = a[sortConfig.key];
+            let bValue: any = b[sortConfig.key];
+
+            // Handle dynamic fields
+            if (sortConfig.key === 'price') {
+                aValue = aUpdate.price || a.price;
+                bValue = bUpdate.price || b.price;
+            } else if (sortConfig.key === 'change') {
+                const aRef = aUpdate.refPrice1020 || a.refPrice1020;
+                const bRef = bUpdate.refPrice1020 || b.refPrice1020;
+                if (aRef) aValue = (((aUpdate.price || a.price) - aRef) / aRef) * 100;
+                else aValue = aUpdate.change || a.changePercent;
+
+                if (bRef) bValue = (((bUpdate.price || b.price) - bRef) / bRef) * 100;
+                else bValue = bUpdate.change || b.changePercent;
+            } else if (sortConfig.key === 'refPrice1020') {
+                aValue = aUpdate.refPrice1020 || a.refPrice1020 || 0;
+                bValue = bUpdate.refPrice1020 || b.refPrice1020 || 0;
+            } else if (sortConfig.key === 'volume') {
+                aValue = aUpdate.volume || a.volume;
+                bValue = bUpdate.volume || b.volume;
+            } else if (sortConfig.key === 'sector') {
+                aValue = aUpdate.sector || a.sector;
+                bValue = bUpdate.sector || b.sector;
+            } else if (sortConfig.key === 'open') {
+                aValue = aUpdate.open || a.open || 0;
+                bValue = bUpdate.open || b.open || 0;
+            } else if (sortConfig.key === 'mvso') {
+                const aRef = aUpdate.refPrice1020 || a.refPrice1020;
+                const aHigh = aUpdate.high || a.high || 0;
+                aValue = (aHigh && aRef) ? ((aHigh - aRef) / aRef) * 100 : 0;
+
+                const bRef = bUpdate.refPrice1020 || b.refPrice1020;
+                const bHigh = bUpdate.high || b.high || 0;
+                bValue = (bHigh && bRef) ? ((bHigh - bRef) / bRef) * 100 : 0;
+            }
+
+            if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+    const SortIcon = ({ column }: { column: SortKey }) => {
+        if (sortConfig.key !== column) return <ArrowUpDown className="w-3 h-3 text-border-primary ml-1 opacity-0 group-hover:opacity-50" />;
+        return sortConfig.direction === 'asc'
+            ? <ArrowUp className="w-3 h-3 text-accent-primary ml-1" />
+            : <ArrowDown className="w-3 h-3 text-accent-primary ml-1" />;
+    };
 
     return (
-        <div className="h-full flex flex-col glass-panel rounded-xl overflow-hidden shadow-2xl animate-in fade-in duration-500">
-            {/* Header & Filters */}
-            <div className="p-4 border-b border-[var(--border-primary)] flex flex-col gap-4 bg-[var(--bg-secondary)]/50 backdrop-blur-sm">
-                <div className="flex justify-between items-center">
-                    <h1 className="text-xl font-bold text-[var(--text-primary)] flex items-center gap-2 font-sans">
-                        <Filter className="w-5 h-5 text-[var(--accent-primary)]" />
-                        Daily Recommendations
-                    </h1>
-                    <span className="text-xs font-mono text-[var(--text-muted)] bg-[var(--bg-primary)] px-2 py-1 rounded border border-[var(--border-primary)]">
-                        {sortedData.length} Tickers
-                    </span>
-                </div>
+        <div className="flex flex-col h-full bg-bg-primary">
+            {/* Header / Filters */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border-primary bg-bg-secondary/30">
+                <h2 className="text-sm font-bold text-text-primary tracking-wide uppercase flex items-center gap-2">
+                    <span className="text-accent-primary">Market</span> Opportunities
+                </h2>
 
-                <div className="flex gap-2">
-                    <select
-                        value={filterSector}
-                        onChange={(e) => setFilterSector(e.target.value)}
-                        className="bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] text-xs px-2 py-1 rounded focus:outline-none focus:border-[var(--accent-primary)] uppercase"
-                    >
-                        <option value="All">Sector: All</option>
-                        {sectors.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
+                <div className="flex items-center gap-4">
+                    {/* Market Indices */}
+                    <div className="flex items-center gap-3 mr-4 border-r border-border-primary pr-4">
+                        {indices.map(idx => (
+                            <div key={idx.symbol} className="flex items-center gap-1.5 text-[10px] font-mono">
+                                <span className="font-bold text-text-secondary">{idx.symbol === 'VIXY' ? 'VIX' : idx.symbol}</span>
+                                <span className={cn(
+                                    "font-medium",
+                                    idx.change >= 0 ? "text-emerald-500" : "text-rose-500"
+                                )}>
+                                    {idx.price.toFixed(2)}
+                                    <span className="ml-1 opacity-75">
+                                        ({idx.change >= 0 ? '+' : ''}{idx.change.toFixed(2)}%)
+                                    </span>
+                                </span>
+                            </div>
+                        ))}
+                    </div>
 
-                    <select
-                        value={filterType}
-                        onChange={(e) => setFilterType(e.target.value)}
-                        className="bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] text-xs px-2 py-1 rounded focus:outline-none focus:border-[var(--accent-primary)] uppercase"
-                    >
-                        <option value="All">Type: All</option>
-                        {types.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
+                    {/* MVSO Threshold Input */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-[10px] uppercase text-text-secondary font-medium">MVSO Thresh</label>
+                        <input
+                            type="number"
+                            step="0.1"
+                            value={mvsoThreshold}
+                            onChange={(e) => onMvsoThresholdChange(parseFloat(e.target.value) || 0)}
+                            className="w-16 bg-bg-primary border border-border-primary rounded px-2 py-1 text-xs text-text-primary focus:border-accent-primary outline-none text-right font-mono"
+                        />
+                    </div>
 
-                    <select
-                        value={filterProbability}
-                        onChange={(e) => setFilterProbability(e.target.value)}
-                        className="bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] text-xs px-2 py-1 rounded focus:outline-none focus:border-[var(--accent-primary)] uppercase"
-                    >
-                        <option value="All">Prob: All</option>
-                        {probabilities.map(p => <option key={p} value={p}>{p}</option>)}
-                    </select>
+                    {/* Min Volume Input */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-[10px] uppercase text-text-secondary font-medium">Min Vol</label>
+                        <input
+                            type="number"
+                            value={minVolume}
+                            onChange={(e) => setMinVolume(parseFloat(e.target.value) || 0)}
+                            placeholder="0"
+                            className="w-20 bg-bg-primary border border-border-primary rounded px-2 py-1 text-xs text-text-primary focus:border-accent-primary outline-none text-right font-mono"
+                        />
+                    </div>
+
+                    {/* Min Open Price Input */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-[10px] uppercase text-text-secondary font-medium">Min Open</label>
+                        <input
+                            type="number"
+                            value={minOpenPrice}
+                            onChange={(e) => setMinOpenPrice(parseFloat(e.target.value) || 0)}
+                            placeholder="0"
+                            className="w-16 bg-bg-primary border border-border-primary rounded px-2 py-1 text-xs text-text-primary focus:border-accent-primary outline-none text-right font-mono"
+                        />
+                    </div>
                 </div>
             </div>
 
             {/* Table */}
-            <div className="flex-1 overflow-auto custom-scrollbar">
-                <table className="w-full text-left border-collapse">
-                    <thead className="sticky top-0 z-10 bg-[var(--bg-secondary)] backdrop-blur-md shadow-sm">
-                        <tr>
-                            {[
-                                { key: 'ticker', label: 'Ticker' },
-                                { key: 'price', label: 'Price' },
-                                { key: 'changePercent', label: '% Chg' },
-                                { key: 'volume', label: 'Vol (M)' },
-                                { key: 'relativeVol', label: 'RVol' },
-                                { key: 'rsi', label: 'RSI' },
-                                { key: 'marketCap', label: 'M. Cap' },
-                                { key: 'beta', label: 'Beta' },
-                                { key: 'probability', label: 'Prob.' },
-                            ].map((col) => (
-                                <th
-                                    key={col.key}
-                                    onClick={() => handleSort(col.key as SortField)}
-                                    className="p-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider cursor-pointer hover:text-[var(--text-primary)] transition-colors select-none border-b border-[var(--border-primary)]"
-                                >
-                                    <div className="flex items-center gap-1">
-                                        {col.label}
-                                        {sortField === col.key && (
-                                            sortDirection === 'asc' ? <ChevronUp className="w-3 h-3 text-[var(--accent-primary)]" /> : <ChevronDown className="w-3 h-3 text-[var(--accent-primary)]" />
-                                        )}
-                                    </div>
-                                </th>
-                            ))}
+            <div className="flex-1 overflow-auto">
+                <table className="w-full border-collapse text-xs font-mono table-fixed">
+                    <thead className="sticky top-0 bg-bg-primary z-10 shadow-sm">
+                        <tr className="text-left text-accent-secondary border-b border-border-primary uppercase tracking-wider text-[10px]">
+                            <th className="py-2 pl-3 w-[4%]"></th> {/* Tag Column */}
+
+                            <th className="py-2 font-medium cursor-pointer hover:text-text-primary w-[12%]" onClick={() => handleSort('symbol')}>
+                                <div className="flex items-center gap-1">Ticker <SortIcon column="symbol" /></div>
+                            </th>
+
+                            <th className="py-2 font-medium text-right cursor-pointer hover:text-text-primary w-[10.5%]" onClick={() => handleSort('volume')}>
+                                <div className="flex items-center justify-end gap-1">Vol <SortIcon column="volume" /></div>
+                            </th>
+
+                            <th className="py-2 font-medium text-right cursor-pointer hover:text-text-primary w-[10.5%]" onClick={() => handleSort('open')}>
+                                <div className="flex items-center justify-end gap-1">Open <SortIcon column="open" /></div>
+                            </th>
+
+                            <th className="py-2 font-medium text-right cursor-pointer hover:text-text-primary w-[10.5%]" onClick={() => handleSort('refPrice1020')}>
+                                <div className="flex items-center justify-end gap-1">10:20 Ref <SortIcon column="refPrice1020" /></div>
+                            </th>
+
+                            <th className="py-2 font-medium text-right cursor-pointer hover:text-text-primary w-[10.5%]" onClick={() => handleSort('price')}>
+                                <div className="flex items-center justify-end gap-1">Price RT <SortIcon column="price" /></div>
+                            </th>
+
+                            <th className="py-2 font-medium text-right cursor-pointer hover:text-text-primary w-[10.5%]" onClick={() => handleSort('change')}>
+                                <div className="flex items-center justify-end gap-1">% Chg 10:20 <SortIcon column="change" /></div>
+                            </th>
+
+                            <th className="py-2 font-medium text-center cursor-pointer hover:text-text-primary w-[10.5%]" onClick={() => handleSort('mvso')}>
+                                <div className="flex items-center justify-center gap-1">MVSO <SortIcon column="mvso" /></div>
+                            </th>
+                            <th className="py-2 font-medium text-right w-[10.5%]">
+                                <div className="flex items-center justify-end gap-1">Ref 11:20</div>
+                            </th>
+                            <th className="py-2 font-medium text-center w-[10.5%]">
+                                <div className="flex items-center justify-center gap-1">MVSO 11:20</div>
+                            </th>
+                            <th className="py-2 font-medium text-right w-[10.5%]">
+                                <div className="flex items-center justify-end gap-1">Ref 12:20</div>
+                            </th>
+                            <th className="py-2 font-medium text-center w-[10.5%]">
+                                <div className="flex items-center justify-center gap-1">MVSO 12:20</div>
+                            </th>
+
+                            <th className="py-2 font-medium text-center cursor-pointer hover:text-text-primary w-[10.5%]" onClick={() => handleSort('sector')}>
+                                <div className="flex items-center justify-center gap-1">Sector <SortIcon column="sector" /></div>
+                            </th>
+
+                            <th className="py-2 font-medium text-center cursor-pointer hover:text-text-primary w-[10.5%]" onClick={() => handleSort('probabilityValue')}>
+                                <div className="flex items-center justify-center gap-1">Prob <SortIcon column="probabilityValue" /></div>
+                            </th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-[var(--border-primary)]">
+                    <tbody>
                         {sortedData.map((rec) => {
-                            const { tag, isWatched } = getAnnotation(rec.ticker);
+                            const update = prices[rec.symbol] || {};
+                            const livePrice = update.price || rec.price;
+                            const refPrice = update.refPrice1020 || rec.refPrice1020;
+                            const openPrice = update.open || rec.open || 0;
+                            const highPrice = update.high || rec.high || 0;
+
+                            // Calculate change vs 10:20 if available, else use daily change
+                            const liveChange = refPrice
+                                ? ((livePrice - refPrice) / refPrice) * 100
+                                : (update.change || rec.changePercent);
+
+                            // Calculate MVSO: ((High - Ref1020) / Ref1020) * 100
+                            const mvso = (highPrice && refPrice)
+                                ? ((highPrice - refPrice) / refPrice) * 100
+                                : 0;
+
+                            const volume = update.volume || rec.volume;
+                            const formattedVol = volume > 1000000
+                                ? (volume / 1000000).toFixed(2) + 'M'
+                                : volume > 1000
+                                    ? (volume / 1000).toFixed(1) + 'K'
+                                    : volume.toFixed(1);
+
+                            const sector = update.sector || rec.sector;
+                            // Abbreviate Sector
+                            const shortSector = sector
+                                .replace('Technology', 'Tech')
+                                .replace('Communication Services', 'Comm')
+                                .replace('Consumer Cyclical', 'Cons Cyc')
+                                .replace('Consumer Defensive', 'Cons Def')
+                                .replace('Financial Services', 'Fin')
+                                .replace('Healthcare', 'Health')
+                                .replace('Industrials', 'Ind')
+                                .replace('Real Estate', 'RE')
+                                .replace('Basic Materials', 'Mat')
+                                .replace('Utilities', 'Util')
+                                .substring(0, 12); // Max length safety
+
+                            const prob = rec.probabilityValue || 70;
+
                             return (
                                 <tr
-                                    key={rec.id}
-                                    onClick={() => onSelect(rec)}
-                                    className={cn(
-                                        "cursor-pointer transition-colors hover:bg-[var(--bg-secondary)] group",
-                                        selectedId === rec.id ? "bg-[var(--accent-primary)]/10 border-l-2 border-l-[var(--accent-primary)]" : "border-l-2 border-l-transparent"
-                                    )}
+                                    key={rec.symbol}
+                                    onClick={() => onRowClick(rec)}
+                                    className="border-b border-border-primary/30 hover:bg-accent-primary/10 transition-colors cursor-pointer group"
                                 >
-                                    <td className="p-2">
+                                    <td className="py-2 pl-3">
+                                        <button
+                                            onClick={(e) => handleTagClick(rec.symbol, e)}
+                                            className="w-3 h-3 rounded-full border border-border-primary flex items-center justify-center hover:border-text-primary transition-colors"
+                                            style={{ backgroundColor: rec.userTag || 'transparent', borderColor: rec.userTag ? 'transparent' : undefined }}
+                                        >
+                                            {!rec.userTag && <div className="w-0.5 h-0.5 rounded-full bg-text-secondary opacity-0 group-hover:opacity-50" />}
+                                        </button>
+                                    </td>
+                                    <td className="py-2">
                                         <div className="flex items-center gap-2">
-                                            {tag && (
-                                                <div
-                                                    className="w-1.5 h-1.5 rounded-full shadow-[0_0_5px_rgba(0,0,0,0.5)]"
-                                                    style={{ backgroundColor: tag }}
-                                                    title="Tagged"
-                                                />
-                                            )}
-                                            <div>
-                                                <div className="font-bold text-[var(--text-primary)] flex items-center gap-1 font-sans text-xs">
-                                                    {rec.ticker}
-                                                    {isWatched && <Star className="w-2.5 h-2.5 fill-[var(--bloomberg-orange)] text-[var(--bloomberg-orange)]" />}
-                                                </div>
-                                                <div className="text-[9px] text-[var(--text-muted)] truncate max-w-[80px] font-mono">{rec.name}</div>
-                                            </div>
+                                            <span className="font-bold text-accent-primary">{rec.symbol}</span>
+                                            <button
+                                                onClick={(e) => handleTradingViewClick(rec.symbol, e)}
+                                                className="text-text-secondary hover:text-accent-primary transition-colors opacity-0 group-hover:opacity-100"
+                                                title="Open in TradingView"
+                                            >
+                                                <ExternalLink className="w-3 h-3" />
+                                            </button>
+                                            <span className="text-text-secondary truncate max-w-[80px] hidden xl:block text-[10px]">{rec.name}</span>
                                         </div>
                                     </td>
-                                    <td className="p-2 font-mono text-xs text-[var(--text-primary)]">${rec.price.toFixed(2)}</td>
-                                    <td className={cn("p-2 font-mono text-xs font-medium", rec.changePercent >= 0 ? "text-[var(--terminal-green)]" : "text-[var(--red-500)]")}>
-                                        {rec.changePercent >= 0 ? '+' : ''}{rec.changePercent}%
-                                    </td>
-                                    <td className="p-2 font-mono text-xs text-[var(--text-muted)]">{typeof rec.volume === 'number' ? (rec.volume / 1000000).toFixed(2) : rec.volume}</td>
-                                    <td className="p-2 font-mono text-xs text-[var(--text-primary)]">{rec.relativeVol?.toFixed(1)}x</td>
-                                    <td className={cn("p-2 font-mono text-xs", (rec.rsi || 0) > 70 || (rec.rsi || 0) < 30 ? "text-[var(--bloomberg-orange)] font-bold" : "text-[var(--text-muted)]")}>
-                                        {(rec.rsi || 0).toFixed(0)}
-                                    </td>
-                                    <td className="p-2 font-mono text-xs text-[var(--text-muted)]">{rec.marketCap?.toFixed(1)}B</td>
-                                    <td className="p-2 font-mono text-xs text-[var(--text-muted)]">{rec.beta?.toFixed(2)}</td>
-                                    <td className="p-2">
-                                        <span className={cn(
-                                            "px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border",
-                                            rec.probability === 'High' ? "bg-[var(--terminal-green)]/20 text-[var(--terminal-green)] border-[var(--terminal-green)]/30" :
-                                                rec.probability === 'Medium' ? "bg-[var(--bloomberg-orange)]/20 text-[var(--bloomberg-orange)] border-[var(--bloomberg-orange)]/30" :
-                                                    "bg-[var(--text-muted)]/20 text-[var(--text-muted)] border-[var(--text-muted)]/30"
-                                        )}>
-                                            {rec.probability}
+
+                                    {/* Vol - Lighter Background */}
+                                    <td className="py-2 text-right">
+                                        <span className="inline-block px-1.5 py-0.5 rounded bg-bg-secondary text-text-primary font-medium text-[10px]">
+                                            {formattedVol}
                                         </span>
+                                    </td>
+
+                                    {/* Open */}
+                                    <td className="py-2 text-right text-text-secondary">
+                                        {openPrice ? openPrice.toFixed(2) : '-'}
+                                    </td>
+
+                                    {/* 10:20 Ref */}
+                                    <td className="py-2 text-right text-text-secondary">
+                                        {refPrice ? refPrice.toFixed(2) : '-'}
+                                    </td>
+
+                                    {/* Price RT */}
+                                    <td className="py-2 text-right text-text-primary font-bold">
+                                        {livePrice.toFixed(2)}
+                                    </td>
+
+                                    {/* % Chg 10:20 */}
+                                    <td className="py-2 text-right">
+                                        <span className={cn(
+                                            "inline-block w-16 text-right",
+                                            liveChange >= 0 ? "text-emerald-500" : "text-rose-500"
+                                        )}>
+                                            {liveChange >= 0 ? '+' : ''}{liveChange.toFixed(2)}%
+                                        </span>
+                                    </td>
+
+                                    {/* MVSO - Colored Background Box based on Threshold */}
+                                    {/* MVSO 10:20 */}
+                                    <td className="px-3 py-2 whitespace-nowrap">
+                                        <div className={cn(
+                                            "inline-block px-1.5 py-0.5 rounded font-bold text-[10px]",
+                                            mvso >= mvsoThreshold ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+                                        )}>
+                                            {mvso > 0 ? '+' : ''}{mvso.toFixed(2)}%
+                                        </div>
+                                    </td>
+
+                                    {/* Ref 11:20 */}
+                                    <td className="px-3 py-2 whitespace-nowrap text-right font-mono text-xs text-text-secondary">
+                                        {rec.refPrice1120 ? `$${rec.refPrice1120.toFixed(2)}` : '-'}
+                                    </td>
+
+                                    {/* MVSO 11:20 */}
+                                    <td className="px-3 py-2 whitespace-nowrap">
+                                        {(() => {
+                                            if (rec.refPrice1120 && rec.highPost1120) {
+                                                const mvso1120 = ((rec.highPost1120 - rec.refPrice1120) / rec.refPrice1120) * 100;
+                                                return (
+                                                    <div className={cn(
+                                                        "inline-block px-1.5 py-0.5 rounded font-bold text-[10px]",
+                                                        mvso1120 >= mvsoThreshold ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+                                                    )}>
+                                                        {mvso1120 > 0 ? '+' : ''}{mvso1120.toFixed(2)}%
+                                                    </div>
+                                                );
+                                            }
+                                            return <span className="text-text-secondary">-</span>;
+                                        })()}
+                                    </td>
+
+                                    {/* Ref 12:20 */}
+                                    <td className="px-3 py-2 whitespace-nowrap text-right font-mono text-xs text-text-secondary">
+                                        {rec.refPrice1220 ? `$${rec.refPrice1220.toFixed(2)}` : '-'}
+                                    </td>
+
+                                    {/* MVSO 12:20 */}
+                                    <td className="px-3 py-2 whitespace-nowrap">
+                                        {(() => {
+                                            if (rec.refPrice1220 && rec.highPost1220) {
+                                                const mvso1220 = ((rec.highPost1220 - rec.refPrice1220) / rec.refPrice1220) * 100;
+                                                return (
+                                                    <div className={cn(
+                                                        "inline-block px-1.5 py-0.5 rounded font-bold text-[10px]",
+                                                        mvso1220 >= mvsoThreshold ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+                                                    )}>
+                                                        {mvso1220 > 0 ? '+' : ''}{mvso1220.toFixed(2)}%
+                                                    </div>
+                                                );
+                                            }
+                                            return <span className="text-text-secondary">-</span>;
+                                        })()}
+                                    </td>
+
+                                    {/* Sector - Abbreviated & Centered */}
+                                    <td className="py-2 text-text-secondary truncate text-center" title={sector}>
+                                        {shortSector}
+                                    </td>
+
+                                    {/* Prob */}
+                                    <td className="py-2">
+                                        <div className="flex items-center gap-2 justify-center">
+                                            <span className={cn(
+                                                "text-[10px] font-bold",
+                                                prob >= 90 ? "text-emerald-500" :
+                                                    prob >= 80 ? "text-amber-500" : "text-text-secondary"
+                                            )}>
+                                                {prob}%
+                                            </span>
+                                            <div className="w-8 h-1 bg-bg-tertiary overflow-hidden rounded-full">
+                                                <div
+                                                    className={cn("h-full rounded-full",
+                                                        prob >= 90 ? "bg-emerald-500" :
+                                                            prob >= 80 ? "bg-amber-500" : "bg-rose-500"
+                                                    )}
+                                                    style={{ width: `${prob}% ` }}
+                                                />
+                                            </div>
+                                        </div>
                                     </td>
                                 </tr>
                             );
@@ -196,6 +498,33 @@ export function RecommendationsTable({ data, onSelect, selectedId }: Recommendat
                     </tbody>
                 </table>
             </div>
+
+            {/* Tag Popover */}
+            {tagPopover && (
+                <>
+                    <div className="fixed inset-0 z-40" onClick={() => setTagPopover(null)} />
+                    <div
+                        className="fixed z-50 bg-bg-secondary border border-border-primary rounded-lg shadow-xl p-2 grid grid-cols-3 gap-2 animate-in fade-in zoom-in-95 duration-200"
+                        style={{ top: tagPopover.y + 5, left: tagPopover.x }}
+                    >
+                        <button
+                            onClick={() => handleColorSelect(null)}
+                            className="w-6 h-6 rounded-full border border-text-secondary/50 flex items-center justify-center hover:bg-bg-tertiary"
+                            title="Clear"
+                        >
+                            <div className="w-3 h-0.5 bg-text-secondary rotate-45" />
+                        </button>
+                        {TAG_COLORS.map((color) => (
+                            <button
+                                key={color}
+                                onClick={() => handleColorSelect(color)}
+                                className="w-6 h-6 rounded-full border border-transparent hover:scale-110 transition-transform"
+                                style={{ backgroundColor: color }}
+                            />
+                        ))}
+                    </div>
+                </>
+            )}
         </div>
     );
 }

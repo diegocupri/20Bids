@@ -1,67 +1,114 @@
-import { useState, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { Sidebar } from './Sidebar';
 import { RecommendationsTable } from './RecommendationsTable';
-import { RecommendationDetail } from './RecommendationDetail';
 import { MarketContext } from './MarketContext';
-import type { Recommendation } from '../data/mockData';
-import { generateMockData } from '../data/mockData';
+import { SkeletonTable } from './SkeletonTable';
 
-import { useMarketSimulator } from '../hooks/useMarketSimulator';
+export function Dashboard() {
+    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+    const [calculatorData, setCalculatorData] = useState<{ ticker: string, price: number, sector: string } | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [recommendations, setRecommendations] = useState<any[]>([]);
+    const [mvsoThreshold, setMvsoThreshold] = useState<number>(0.5);
 
-interface DashboardProps {
-    selectedDate?: string;
-    searchQuery?: string;
-}
+    // Resizable Panel State
+    const [panelHeight, setPanelHeight] = useState(30); // Percentage
+    const isDragging = useRef(false);
+    const containerRef = useRef<HTMLDivElement>(null);
 
-export function Dashboard({ selectedDate = new Date().toISOString().split('T')[0], searchQuery = '' }: DashboardProps) {
-    const [selectedRec, setSelectedRec] = useState<Recommendation | null>(null);
+    const handleDateSelect = (date: Date) => {
+        setIsLoading(true);
+        setSelectedDate(date);
+        setTimeout(() => setIsLoading(false), 500);
+    };
 
-    // Initial static data generation
-    const initialData = useMemo(() => generateMockData(selectedDate), [selectedDate]);
+    const handleDataLoaded = useCallback((data: any[]) => {
+        setRecommendations(data);
+    }, []);
 
-    // Live simulation
-    const { indices, data: liveData } = useMarketSimulator(initialData);
+    const handleRowClick = (rec: any) => {
+        setCalculatorData({
+            ticker: rec.symbol,
+            price: rec.price || 0,
+            sector: rec.sector
+        });
+    };
 
-    // Filter logic applied to LIVE data
-    const filteredData = useMemo(() => {
-        return liveData.filter(rec =>
-            rec.ticker.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            rec.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            rec.sector.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-    }, [liveData, searchQuery]);
+    // Resize Handlers
+    const handleMouseDown = () => {
+        isDragging.current = true;
+        document.body.style.cursor = 'row-resize';
+        document.body.style.userSelect = 'none';
+    };
 
-    // Reset selection when date changes
-    useMemo(() => {
-        setSelectedRec(null);
-    }, [selectedDate]);
+    const handleMouseMove = useCallback((e: MouseEvent) => {
+        if (!isDragging.current || !containerRef.current) return;
 
+        const containerHeight = containerRef.current.clientHeight;
+        const newHeight = ((containerHeight - e.clientY) / containerHeight) * 100;
 
+        // Clamp height between 10% and 80%
+        if (newHeight >= 10 && newHeight <= 80) {
+            setPanelHeight(newHeight);
+        }
+    }, []);
+
+    const handleMouseUp = useCallback(() => {
+        isDragging.current = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    }, []);
+
+    useEffect(() => {
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [handleMouseMove, handleMouseUp]);
 
     return (
-        <div className="h-full flex flex-col gap-4 bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors duration-300">
-            {/* Top Section: Table + Detail (70% height) */}
-            <div className="flex-1 min-h-0 flex gap-4">
-                <div className={`transition-all duration-300 ease-in-out ${selectedRec ? 'w-[65%]' : 'w-full'}`}>
-                    <RecommendationsTable
-                        data={filteredData}
-                        onSelect={setSelectedRec}
-                        selectedId={selectedRec?.id}
-                    />
-                </div>
+        <div className="flex h-screen bg-bg-primary overflow-hidden" ref={containerRef}>
+            <Sidebar
+                selectedDate={selectedDate}
+                onDateSelect={handleDateSelect}
+                mvsoThreshold={mvsoThreshold}
+            />
 
-                {selectedRec && (
-                    <div className="w-[35%] min-w-[400px] animate-in slide-in-from-right-4 duration-300">
-                        <RecommendationDetail
-                            recommendation={selectedRec}
-                            onClose={() => setSelectedRec(null)}
+            <div className="flex-1 flex flex-col min-w-0">
+                <div className="flex-1 flex flex-col min-h-0">
+                    <div className="flex-1 flex flex-col min-w-0 border-r border-border-primary overflow-hidden">
+                        {isLoading ? (
+                            <SkeletonTable />
+                        ) : (
+                            <RecommendationsTable
+                                selectedDate={selectedDate}
+                                onRowClick={handleRowClick}
+                                onDataLoaded={handleDataLoaded}
+                                mvsoThreshold={mvsoThreshold}
+                                onMvsoThresholdChange={setMvsoThreshold}
+                            />
+                        )}
+
+                        {/* Resizable Handle */}
+                        <div
+                            className="h-1 bg-border-primary hover:bg-accent-primary cursor-row-resize transition-colors w-full"
+                            onMouseDown={handleMouseDown}
                         />
-                    </div>
-                )}
-            </div>
 
-            {/* Bottom Section: Market Context (30% height) */}
-            <div className="h-[30%] min-h-[250px]">
-                <MarketContext indices={indices} />
+                        {/* Bottom Panel */}
+                        <div style={{ height: `${panelHeight}%` }} className="border-t border-border-primary transition-none">
+                            <MarketContext
+                                recommendations={recommendations}
+                                selectedTicker={calculatorData?.ticker}
+                                selectedPrice={calculatorData?.price}
+                                selectedSector={calculatorData?.sector}
+                                selectedDate={selectedDate}
+                            />
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );
