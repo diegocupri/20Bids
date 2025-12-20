@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Upload, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { uploadRecommendations } from '../api/client';
 
 export function UploadPage() {
     const navigate = useNavigate();
@@ -35,14 +36,11 @@ export function UploadPage() {
                 formData.append('files', file);
             });
 
-            const response = await fetch('http://localhost:3001/api/recommendations/upload', {
-                method: 'POST',
-                body: formData
-            });
+            const data = await uploadRecommendations(formData);
+            const response = { ok: !data.error, json: async () => data }; // Mocking response object to match previous logic flow or adjusting logic.
+            // Actually, let's adjust the logic to match the new client function return.
 
-            const data = await response.json();
-
-            if (response.ok) {
+            if (!data.error) {
                 setResult(data);
                 setFiles([]);
                 // Reset file input

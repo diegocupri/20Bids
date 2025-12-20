@@ -50,3 +50,14 @@ export const fetchAnalysis = async () => {
     if (!response.ok) throw new Error('Failed to fetch analysis data');
     return response.json();
 };
+
+export const uploadRecommendations = async (formData: FormData) => {
+    const response = await fetch(`${API_URL}/recommendations/upload`, {
+        method: 'POST',
+        headers: {
+            'x-api-key': 'dev-api-key-change-in-production' // In a real app, this should be handled better, but keeping it simple for now as per current setup
+        },
+        body: formData
+    });
+    return response.json();
+};
