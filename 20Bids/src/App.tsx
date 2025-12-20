@@ -11,7 +11,7 @@ function App() {
         <Route path="/analysis" element={<AnalysisPage />} />
         <Route path="/upload" element={<UploadPage />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
