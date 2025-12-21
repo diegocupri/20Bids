@@ -122,6 +122,70 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
         }));
     };
 
+    const sortedData = [...recommendations]
+        .filter(rec => {
+            const update = prices[rec.symbol] || {};
+            const volume = update.volume || rec.volume;
+            const open = update.open || rec.open || 0;
+
+            if (minVolume > 0 && volume < minVolume) return false;
+            if (minOpenPrice > 0 && open < minOpenPrice) return false;
+
+            return true;
+        })
+        .sort((a, b) => {
+            const aUpdate = prices[a.symbol] || {};
+            const bUpdate = prices[b.symbol] || {};
+
+            let aValue: any = a[sortConfig.key];
+            let bValue: any = b[sortConfig.key];
+
+            // Handle dynamic fields
+            if (sortConfig.key === 'price') {
+                aValue = aUpdate.price || a.price;
+                bValue = bUpdate.price || b.price;
+            } else if (sortConfig.key === 'change') {
+                const aRef = aUpdate.refPrice1020 || a.refPrice1020;
+                const bRef = bUpdate.refPrice1020 || b.refPrice1020;
+                if (aRef) aValue = (((aUpdate.price || a.price) - aRef) / aRef) * 100;
+                else aValue = aUpdate.change || a.changePercent;
+
+                if (bRef) bValue = (((bUpdate.price || b.price) - bRef) / bRef) * 100;
+                else bValue = bUpdate.change || b.changePercent;
+            } else if (sortConfig.key === 'refPrice1020') {
+                aValue = aUpdate.refPrice1020 || a.refPrice1020 || 0;
+                bValue = bUpdate.refPrice1020 || b.refPrice1020 || 0;
+            } else if (sortConfig.key === 'volume') {
+                aValue = aUpdate.volume || a.volume;
+                bValue = bUpdate.volume || b.volume;
+            } else if (sortConfig.key === 'sector') {
+                aValue = aUpdate.sector || a.sector;
+                bValue = bUpdate.sector || b.sector;
+            } else if (sortConfig.key === 'open') {
+                aValue = aUpdate.open || a.open || 0;
+                bValue = bUpdate.open || b.open || 0;
+            } else if (sortConfig.key === 'mvso') {
+                const aRef = aUpdate.refPrice1020 || a.refPrice1020;
+                const aHigh = aUpdate.high || a.high || 0;
+                aValue = (aHigh && aRef) ? ((aHigh - aRef) / aRef) * 100 : 0;
+
+                const bRef = bUpdate.refPrice1020 || b.refPrice1020;
+                const bHigh = bUpdate.high || b.high || 0;
+                bValue = (bHigh && bRef) ? ((bHigh - bRef) / bRef) * 100 : 0;
+            }
+
+            if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+    const SortIcon = ({ column }: { column: SortKey }) => {
+        if (sortConfig.key !== column) return <ArrowUpDown className="w-3 h-3 text-border-primary ml-1 opacity-0 group-hover:opacity-50" />;
+        return sortConfig.direction === 'asc'
+            ? <ArrowUp className="w-3 h-3 text-accent-primary ml-1" />
+            : <ArrowDown className="w-3 h-3 text-accent-primary ml-1" />;
+    };
+
     return (
         <div className="flex flex-col h-full bg-bg-primary">
             {/* Header / Filters */}
