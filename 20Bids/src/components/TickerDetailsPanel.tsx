@@ -15,8 +15,8 @@ interface TickerDetailsPanelProps {
 // ... imports
 import { useState, useEffect } from 'react';
 import { fetchTickerNews } from '../api/client';
-import { X, TrendingUp, TrendingDown, DollarSign, Activity, BarChart2, Calendar, Newspaper, MessageCircle } from 'lucide-react';
-import { getProbabilityColor } from '../lib/colors';
+import { NewsTab } from './ticker-details/NewsTab';
+import { Newspaper } from 'lucide-react';
 
 // ... interface TickerDetailsPanelProps ...
 
@@ -124,13 +124,12 @@ export function TickerDetailsPanel({
                                         </tr>
                                         <tr>
                                             <td className="px-4 py-2 text-text-secondary font-medium">Probability</td>
-                                            <td className="px-4 py-2 text-right">
-                                                <div className={cn(
-                                                    "flex items-center gap-2 justify-end", // Added justify-end for right alignment
-                                                    getProbabilityColor(tickerDetails?.probabilityValue || 0)
-                                                )}>
-                                                    <span className="text-xl font-bold tabular-nums">{tickerDetails?.probabilityValue || 0}%</span>
-                                                </div>
+                                            <td className={cn(
+                                                "px-4 py-2 font-bold tabular-nums text-right",
+                                                (tickerDetails?.probabilityValue || 0) >= 90 ? "text-emerald-600" :
+                                                    (tickerDetails?.probabilityValue || 0) >= 80 ? "text-amber-600" : "text-text-primary"
+                                            )}>
+                                                {tickerDetails?.probabilityValue}%
                                             </td>
                                         </tr>
                                         <tr className="bg-bg-secondary/20">

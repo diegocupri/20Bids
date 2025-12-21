@@ -5,7 +5,6 @@ import { subDays, format } from 'date-fns';
 import { fetchRealTimePrices, fetchTickerDetails, fetchGroupedDaily, fetchDailyStats, getReferencePrice, fetchSectorPerformance, fetchMarketIndices, getIntradayStats, fetchTickerNews, fetchSocialSentiment } from './services/polygon';
 import { parse } from 'csv-parse/sync';
 import authRouter from './routes/auth';
-import notesRouter from './routes/notes';
 
 const app = express();
 const prisma = new PrismaClient();

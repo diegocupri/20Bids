@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
-import { getProbabilityColor, getProbabilityBg } from '../lib/colors';
 import { cn } from '../lib/utils';
 import { fetchRecommendations, fetchPrices, updateTag, fetchIndices } from '../api/client';
 
@@ -315,8 +314,9 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                     </div>
                 </div>
             </div>
-            {/* Table Container */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
+
+            {/* Table */}
+            <div className="flex-1 overflow-auto px-6 py-4">
                 <table className="w-full border-collapse text-sm table-fixed">
                     <thead className="sticky top-0 bg-bg-primary z-10">
                         <tr className="text-left text-text-secondary border-b border-border-primary/50 text-xs font-medium">
@@ -590,16 +590,18 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                         <div className="flex items-center gap-2 justify-center">
                                             <span className={cn(
                                                 "text-xs font-bold tabular-nums",
-                                                getProbabilityColor(prob)
+                                                prob >= 90 ? "text-emerald-600" :
+                                                    prob >= 80 ? "text-amber-600" : "text-text-secondary"
                                             )}>
                                                 {prob}%
                                             </span>
                                             <div className="w-10 h-1.5 bg-bg-tertiary overflow-hidden rounded-full">
                                                 <div
                                                     className={cn("h-full rounded-full transition-all duration-500",
-                                                        getProbabilityBg(prob)
+                                                        prob >= 90 ? "bg-emerald-500" :
+                                                            prob >= 80 ? "bg-amber-500" : "bg-rose-500"
                                                     )}
-                                                    style={{ width: `${prob}%` }}
+                                                    style={{ width: `${prob}% ` }}
                                                 />
                                             </div>
                                         </div>
@@ -609,7 +611,8 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                         })}
                     </tbody>
                 </table>
-            </div>
+            </div >
+
             {/* Tag Popover */}
             {
                 tagPopover && (
