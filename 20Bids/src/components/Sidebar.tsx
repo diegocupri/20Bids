@@ -1,4 +1,5 @@
-import { MoreHorizontal, Settings, LogOut, BarChart2, PieChart } from 'lucide-react';
+import { MoreHorizontal, Settings, LogOut, BarChart2, PieChart, Edit2 } from 'lucide-react';
+import { DailyNotePopup } from './DailyNotePopup';
 import { format, isWeekend } from 'date-fns';
 import { cn } from '../lib/utils';
 import { useState, useEffect } from 'react';
@@ -28,6 +29,12 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
     const [mvsoHistory, setMvsoHistory] = useState<Record<string, number[]>>({});
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [notePopup, setNotePopup] = useState<{ date: Date | null, anchor: DOMRect | null }>({ date: null, anchor: null });
+
+    const handleNoteClick = (date: Date, e: React.MouseEvent) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        setNotePopup({ date, anchor: rect });
+    };
 
     useEffect(() => {
         if (!isAnalysis) {
@@ -182,6 +189,15 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                                     </div>
                                     {stats && (
                                         <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleNoteClick(date, e);
+                                                }}
+                                                className="p-1 rounded-full text-text-secondary hover:text-accent-primary hover:bg-bg-secondary transition-colors"
+                                            >
+                                                <Edit2 className="w-3 h-3" />
+                                            </button>
                                             <span className={cn(
                                                 "text-xs font-bold tabular-nums",
                                                 stats.accuracy >= 80 ? "text-emerald-600" :
@@ -200,18 +216,13 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
 
             {/* User Profile Section */}
             <div className="p-6 border-t border-border-primary/50 space-y-4 bg-bg-primary">
-                {/* Theme Selector moved to Profile Modal - removing here if requested or keeping as shortcut? 
-                     User said: "La elección del tema de colores esté en los 3 puntitos de la derecha de la cuenta también" 
-                     So I should probably remove it from here to declutter, or keep it inside the menu. 
-                     The prompt says "The choice of theme colors is in the 3 dots ... also". 
-                     I'll keep it simple and move it fully to the menu/modal as per cleaner design.
-                 */}
-
+                {/* ... existing profile code ... */}
                 <div className="relative">
                     <button
                         onClick={() => setShowUserMenu(!showUserMenu)}
                         className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-bg-secondary transition-colors text-left border border-transparent hover:border-border-primary/50"
                     >
+                        {/* ... user avatar ... */}
                         <div className="w-8 h-8 rounded-full bg-accent-primary/10 flex items-center justify-center overflow-hidden ring-2 ring-white dark:ring-zinc-800">
                             {user?.avatarUrl ? (
                                 <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
@@ -258,6 +269,14 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
             </div>
 
             <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
+
+            {notePopup.date && notePopup.anchor && (
+                <DailyNotePopup
+                    date={notePopup.date}
+                    onClose={() => setNotePopup({ date: null, anchor: null })}
+                    anchorRect={notePopup.anchor}
+                />
+            )}
         </div>
     );
 }

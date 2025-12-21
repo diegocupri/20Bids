@@ -17,6 +17,7 @@ model User {
   createdAt DateTime @default(now())
   tags      Tag[]
   watchlist Watchlist[]
+  notes     DailyNote[]
 }
 
 model Recommendation {
@@ -71,4 +72,15 @@ model Watchlist {
   symbol    String
   
   @@unique([userId, symbol])
+}
+
+model DailyNote {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  date      String   // YYYY-MM-DD format for simplicity
+  content   String
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
 }
