@@ -316,7 +316,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
             </div>
 
             {/* Table */}
-            <div className="flex-1 overflow-auto px-6 py-4">
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
                 <table className="w-full border-collapse text-sm table-fixed">
                     <thead className="sticky top-0 bg-bg-primary z-10">
                         <tr className="text-left text-text-secondary border-b border-border-primary/50 text-xs font-medium">
