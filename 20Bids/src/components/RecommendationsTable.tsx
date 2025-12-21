@@ -372,7 +372,6 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                             const prob = rec.probabilityValue || 70;
 
                             return (
-                            return (
                                 <tr
                                     key={rec.symbol}
                                     onClick={() => onRowClick(rec)}
