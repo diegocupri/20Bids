@@ -4,12 +4,30 @@ import { RecommendationsTable } from './RecommendationsTable';
 import { MarketContext } from './MarketContext';
 import { SkeletonTable } from './SkeletonTable';
 
+import { fetchDates } from '../api/client';
+
 export function Dashboard() {
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
     const [calculatorData, setCalculatorData] = useState<{ ticker: string, price: number, sector: string } | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [recommendations, setRecommendations] = useState<any[]>([]);
     const [mvsoThreshold, setMvsoThreshold] = useState<number>(0.5);
+
+    // Initial Date Load
+    useEffect(() => {
+        const initDate = async () => {
+            try {
+                const dates = await fetchDates();
+                if (dates.length > 0) {
+                    // Dates are assumed sorted desc from backend
+                    setSelectedDate(dates[0]);
+                }
+            } catch (err) {
+                console.error("Failed to load dates for defaults", err);
+            }
+        };
+        initDate();
+    }, []);
 
     // Resizable Panel State
     const [panelHeight, setPanelHeight] = useState(30); // Percentage
