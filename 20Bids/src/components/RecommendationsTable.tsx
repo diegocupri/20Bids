@@ -32,13 +32,95 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
     const [tagPopover, setTagPopover] = useState<{ symbol: string, x: number, y: number } | null>(null);
     const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: 'asc' | 'desc' }>({ key: 'probabilityValue', direction: 'desc' });
     const [showExtraHours, setShowExtraHours] = useState(false);
+    const [minVolume, setMinVolume] = useState<number>(0);
+    const [minOpenPrice, setMinOpenPrice] = useState<number>(0);
 
     // Fetch Indices
     useEffect(() => {
-        // ... (existing code)
+        const loadIndices = async () => {
+            try {
+                const data = await fetchIndices();
+                setIndices(data);
+            } catch (error) {
+                console.error('Failed to load indices:', error);
+            }
+        };
+        loadIndices();
+        const interval = setInterval(loadIndices, 60000); // Poll every minute
+        return () => clearInterval(interval);
     }, []);
 
-    // ... (existing code for loading data, polling prices, handlers) ...
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const data = await fetchRecommendations(selectedDate);
+                setRecommendations(data);
+                onDataLoaded?.(data);
+            } catch (error) {
+                console.error('Failed to load recommendations:', error);
+            }
+        };
+        loadData();
+    }, [selectedDate, onDataLoaded]);
+
+    // Poll for real-time prices every 10 seconds (only if today)
+    useEffect(() => {
+        const isToday = new Date(selectedDate).toDateString() === new Date().toDateString();
+        if (!isToday) {
+            setPrices({}); // Clear live prices for past dates
+            return;
+        }
+
+        const pollPrices = async () => {
+            try {
+                const updates = await fetchPrices();
+                setPrices(prev => ({ ...prev, ...updates }));
+            } catch (error) {
+                console.error('Failed to poll prices:', error);
+            }
+        };
+
+        pollPrices(); // Initial poll
+        const interval = setInterval(pollPrices, 10000);
+        return () => clearInterval(interval);
+    }, [selectedDate]);
+
+    const handleTagClick = async (symbol: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        const rect = e.currentTarget.getBoundingClientRect();
+        setTagPopover({ symbol, x: rect.left, y: rect.bottom + 5 });
+    };
+
+    const handleColorSelect = async (color: string | null) => {
+        if (!tagPopover) return;
+
+        // Optimistic update
+        setRecommendations(prev => prev.map(r =>
+            r.symbol === tagPopover.symbol ? { ...r, userTag: color } : r
+        ));
+
+        try {
+            await updateTag(tagPopover.symbol, color);
+        } catch (error) {
+            console.error('Failed to update tag:', error);
+            // Revert on error
+            const data = await fetchRecommendations(selectedDate);
+            setRecommendations(data);
+        }
+        setTagPopover(null);
+    };
+
+    const handleTradingViewClick = (symbol: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        window.open(`https://www.tradingview.com/chart/?symbol=${symbol}`, '_blank');
+    };
+
+    const handleSort = (key: SortKey) => {
+        setSortConfig(current => ({
+            key,
+            direction: current.key === key && current.direction === 'desc' ? 'asc' : 'desc'
+        }));
+    };
 
     return (
         <div className="flex flex-col h-full bg-bg-primary">
@@ -64,7 +146,58 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                     </button>
 
                     {/* Market Indices */}
-                    {/* ... (rest of header) ... */}
+                    <div className="flex items-center gap-3 mr-4 border-r border-border-primary pr-4">
+                        {indices.map(idx => (
+                            <div key={idx.symbol} className="flex items-center gap-1.5 text-[10px] font-mono">
+                                <span className="font-bold text-text-secondary">{idx.symbol === 'VIXY' ? 'VIX' : idx.symbol}</span>
+                                <span className={cn(
+                                    "font-medium",
+                                    idx.change >= 0 ? "text-emerald-500" : "text-rose-500"
+                                )}>
+                                    {idx.price.toFixed(2)}
+                                    <span className="ml-1 opacity-75">
+                                        ({idx.change >= 0 ? '+' : ''}{idx.change.toFixed(2)}%)
+                                    </span>
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* MVSO Threshold Input */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-[10px] uppercase text-text-secondary font-medium">MVSO Thresh</label>
+                        <input
+                            type="number"
+                            step="0.1"
+                            value={mvsoThreshold}
+                            onChange={(e) => onMvsoThresholdChange(parseFloat(e.target.value) || 0)}
+                            className="w-16 bg-bg-primary border border-border-primary rounded px-2 py-1 text-xs text-text-primary focus:border-accent-primary outline-none text-right font-mono"
+                        />
+                    </div>
+
+                    {/* Min Volume Input */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-[10px] uppercase text-text-secondary font-medium">Min Vol</label>
+                        <input
+                            type="number"
+                            value={minVolume}
+                            onChange={(e) => setMinVolume(parseFloat(e.target.value) || 0)}
+                            placeholder="0"
+                            className="w-20 bg-bg-primary border border-border-primary rounded px-2 py-1 text-xs text-text-primary focus:border-accent-primary outline-none text-right font-mono"
+                        />
+                    </div>
+
+                    {/* Min Open Price Input */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-[10px] uppercase text-text-secondary font-medium">Min Open</label>
+                        <input
+                            type="number"
+                            value={minOpenPrice}
+                            onChange={(e) => setMinOpenPrice(parseFloat(e.target.value) || 0)}
+                            placeholder="0"
+                            className="w-16 bg-bg-primary border border-border-primary rounded px-2 py-1 text-xs text-text-primary focus:border-accent-primary outline-none text-right font-mono"
+                        />
+                    </div>
                 </div>
             </div>
 
