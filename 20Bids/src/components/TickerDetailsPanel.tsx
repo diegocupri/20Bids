@@ -18,7 +18,6 @@ export function TickerDetailsPanel({
     selectedTicker,
     selectedPrice,
     selectedSector,
-    selectedDate,
     isOpen,
     onClose
 }: TickerDetailsPanelProps) {
