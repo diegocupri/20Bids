@@ -50,15 +50,6 @@ export function TickerDetailsPanel({
     }, [selectedTicker, isOpen]);
 
     // ... existing useMemo logic ...
-    const sectorStats = useMemo(() => {
-        if (!selectedSector || !recommendations.length) return null;
-        const sectorRecs = recommendations.filter(r => r.sector === selectedSector);
-        if (sectorRecs.length === 0) return null;
-        const avgProb = sectorRecs.reduce((sum, r) => sum + (r.probabilityValue || 0), 0) / sectorRecs.length;
-        const avgVol = sectorRecs.reduce((sum, r) => sum + (r.volume || 0), 0) / sectorRecs.length;
-        return { count: sectorRecs.length, avgProb, avgVol };
-    }, [recommendations, selectedSector]);
-
     const tickerDetails = useMemo(() => {
         return recommendations.find(r => r.symbol === selectedTicker);
     }, [recommendations, selectedTicker]);

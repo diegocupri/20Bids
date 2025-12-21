@@ -84,8 +84,8 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
 
     return (
         <div className="w-72 bg-bg-primary border-r border-border-primary/50 flex flex-col h-full transition-colors duration-300 font-sans">
-            <div className="p-6">
-                <div className="flex items-center gap-3 mb-6 px-2">
+            <div className="p-4">
+                <div className="flex items-center gap-3 mb-4 px-2">
                     <div className="w-8 h-8 bg-accent-primary rounded-lg shadow-sm flex items-center justify-center">
                         <span className="text-white font-bold text-lg tracking-tighter">20</span>
                     </div>
@@ -93,7 +93,7 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                 </div>
 
                 {/* Performance Summary */}
-                <div className="mb-8">
+                <div className="mb-4">
                     <div className="flex items-center justify-between mb-2 px-1">
                         <span className="text-xs font-medium text-text-secondary">Avg Accuracy</span>
                         <div className={cn(
@@ -123,7 +123,7 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                 </div>
 
                 {/* Navigation */}
-                <div className="space-y-1 mb-8">
+                <div className="space-y-1 mb-4">
                     <button
                         onClick={() => navigate('/')}
                         className={cn(
@@ -153,12 +153,12 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
 
             {/* History List */}
             {!isAnalysis && (
-                <div className="flex-1 overflow-y-auto px-4 py-2">
-                    <div className="px-4 mb-3 text-xs font-semibold text-text-secondary uppercase tracking-wider sticky top-0 bg-bg-primary py-2 z-10">
+                <div className="flex-1 overflow-y-auto px-4 py-0">
+                    <div className="px-4 mb-2 text-xs font-semibold text-text-secondary uppercase tracking-wider sticky top-0 bg-bg-primary py-2 z-10 border-b border-border-primary/30">
                         History (30 Days)
                     </div>
                     <div className="space-y-1">
-                        {dates.map((date) => {
+                        {dates.filter(d => format(d, 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd')).map((date) => {
                             const stats = getAccuracy(date);
                             const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString();
                             return (
