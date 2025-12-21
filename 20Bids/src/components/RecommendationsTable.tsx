@@ -610,36 +610,34 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                     </tbody>
                 </table>
             </div>
-        </div>
-
-            {/* Tag Popover */ }
-    {
-        tagPopover && (
-            <>
-                <div className="fixed inset-0 z-40" onClick={() => setTagPopover(null)} />
-                <div
-                    className="fixed z-50 bg-bg-secondary border border-border-primary rounded-lg shadow-xl p-2 grid grid-cols-3 gap-2 animate-in fade-in zoom-in-95 duration-200"
-                    style={{ top: tagPopover.y + 5, left: tagPopover.x }}
-                >
-                    <button
-                        onClick={() => handleColorSelect(null)}
-                        className="w-6 h-6 rounded-full border border-text-secondary/50 flex items-center justify-center hover:bg-bg-tertiary"
-                        title="Clear"
-                    >
-                        <div className="w-3 h-0.5 bg-text-secondary rotate-45" />
-                    </button>
-                    {TAG_COLORS.map((color) => (
-                        <button
-                            key={color}
-                            onClick={() => handleColorSelect(color)}
-                            className="w-6 h-6 rounded-full border border-transparent hover:scale-110 transition-transform"
-                            style={{ backgroundColor: color }}
-                        />
-                    ))}
-                </div>
-            </>
-        )
-    }
+            {/* Tag Popover */}
+            {
+                tagPopover && (
+                    <>
+                        <div className="fixed inset-0 z-40" onClick={() => setTagPopover(null)} />
+                        <div
+                            className="fixed z-50 bg-bg-secondary border border-border-primary rounded-lg shadow-xl p-2 grid grid-cols-3 gap-2 animate-in fade-in zoom-in-95 duration-200"
+                            style={{ top: tagPopover.y + 5, left: tagPopover.x }}
+                        >
+                            <button
+                                onClick={() => handleColorSelect(null)}
+                                className="w-6 h-6 rounded-full border border-text-secondary/50 flex items-center justify-center hover:bg-bg-tertiary"
+                                title="Clear"
+                            >
+                                <div className="w-3 h-0.5 bg-text-secondary rotate-45" />
+                            </button>
+                            {TAG_COLORS.map((color) => (
+                                <button
+                                    key={color}
+                                    onClick={() => handleColorSelect(color)}
+                                    className="w-6 h-6 rounded-full border border-transparent hover:scale-110 transition-transform"
+                                    style={{ backgroundColor: color }}
+                                />
+                            ))}
+                        </div>
+                    </>
+                )
+            }
         </div >
     );
 }
