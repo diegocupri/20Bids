@@ -128,7 +128,9 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
             const volume = update.volume || rec.volume;
             const open = update.open || rec.open || 0;
 
-            if (minVolume > 0 && volume < minVolume) return false;
+            // Filter Logic: Treat minVolume input as Millions (e.g. 14 -> 14,000,000)
+            if (minVolume > 0 && volume < minVolume * 1000000) return false;
+
             if (minOpenPrice > 0 && open < minOpenPrice) return false;
 
             return true;
@@ -187,141 +189,142 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
     };
 
     return (
-        <div className="flex flex-col h-full bg-bg-primary">
+        <div className="flex flex-col h-full bg-bg-primary font-sans">
             {/* Header / Filters */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border-primary bg-bg-secondary/30">
-                <h2 className="text-sm font-bold text-text-primary tracking-wide uppercase flex items-center gap-2">
-                    <span className="text-accent-primary">Market</span> Opportunities
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border-primary/50 bg-bg-primary">
+                <h2 className="text-lg font-bold text-text-primary tracking-tight flex items-center gap-2">
+                    Market Opportunities
                 </h2>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-6">
                     {/* Toggle Extra Hours */}
                     <button
                         onClick={() => setShowExtraHours(!showExtraHours)}
                         className={cn(
-                            "flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium transition-colors border",
+                            "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border",
                             showExtraHours
-                                ? "bg-accent-primary/10 text-accent-primary border-accent-primary/20"
-                                : "bg-bg-primary text-text-secondary border-border-primary hover:text-text-primary"
+                                ? "bg-accent-primary/5 text-accent-primary border-accent-primary/20 shadow-sm"
+                                : "bg-bg-secondary text-text-secondary border-border-primary hover:text-text-primary hover:bg-bg-tertiary"
                         )}
-                        title={showExtraHours ? "Hide 11:20 & 12:20 Columns" : "Show 11:20 & 12:20 Columns"}
                     >
                         {showExtraHours ? 'Hide Extended' : 'Show Extended'}
                     </button>
 
                     {/* Market Indices */}
-                    <div className="flex items-center gap-3 mr-4 border-r border-border-primary pr-4">
+                    <div className="flex items-center gap-4 mr-6 border-r border-border-primary/50 pr-6 hidden md:flex">
                         {indices.map(idx => (
-                            <div key={idx.symbol} className="flex items-center gap-1.5 text-[10px] font-mono">
-                                <span className="font-bold text-text-secondary">{idx.symbol === 'VIXY' ? 'VIX' : idx.symbol}</span>
+                            <div key={idx.symbol} className="flex items-center gap-2 text-xs">
+                                <span className="font-bold text-text-primary">{idx.symbol === 'VIXY' ? 'VIX' : idx.symbol}</span>
                                 <span className={cn(
-                                    "font-medium",
-                                    idx.change >= 0 ? "text-emerald-500" : "text-rose-500"
+                                    "font-medium tabular-nums",
+                                    idx.change >= 0 ? "text-emerald-600" : "text-rose-600"
                                 )}>
                                     {idx.price.toFixed(2)}
-                                    <span className="ml-1 opacity-75">
-                                        ({idx.change >= 0 ? '+' : ''}{idx.change.toFixed(2)}%)
+                                    <span className="ml-1 opacity-60 text-[10px]">
+                                        {idx.change >= 0 ? '+' : ''}{idx.change.toFixed(2)}%
                                     </span>
                                 </span>
                             </div>
                         ))}
                     </div>
 
-                    {/* MVSO Threshold Input */}
-                    <div className="flex items-center gap-2">
-                        <label className="text-[10px] uppercase text-text-secondary font-medium">MVSO Thresh</label>
-                        <input
-                            type="number"
-                            step="0.1"
-                            value={mvsoThreshold}
-                            onChange={(e) => onMvsoThresholdChange(parseFloat(e.target.value) || 0)}
-                            className="w-16 bg-bg-primary border border-border-primary rounded px-2 py-1 text-xs text-text-primary focus:border-accent-primary outline-none text-right font-mono"
-                        />
-                    </div>
+                    <div className="flex items-center gap-4">
+                        {/* MVSO Threshold Input */}
+                        <div className="flex items-center gap-2">
+                            <label className="text-xs text-text-secondary font-medium">MVSO</label>
+                            <input
+                                type="number"
+                                step="0.1"
+                                value={mvsoThreshold}
+                                onChange={(e) => onMvsoThresholdChange(parseFloat(e.target.value) || 0)}
+                                className="w-16 bg-bg-secondary border border-border-primary hover:border-text-secondary/30 focus:border-accent-primary rounded-lg px-2.5 py-1.5 text-sm text-text-primary outline-none text-right transition-colors"
+                            />
+                        </div>
 
-                    {/* Min Volume Input */}
-                    <div className="flex items-center gap-2">
-                        <label className="text-[10px] uppercase text-text-secondary font-medium">Min Vol</label>
-                        <input
-                            type="number"
-                            value={minVolume}
-                            onChange={(e) => setMinVolume(parseFloat(e.target.value) || 0)}
-                            placeholder="0"
-                            className="w-20 bg-bg-primary border border-border-primary rounded px-2 py-1 text-xs text-text-primary focus:border-accent-primary outline-none text-right font-mono"
-                        />
-                    </div>
+                        {/* Min Volume Input */}
+                        <div className="flex items-center gap-2">
+                            <label className="text-xs text-text-secondary font-medium">Min Vol (M)</label>
+                            <input
+                                type="number"
+                                value={minVolume}
+                                onChange={(e) => setMinVolume(parseFloat(e.target.value) || 0)}
+                                placeholder="0"
+                                className="w-16 bg-bg-secondary border border-border-primary hover:border-text-secondary/30 focus:border-accent-primary rounded-lg px-2.5 py-1.5 text-sm text-text-primary outline-none text-right transition-colors"
+                            />
+                        </div>
 
-                    {/* Min Open Price Input */}
-                    <div className="flex items-center gap-2">
-                        <label className="text-[10px] uppercase text-text-secondary font-medium">Min Open</label>
-                        <input
-                            type="number"
-                            value={minOpenPrice}
-                            onChange={(e) => setMinOpenPrice(parseFloat(e.target.value) || 0)}
-                            placeholder="0"
-                            className="w-16 bg-bg-primary border border-border-primary rounded px-2 py-1 text-xs text-text-primary focus:border-accent-primary outline-none text-right font-mono"
-                        />
+                        {/* Min Open Price Input */}
+                        <div className="flex items-center gap-2">
+                            <label className="text-xs text-text-secondary font-medium">Open $</label>
+                            <input
+                                type="number"
+                                value={minOpenPrice}
+                                onChange={(e) => setMinOpenPrice(parseFloat(e.target.value) || 0)}
+                                placeholder="0"
+                                className="w-16 bg-bg-secondary border border-border-primary hover:border-text-secondary/30 focus:border-accent-primary rounded-lg px-2.5 py-1.5 text-sm text-text-primary outline-none text-right transition-colors"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Table */}
-            <div className="flex-1 overflow-auto">
-                <table className="w-full border-collapse text-xs font-mono table-fixed">
-                    <thead className="sticky top-0 bg-bg-primary z-10 shadow-sm">
-                        <tr className="text-left text-accent-secondary border-b border-border-primary uppercase tracking-wider text-[10px]">
-                            <th className="py-2 pl-3 w-[4%]"></th> {/* Tag Column */}
+            <div className="flex-1 overflow-auto px-6 py-4">
+                <table className="w-full border-collapse text-sm table-fixed">
+                    <thead className="sticky top-0 bg-bg-primary z-10">
+                        <tr className="text-left text-text-secondary border-b border-border-primary/50 text-xs font-medium">
+                            <th className="py-3 pl-4 w-[4%]"></th> {/* Tag Column */}
 
-                            <th className="py-2 font-medium cursor-pointer hover:text-text-primary w-[12%]" onClick={() => handleSort('symbol')}>
+                            <th className="py-3 font-medium cursor-pointer hover:text-text-primary transition-colors w-[12%]" onClick={() => handleSort('symbol')}>
                                 <div className="flex items-center gap-1">Ticker <SortIcon column="symbol" /></div>
                             </th>
 
-                            <th className="py-2 font-medium text-right cursor-pointer hover:text-text-primary w-[8%]" onClick={() => handleSort('volume')}>
+                            <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('volume')}>
                                 <div className="flex items-center justify-end gap-1">Vol <SortIcon column="volume" /></div>
                             </th>
 
-                            <th className="py-2 font-medium text-right cursor-pointer hover:text-text-primary w-[8%]" onClick={() => handleSort('open')}>
+                            <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('open')}>
                                 <div className="flex items-center justify-end gap-1">Open <SortIcon column="open" /></div>
                             </th>
 
-                            <th className="py-2 font-medium text-right cursor-pointer hover:text-text-primary w-[8%]" onClick={() => handleSort('refPrice1020')}>
+                            <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('refPrice1020')}>
                                 <div className="flex items-center justify-end gap-1">10:20 Ref <SortIcon column="refPrice1020" /></div>
                             </th>
 
-                            <th className="py-2 font-medium text-right cursor-pointer hover:text-text-primary w-[8%]" onClick={() => handleSort('price')}>
-                                <div className="flex items-center justify-end gap-1">Price RT <SortIcon column="price" /></div>
+                            <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('price')}>
+                                <div className="flex items-center justify-end gap-1">Price <SortIcon column="price" /></div>
                             </th>
 
-                            <th className="py-2 font-medium text-right cursor-pointer hover:text-text-primary w-[8%]" onClick={() => handleSort('change')}>
+                            <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('change')}>
                                 <div className="flex items-center justify-end gap-1">% Chg <SortIcon column="change" /></div>
                             </th>
 
-                            <th className="py-2 font-medium text-center cursor-pointer hover:text-text-primary w-[8%]" onClick={() => handleSort('mvso')}>
+                            <th className="py-3 font-medium text-center cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('mvso')}>
                                 <div className="flex items-center justify-center gap-1">MVSO <SortIcon column="mvso" /></div>
                             </th>
 
                             {showExtraHours && (
                                 <>
-                                    <th className="py-2 font-medium text-right w-[8%]">
+                                    <th className="py-3 font-medium text-right w-[8%] text-text-secondary/70">
                                         <div className="flex items-center justify-end gap-1">Ref 11:20</div>
                                     </th>
-                                    <th className="py-2 font-medium text-center w-[8%]">
+                                    <th className="py-3 font-medium text-center w-[8%] text-text-secondary/70">
                                         <div className="flex items-center justify-center gap-1">MVSO 11:20</div>
                                     </th>
-                                    <th className="py-2 font-medium text-right w-[8%]">
+                                    <th className="py-3 font-medium text-right w-[8%] text-text-secondary/70">
                                         <div className="flex items-center justify-end gap-1">Ref 12:20</div>
                                     </th>
-                                    <th className="py-2 font-medium text-center w-[8%]">
+                                    <th className="py-3 font-medium text-center w-[8%] text-text-secondary/70">
                                         <div className="flex items-center justify-center gap-1">MVSO 12:20</div>
                                     </th>
                                 </>
                             )}
 
-                            <th className="py-2 font-medium text-center cursor-pointer hover:text-text-primary w-[10%]" onClick={() => handleSort('sector')}>
+                            <th className="py-3 font-medium text-center cursor-pointer hover:text-text-primary transition-colors w-[10%]" onClick={() => handleSort('sector')}>
                                 <div className="flex items-center justify-center gap-1">Sector <SortIcon column="sector" /></div>
                             </th>
 
-                            <th className="py-2 font-medium text-center cursor-pointer hover:text-text-primary w-[8%]" onClick={() => handleSort('probabilityValue')}>
+                            <th className="py-3 font-medium text-center cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('probabilityValue')}>
                                 <div className="flex items-center justify-center gap-1">Prob <SortIcon column="probabilityValue" /></div>
                             </th>
                         </tr>
@@ -369,61 +372,69 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                             const prob = rec.probabilityValue || 70;
 
                             return (
+                            return (
                                 <tr
                                     key={rec.symbol}
                                     onClick={() => onRowClick(rec)}
-                                    className="border-b border-border-primary/30 hover:bg-accent-primary/10 transition-colors cursor-pointer group"
+                                    className="border-b border-border-primary/40 hover:bg-bg-secondary/80 transition-all duration-200 cursor-pointer group"
                                 >
-                                    <td className="py-2 pl-3">
+                                    <td className="py-3 pl-4">
                                         <button
                                             onClick={(e) => handleTagClick(rec.symbol, e)}
-                                            className="w-3 h-3 rounded-full border border-border-primary flex items-center justify-center hover:border-text-primary transition-colors"
+                                            className="w-4 h-4 rounded-full border-2 border-border-primary flex items-center justify-center hover:border-text-primary transition-colors"
                                             style={{ backgroundColor: rec.userTag || 'transparent', borderColor: rec.userTag ? 'transparent' : undefined }}
                                         >
-                                            {!rec.userTag && <div className="w-0.5 h-0.5 rounded-full bg-text-secondary opacity-0 group-hover:opacity-50" />}
+                                            {!rec.userTag && <div className="w-1 h-1 rounded-full bg-text-secondary opacity-0 group-hover:opacity-50" />}
                                         </button>
                                     </td>
-                                    <td className="py-2">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-bold text-accent-primary">{rec.symbol}</span>
-                                            <button
-                                                onClick={(e) => handleTradingViewClick(rec.symbol, e)}
-                                                className="text-text-secondary hover:text-accent-primary transition-colors opacity-0 group-hover:opacity-100"
-                                                title="Open in TradingView"
-                                            >
-                                                <ExternalLink className="w-3 h-3" />
-                                            </button>
-                                            <span className="text-text-secondary truncate max-w-[80px] hidden xl:block text-[10px]">{rec.name}</span>
+                                    <td className="py-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-bg-secondary flex items-center justify-center text-xs font-bold text-text-primary">
+                                                {rec.symbol[0]}
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-text-primary">{rec.symbol}</span>
+                                                    <button
+                                                        onClick={(e) => handleTradingViewClick(rec.symbol, e)}
+                                                        className="text-text-secondary hover:text-accent-primary transition-colors opacity-0 group-hover:opacity-100"
+                                                        title="Open in TradingView"
+                                                    >
+                                                        <ExternalLink className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                                <span className="text-text-secondary truncate max-w-[120px] text-xs">{rec.name}</span>
+                                            </div>
                                         </div>
                                     </td>
 
-                                    {/* Vol - Lighter Background */}
-                                    <td className="py-2 text-right">
-                                        <span className="inline-block px-1.5 py-0.5 rounded bg-bg-secondary text-text-primary font-medium text-[10px]">
+                                    {/* Vol */}
+                                    <td className="py-3 text-right">
+                                        <span className="font-medium text-text-secondary text-sm tabular-nums">
                                             {formattedVol}
                                         </span>
                                     </td>
 
                                     {/* Open */}
-                                    <td className="py-2 text-right text-text-secondary">
+                                    <td className="py-3 text-right text-text-secondary text-sm tabular-nums">
                                         {openPrice ? openPrice.toFixed(2) : '-'}
                                     </td>
 
                                     {/* 10:20 Ref */}
-                                    <td className="py-2 text-right text-text-secondary">
+                                    <td className="py-3 text-right text-text-secondary text-sm tabular-nums">
                                         {refPrice ? refPrice.toFixed(2) : '-'}
                                     </td>
 
                                     {/* Price RT */}
-                                    <td className="py-2 text-right text-text-primary font-bold">
+                                    <td className="py-3 text-right text-text-primary font-bold text-sm tabular-nums">
                                         {livePrice.toFixed(2)}
                                     </td>
 
                                     {/* % Chg 10:20 */}
-                                    <td className="py-2 text-right">
+                                    <td className="py-3 text-right">
                                         <span className={cn(
-                                            "inline-block w-16 text-right",
-                                            liveChange >= 0 ? "text-emerald-500" : "text-rose-500"
+                                            "inline-block font-medium text-sm tabular-nums",
+                                            liveChange >= 0 ? "text-emerald-600" : "text-rose-600"
                                         )}>
                                             {liveChange >= 0 ? '+' : ''}{liveChange.toFixed(2)}%
                                         </span>
@@ -431,10 +442,10 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
 
                                     {/* MVSO - Colored Background Box based on Threshold */}
                                     {/* MVSO 10:20 */}
-                                    <td className="px-3 py-2 whitespace-nowrap">
+                                    <td className="px-3 py-3 whitespace-nowrap text-center">
                                         <div className={cn(
-                                            "inline-block px-1.5 py-0.5 rounded font-bold text-[10px]",
-                                            mvso >= mvsoThreshold ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+                                            "inline-block px-2.5 py-1 rounded-md font-bold text-xs tabular-nums",
+                                            mvso >= mvsoThreshold ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
                                         )}>
                                             {mvso > 0 ? '+' : ''}{mvso.toFixed(2)}%
                                         </div>
@@ -443,71 +454,73 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                     {showExtraHours && (
                                         <>
                                             {/* Ref 11:20 */}
-                                            <td className="px-3 py-2 whitespace-nowrap text-right font-mono text-xs text-text-secondary">
+                                            <td className="px-3 py-3 whitespace-nowrap text-right text-sm text-text-secondary/70 tabular-nums">
                                                 {rec.refPrice1120 ? `$${rec.refPrice1120.toFixed(2)}` : '-'}
                                             </td>
 
                                             {/* MVSO 11:20 */}
-                                            <td className="px-3 py-2 whitespace-nowrap">
+                                            <td className="px-3 py-3 whitespace-nowrap text-center">
                                                 {(() => {
                                                     if (rec.refPrice1120 && rec.highPost1120) {
                                                         const mvso1120 = ((rec.highPost1120 - rec.refPrice1120) / rec.refPrice1120) * 100;
                                                         return (
                                                             <div className={cn(
-                                                                "inline-block px-1.5 py-0.5 rounded font-bold text-[10px]",
-                                                                mvso1120 >= mvsoThreshold ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+                                                                "inline-block px-2 py-0.5 rounded text-xs font-medium tabular-nums",
+                                                                mvso1120 >= mvsoThreshold ? "text-emerald-600 bg-emerald-500/5" : "text-rose-600 bg-rose-500/5"
                                                             )}>
                                                                 {mvso1120 > 0 ? '+' : ''}{mvso1120.toFixed(2)}%
                                                             </div>
                                                         );
                                                     }
-                                                    return <span className="text-text-secondary">-</span>;
+                                                    return <span className="text-text-secondary/50">-</span>;
                                                 })()}
                                             </td>
 
                                             {/* Ref 12:20 */}
-                                            <td className="px-3 py-2 whitespace-nowrap text-right font-mono text-xs text-text-secondary">
+                                            <td className="px-3 py-3 whitespace-nowrap text-right text-sm text-text-secondary/70 tabular-nums">
                                                 {rec.refPrice1220 ? `$${rec.refPrice1220.toFixed(2)}` : '-'}
                                             </td>
 
                                             {/* MVSO 12:20 */}
-                                            <td className="px-3 py-2 whitespace-nowrap">
+                                            <td className="px-3 py-3 whitespace-nowrap text-center">
                                                 {(() => {
                                                     if (rec.refPrice1220 && rec.highPost1220) {
                                                         const mvso1220 = ((rec.highPost1220 - rec.refPrice1220) / rec.refPrice1220) * 100;
                                                         return (
                                                             <div className={cn(
-                                                                "inline-block px-1.5 py-0.5 rounded font-bold text-[10px]",
-                                                                mvso1220 >= mvsoThreshold ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+                                                                "inline-block px-2 py-0.5 rounded text-xs font-medium tabular-nums",
+                                                                mvso1220 >= mvsoThreshold ? "text-emerald-600 bg-emerald-500/5" : "text-rose-600 bg-rose-500/5"
                                                             )}>
                                                                 {mvso1220 > 0 ? '+' : ''}{mvso1220.toFixed(2)}%
                                                             </div>
                                                         );
                                                     }
-                                                    return <span className="text-text-secondary">-</span>;
+                                                    return <span className="text-text-secondary/50">-</span>;
                                                 })()}
                                             </td>
                                         </>
                                     )}
 
                                     {/* Sector - Abbreviated & Centered */}
-                                    <td className="py-2 text-text-secondary truncate text-center" title={sector}>
-                                        {shortSector}
+                                    <td className="py-3 text-text-secondary truncate text-center text-xs" title={sector}>
+                                        <span className="px-2 py-1 rounded-full bg-bg-tertiary/50 border border-border-primary/50">
+                                            {shortSector}
+                                        </span>
                                     </td>
 
                                     {/* Prob */}
-                                    <td className="py-2">
+                                    <td className="py-3">
                                         <div className="flex items-center gap-2 justify-center">
                                             <span className={cn(
-                                                "text-[10px] font-bold",
-                                                prob >= 90 ? "text-emerald-500" :
-                                                    prob >= 80 ? "text-amber-500" : "text-text-secondary"
+                                                "text-xs font-bold tabular-nums",
+                                                prob >= 90 ? "text-emerald-600" :
+                                                    prob >= 80 ? "text-amber-600" : "text-text-secondary"
                                             )}>
                                                 {prob}%
                                             </span>
-                                            <div className="w-8 h-1 bg-bg-tertiary overflow-hidden rounded-full">
+                                            <div className="w-10 h-1.5 bg-bg-tertiary overflow-hidden rounded-full">
                                                 <div
-                                                    className={cn("h-full rounded-full",
+                                                    className={cn("h-full rounded-full transition-all duration-500",
                                                         prob >= 90 ? "bg-emerald-500" :
                                                             prob >= 80 ? "bg-amber-500" : "bg-rose-500"
                                                     )}

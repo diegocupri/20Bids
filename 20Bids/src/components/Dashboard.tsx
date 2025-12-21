@@ -11,7 +11,10 @@ export function Dashboard() {
     const [calculatorData, setCalculatorData] = useState<{ ticker: string, price: number, sector: string } | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [recommendations, setRecommendations] = useState<any[]>([]);
-    const [mvsoThreshold, setMvsoThreshold] = useState<number>(0.5);
+    const [mvsoThreshold, setMvsoThreshold] = useState<number>(() => {
+        const saved = localStorage.getItem('mvsoThreshold');
+        return saved ? parseFloat(saved) : 0.5;
+    });
 
     // Initial Date Load
     useEffect(() => {
