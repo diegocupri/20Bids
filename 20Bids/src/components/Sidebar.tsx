@@ -120,31 +120,28 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                     </button>
                 </div>
 
-                {/* Performance Summary Widget */}
-                <div className="bg-bg-secondary/50 rounded-2xl p-4 space-y-4 border border-border-primary/50">
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                            Avg Accuracy
-                        </span>
+                {/* Performance Summary Widget (Compact) */}
+                <div className="mb-6">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-text-secondary">Avg Accuracy</span>
                         <div className={cn(
-                            "text-xl font-bold tracking-tight tabular-nums",
+                            "text-sm font-bold",
                             currentPeriodValue >= 80 ? "text-emerald-600" :
                                 currentPeriodValue >= 50 ? "text-amber-600" : "text-rose-600"
                         )}>
                             {currentPeriodValue}%
                         </div>
                     </div>
-
-                    <div className="flex bg-bg-primary rounded-lg p-1 border border-border-primary/50">
+                    <div className="flex gap-1">
                         {periods.map((p) => (
                             <button
                                 key={p}
                                 onClick={() => setSelectedPeriod(p)}
                                 className={cn(
-                                    "flex-1 text-[10px] font-medium py-1 rounded-md transition-all duration-200",
+                                    "flex-1 text-[9px] font-medium py-1 rounded-md transition-all",
                                     selectedPeriod === p
-                                        ? "bg-white dark:bg-zinc-800 text-text-primary shadow-sm border border-border-primary/50"
-                                        : "text-text-secondary hover:text-text-primary hover:bg-bg-secondary/50"
+                                        ? "bg-bg-secondary text-text-primary border border-border-primary/50"
+                                        : "text-text-secondary/60 hover:text-text-primary hover:bg-bg-secondary/30"
                                 )}
                             >
                                 {p}
