@@ -216,15 +216,17 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
 
     return (
         <div className="flex flex-col h-full bg-bg-primary font-sans relative">
-            {/* Launch Button Floating */}
+            {/* Launch Button Floating - Compact */}
             {selectedSymbols.size > 0 && (
-                <div className="absolute bottom-8 right-8 z-50 animate-in slide-in-from-bottom-4 duration-300">
+                <div className="absolute bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
                     <button
                         onClick={handleLaunchGraphs}
-                        className="bg-accent-primary text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl hover:bg-accent-primary/90 transition-all font-bold flex items-center gap-2"
+                        className="flex items-center gap-2 pl-4 pr-2 py-2 bg-text-primary text-bg-primary rounded-full shadow-lg hover:scale-105 transition-all font-bold text-xs tracking-tight group"
                     >
-                        <ExternalLink className="w-4 h-4" />
-                        Launch {selectedSymbols.size} Graphs
+                        <span>Launch {selectedSymbols.size} Chart{selectedSymbols.size !== 1 ? 's' : ''}</span>
+                        <div className="w-6 h-6 rounded-full bg-bg-primary/20 flex items-center justify-center group-hover:bg-accent-primary group-hover:text-white transition-colors">
+                            <ExternalLink className="w-3 h-3" />
+                        </div>
                     </button>
                 </div>
             )}
@@ -240,10 +242,10 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                     <button
                         onClick={() => setShowExtraHours(!showExtraHours)}
                         className={cn(
-                            "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border",
+                            "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 border",
                             showExtraHours
-                                ? "bg-accent-primary/5 text-accent-primary border-accent-primary/20 shadow-sm"
-                                : "bg-bg-secondary text-text-secondary border-border-primary hover:text-text-primary hover:bg-bg-tertiary"
+                                ? "bg-accent-primary text-white border-accent-primary shadow-sm"
+                                : "bg-bg-secondary text-text-secondary border-transparent hover:text-text-primary hover:bg-bg-tertiary"
                         )}
                     >
                         {showExtraHours ? 'Hide Extended' : 'Show Extended'}
@@ -269,39 +271,45 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
 
                     <div className="flex items-center gap-4">
                         {/* MVSO Threshold Input */}
-                        <div className="flex items-center gap-2">
-                            <label className="text-xs text-text-secondary font-medium">MVSO</label>
-                            <input
-                                type="number"
-                                step="0.1"
-                                value={mvsoThreshold}
-                                onChange={(e) => onMvsoThresholdChange(parseFloat(e.target.value) || 0)}
-                                className="w-16 bg-bg-secondary border border-border-primary hover:border-text-secondary/30 focus:border-accent-primary rounded-full px-3 py-1.5 text-xs font-medium text-text-primary outline-none text-center transition-all shadow-sm"
-                            />
+                        <div className="flex items-center gap-2 group">
+                            <div className="flex items-center bg-bg-secondary rounded-lg px-2 py-1 transition-all group-hover:bg-bg-tertiary">
+                                <label className="text-[10px] font-bold text-text-primary mr-2">MVSO</label>
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    value={mvsoThreshold}
+                                    onChange={(e) => onMvsoThresholdChange(parseFloat(e.target.value) || 0)}
+                                    className="w-12 bg-transparent text-xs font-bold text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
+                                />
+                            </div>
                         </div>
 
                         {/* Min Volume Input */}
-                        <div className="flex items-center gap-2">
-                            <label className="text-xs text-text-secondary font-medium">Min Vol (M)</label>
-                            <input
-                                type="number"
-                                value={minVolume}
-                                onChange={(e) => setMinVolume(parseFloat(e.target.value) || 0)}
-                                placeholder="0"
-                                className="w-16 bg-bg-secondary border border-border-primary hover:border-text-secondary/30 focus:border-accent-primary rounded-full px-3 py-1.5 text-xs font-medium text-text-primary outline-none text-center transition-all shadow-sm"
-                            />
+                        <div className="flex items-center gap-2 group">
+                            <div className="flex items-center bg-bg-secondary rounded-lg px-2 py-1 transition-all group-hover:bg-bg-tertiary">
+                                <label className="text-[10px] font-bold text-text-primary mr-2">VOL (M)</label>
+                                <input
+                                    type="number"
+                                    value={minVolume}
+                                    onChange={(e) => setMinVolume(parseFloat(e.target.value) || 0)}
+                                    placeholder="0"
+                                    className="w-12 bg-transparent text-xs font-bold text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
+                                />
+                            </div>
                         </div>
 
                         {/* Min Open Price Input */}
-                        <div className="flex items-center gap-2">
-                            <label className="text-xs text-text-secondary font-medium">Open $</label>
-                            <input
-                                type="number"
-                                value={minOpenPrice}
-                                onChange={(e) => setMinOpenPrice(parseFloat(e.target.value) || 0)}
-                                placeholder="0"
-                                className="w-16 bg-bg-secondary border border-border-primary hover:border-text-secondary/30 focus:border-accent-primary rounded-full px-3 py-1.5 text-xs font-medium text-text-primary outline-none text-center transition-all shadow-sm"
-                            />
+                        <div className="flex items-center gap-2 group">
+                            <div className="flex items-center bg-bg-secondary rounded-lg px-2 py-1 transition-all group-hover:bg-bg-tertiary">
+                                <label className="text-[10px] font-bold text-text-primary mr-2">OPEN $</label>
+                                <input
+                                    type="number"
+                                    value={minOpenPrice}
+                                    onChange={(e) => setMinOpenPrice(parseFloat(e.target.value) || 0)}
+                                    placeholder="0"
+                                    className="w-12 bg-transparent text-xs font-bold text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>

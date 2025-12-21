@@ -85,11 +85,41 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
     return (
         <div className="w-72 bg-bg-primary border-r border-border-primary/50 flex flex-col h-full transition-colors duration-300 font-sans">
             <div className="p-6">
-                <div className="flex items-center gap-3 mb-8 px-2">
+                <div className="flex items-center gap-3 mb-6 px-2">
                     <div className="w-8 h-8 bg-accent-primary rounded-lg shadow-sm flex items-center justify-center">
                         <span className="text-white font-bold text-lg tracking-tighter">20</span>
                     </div>
                     <span className="text-xl font-bold text-text-primary tracking-tight">Bids</span>
+                </div>
+
+                {/* Performance Summary Widget (Compact - Moved to Top) */}
+                <div className="mb-8">
+                    <div className="flex items-center justify-between mb-2 px-1">
+                        <span className="text-xs font-medium text-text-secondary">Avg Accuracy</span>
+                        <div className={cn(
+                            "text-sm font-bold",
+                            currentPeriodValue >= 80 ? "text-emerald-600" :
+                                currentPeriodValue >= 50 ? "text-amber-600" : "text-rose-600"
+                        )}>
+                            {currentPeriodValue}%
+                        </div>
+                    </div>
+                    <div className="flex gap-1">
+                        {periods.map((p) => (
+                            <button
+                                key={p}
+                                onClick={() => setSelectedPeriod(p)}
+                                className={cn(
+                                    "flex-1 text-[9px] font-medium py-1 rounded-md transition-all",
+                                    selectedPeriod === p
+                                        ? "bg-bg-secondary text-text-primary border border-border-primary/50 shadow-sm"
+                                        : "text-text-secondary/60 hover:text-text-primary hover:bg-bg-secondary/30"
+                                )}
+                            >
+                                {p}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Navigation */}
@@ -118,36 +148,6 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                         <PieChart className="w-4 h-4" />
                         Analysis
                     </button>
-                </div>
-
-                {/* Performance Summary Widget (Compact) */}
-                <div className="mb-6">
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-medium text-text-secondary">Avg Accuracy</span>
-                        <div className={cn(
-                            "text-sm font-bold",
-                            currentPeriodValue >= 80 ? "text-emerald-600" :
-                                currentPeriodValue >= 50 ? "text-amber-600" : "text-rose-600"
-                        )}>
-                            {currentPeriodValue}%
-                        </div>
-                    </div>
-                    <div className="flex gap-1">
-                        {periods.map((p) => (
-                            <button
-                                key={p}
-                                onClick={() => setSelectedPeriod(p)}
-                                className={cn(
-                                    "flex-1 text-[9px] font-medium py-1 rounded-md transition-all",
-                                    selectedPeriod === p
-                                        ? "bg-bg-secondary text-text-primary border border-border-primary/50"
-                                        : "text-text-secondary/60 hover:text-text-primary hover:bg-bg-secondary/30"
-                                )}
-                            >
-                                {p}
-                            </button>
-                        ))}
-                    </div>
                 </div>
             </div>
 
