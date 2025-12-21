@@ -388,12 +388,24 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                     </td>
                                     <td className="py-3">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-bg-secondary flex items-center justify-center text-xs font-bold text-text-primary">
-                                                {rec.symbol[0]}
+                                            <div className="w-8 h-8 rounded-full bg-white dark:bg-zinc-800 p-0.5 shadow-sm border border-border-primary/50 flex items-center justify-center overflow-hidden shrink-0">
+                                                <img
+                                                    src={`https://financialmodelingprep.com/image-stock/${rec.symbol}.png`}
+                                                    alt={rec.symbol}
+                                                    className="w-full h-full object-contain rounded-full"
+                                                    onError={(e) => {
+                                                        e.currentTarget.style.display = 'none';
+                                                        e.currentTarget.parentElement!.classList.add('bg-bg-secondary');
+                                                        const fallback = document.createElement('div');
+                                                        fallback.className = 'text-xs font-bold text-text-primary';
+                                                        fallback.innerText = rec.symbol[0];
+                                                        e.currentTarget.parentElement!.appendChild(fallback);
+                                                    }}
+                                                />
                                             </div>
-                                            <div className="flex flex-col">
+                                            <div className="flex flex-col min-w-0">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-bold text-text-primary">{rec.symbol}</span>
+                                                    <span className="font-bold text-text-primary text-sm tracking-tight">{rec.symbol}</span>
                                                     <button
                                                         onClick={(e) => handleTradingViewClick(rec.symbol, e)}
                                                         className="text-text-secondary hover:text-accent-primary transition-colors opacity-0 group-hover:opacity-100"
@@ -402,7 +414,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                                         <ExternalLink className="w-3 h-3" />
                                                     </button>
                                                 </div>
-                                                <span className="text-text-secondary truncate max-w-[120px] text-xs">{rec.name}</span>
+                                                <span className="text-text-secondary truncate max-w-[140px] text-xs font-medium">{rec.name}</span>
                                             </div>
                                         </div>
                                     </td>
