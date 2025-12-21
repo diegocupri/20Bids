@@ -313,335 +313,333 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                             </div>
                         </div>
                     </div>
-                </tbody>
-            </table>
-        </div>
-            </div >
+                </div>
+            </div>
+            < div className="flex-1 overflow-hidden relative" >
+                <div className="absolute inset-0 overflow-auto px-6 py-4">
+                    <table className="w-full border-collapse text-sm table-fixed">
+                        <thead className="sticky top-0 bg-bg-primary z-10">
+                            <tr className="text-left text-text-secondary border-b border-border-primary/50 text-xs font-medium">
+                                <th className="py-3 pl-4 w-[4%]">
+                                    <input
+                                        type="checkbox"
+                                        className="rounded border-border-primary text-accent-primary focus:ring-0 cursor-pointer"
+                                        checked={selectedSymbols.size === sortedData.length && sortedData.length > 0}
+                                        onChange={toggleAll}
+                                    />
+                                </th>
+                                <th className="py-3 w-[4%]"></th> {/* Tag Column */}
 
-        {/* Table Container */ }
-        < div className = "flex-1 overflow-hidden relative" >
-            <div className="absolute inset-0 overflow-auto px-6 py-4">
-                <table className="w-full border-collapse text-sm table-fixed">
-                    <thead className="sticky top-0 bg-bg-primary z-10">
-                        <tr className="text-left text-text-secondary border-b border-border-primary/50 text-xs font-medium">
-                            <th className="py-3 pl-4 w-[4%]">
-                                <input
-                                    type="checkbox"
-                                    className="rounded border-border-primary text-accent-primary focus:ring-0 cursor-pointer"
-                                    checked={selectedSymbols.size === sortedData.length && sortedData.length > 0}
-                                    onChange={toggleAll}
-                                />
-                            </th>
-                            <th className="py-3 w-[4%]"></th> {/* Tag Column */}
+                                <th className="py-3 font-medium cursor-pointer hover:text-text-primary transition-colors w-[12%]" onClick={() => handleSort('symbol')}>
+                                    <div className="flex items-center gap-1">Ticker <SortIcon column="symbol" /></div>
+                                </th>
 
-                            <th className="py-3 font-medium cursor-pointer hover:text-text-primary transition-colors w-[12%]" onClick={() => handleSort('symbol')}>
-                                <div className="flex items-center gap-1">Ticker <SortIcon column="symbol" /></div>
-                            </th>
+                                <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('volume')}>
+                                    <div className="flex items-center justify-end gap-1">Vol <SortIcon column="volume" /></div>
+                                </th>
 
-                            <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('volume')}>
-                                <div className="flex items-center justify-end gap-1">Vol <SortIcon column="volume" /></div>
-                            </th>
+                                <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('open')}>
+                                    <div className="flex items-center justify-end gap-1">Open <SortIcon column="open" /></div>
+                                </th>
 
-                            <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('open')}>
-                                <div className="flex items-center justify-end gap-1">Open <SortIcon column="open" /></div>
-                            </th>
+                                <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('refPrice1020')}>
+                                    <div className="flex items-center justify-end gap-1">10:20 Ref <SortIcon column="refPrice1020" /></div>
+                                </th>
 
-                            <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('refPrice1020')}>
-                                <div className="flex items-center justify-end gap-1">10:20 Ref <SortIcon column="refPrice1020" /></div>
-                            </th>
+                                <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('price')}>
+                                    <div className="flex items-center justify-end gap-1">Price <SortIcon column="price" /></div>
+                                </th>
 
-                            <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('price')}>
-                                <div className="flex items-center justify-end gap-1">Price <SortIcon column="price" /></div>
-                            </th>
+                                <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('change')}>
+                                    <div className="flex items-center justify-end gap-1">% Chg <SortIcon column="change" /></div>
+                                </th>
 
-                            <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('change')}>
-                                <div className="flex items-center justify-end gap-1">% Chg <SortIcon column="change" /></div>
-                            </th>
+                                <th className="py-3 font-medium text-center cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('mvso')}>
+                                    <div className="flex items-center justify-center gap-1">MVSO <SortIcon column="mvso" /></div>
+                                </th>
 
-                            <th className="py-3 font-medium text-center cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('mvso')}>
-                                <div className="flex items-center justify-center gap-1">MVSO <SortIcon column="mvso" /></div>
-                            </th>
+                                {showExtraHours && (
+                                    <>
+                                        <th className="py-3 font-medium text-right w-[8%] text-text-secondary/70">
+                                            <div className="flex items-center justify-end gap-1">Ref 11:20</div>
+                                        </th>
+                                        <th className="py-3 font-medium text-center w-[8%] text-text-secondary/70">
+                                            <div className="flex items-center justify-center gap-1">MVSO 11:20</div>
+                                        </th>
+                                        <th className="py-3 font-medium text-right w-[8%] text-text-secondary/70">
+                                            <div className="flex items-center justify-end gap-1">Ref 12:20</div>
+                                        </th>
+                                        <th className="py-3 font-medium text-center w-[8%] text-text-secondary/70">
+                                            <div className="flex items-center justify-center gap-1">MVSO 12:20</div>
+                                        </th>
+                                    </>
+                                )}
 
-                            {showExtraHours && (
-                                <>
-                                    <th className="py-3 font-medium text-right w-[8%] text-text-secondary/70">
-                                        <div className="flex items-center justify-end gap-1">Ref 11:20</div>
-                                    </th>
-                                    <th className="py-3 font-medium text-center w-[8%] text-text-secondary/70">
-                                        <div className="flex items-center justify-center gap-1">MVSO 11:20</div>
-                                    </th>
-                                    <th className="py-3 font-medium text-right w-[8%] text-text-secondary/70">
-                                        <div className="flex items-center justify-end gap-1">Ref 12:20</div>
-                                    </th>
-                                    <th className="py-3 font-medium text-center w-[8%] text-text-secondary/70">
-                                        <div className="flex items-center justify-center gap-1">MVSO 12:20</div>
-                                    </th>
-                                </>
-                            )}
+                                <th className="py-3 font-medium text-center cursor-pointer hover:text-text-primary transition-colors w-[10%]" onClick={() => handleSort('sector')}>
+                                    <div className="flex items-center justify-center gap-1">Sector <SortIcon column="sector" /></div>
+                                </th>
 
-                            <th className="py-3 font-medium text-center cursor-pointer hover:text-text-primary transition-colors w-[10%]" onClick={() => handleSort('sector')}>
-                                <div className="flex items-center justify-center gap-1">Sector <SortIcon column="sector" /></div>
-                            </th>
+                                <th className="py-3 font-medium text-center cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('probabilityValue')}>
+                                    <div className="flex items-center justify-center gap-1">Prob <SortIcon column="probabilityValue" /></div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sortedData.map((rec) => {
+                                const update = prices[rec.symbol] || {};
+                                const livePrice = update.price || rec.price;
+                                const refPrice = update.refPrice1020 || rec.refPrice1020;
+                                const openPrice = update.open || rec.open || 0;
+                                const highPrice = update.high || rec.high || 0;
 
-                            <th className="py-3 font-medium text-center cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('probabilityValue')}>
-                                <div className="flex items-center justify-center gap-1">Prob <SortIcon column="probabilityValue" /></div>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {sortedData.map((rec) => {
-                            const update = prices[rec.symbol] || {};
-                            const livePrice = update.price || rec.price;
-                            const refPrice = update.refPrice1020 || rec.refPrice1020;
-                            const openPrice = update.open || rec.open || 0;
-                            const highPrice = update.high || rec.high || 0;
+                                // Calculate change vs 10:20 if available, else use daily change
+                                const liveChange = refPrice
+                                    ? ((livePrice - refPrice) / refPrice) * 100
+                                    : (update.change || rec.changePercent);
 
-                            // Calculate change vs 10:20 if available, else use daily change
-                            const liveChange = refPrice
-                                ? ((livePrice - refPrice) / refPrice) * 100
-                                : (update.change || rec.changePercent);
+                                // Calculate MVSO: ((High - Ref1020) / Ref1020) * 100
+                                const mvso = (highPrice && refPrice)
+                                    ? ((highPrice - refPrice) / refPrice) * 100
+                                    : 0;
 
-                            // Calculate MVSO: ((High - Ref1020) / Ref1020) * 100
-                            const mvso = (highPrice && refPrice)
-                                ? ((highPrice - refPrice) / refPrice) * 100
-                                : 0;
+                                const volume = update.volume || rec.volume;
+                                const formattedVol = volume > 1000000
+                                    ? (volume / 1000000).toFixed(2) + 'M'
+                                    : volume > 1000
+                                        ? (volume / 1000).toFixed(1) + 'K'
+                                        : volume.toFixed(1);
 
-                            const volume = update.volume || rec.volume;
-                            const formattedVol = volume > 1000000
-                                ? (volume / 1000000).toFixed(2) + 'M'
-                                : volume > 1000
-                                    ? (volume / 1000).toFixed(1) + 'K'
-                                    : volume.toFixed(1);
+                                const sector = update.sector || rec.sector;
+                                // Abbreviate Sector
+                                const shortSector = sector
+                                    .replace('Technology', 'Tech')
+                                    .replace('Communication Services', 'Comm')
+                                    .replace('Consumer Cyclical', 'Cons Cyc')
+                                    .replace('Consumer Defensive', 'Cons Def')
+                                    .replace('Financial Services', 'Fin')
+                                    .replace('Healthcare', 'Health')
+                                    .replace('Industrials', 'Ind')
+                                    .replace('Real Estate', 'RE')
+                                    .replace('Basic Materials', 'Mat')
+                                    .replace('Utilities', 'Util')
+                                    .substring(0, 12); // Max length safety
 
-                            const sector = update.sector || rec.sector;
-                            // Abbreviate Sector
-                            const shortSector = sector
-                                .replace('Technology', 'Tech')
-                                .replace('Communication Services', 'Comm')
-                                .replace('Consumer Cyclical', 'Cons Cyc')
-                                .replace('Consumer Defensive', 'Cons Def')
-                                .replace('Financial Services', 'Fin')
-                                .replace('Healthcare', 'Health')
-                                .replace('Industrials', 'Ind')
-                                .replace('Real Estate', 'RE')
-                                .replace('Basic Materials', 'Mat')
-                                .replace('Utilities', 'Util')
-                                .substring(0, 12); // Max length safety
+                                const prob = rec.probabilityValue || 70;
 
-                            const prob = rec.probabilityValue || 70;
+                                const isSelected = selectedSymbols.has(rec.symbol);
 
-                            const isSelected = selectedSymbols.has(rec.symbol);
-
-                            return (
-                                <tr
-                                    key={rec.symbol}
-                                    onClick={() => onRowClick(rec)}
-                                    className={cn(
-                                        "border-b border-border-primary/40 hover:bg-bg-secondary/80 transition-all duration-200 cursor-pointer group",
-                                        isSelected ? "bg-accent-primary/5" : ""
-                                    )}
-                                >
-                                    <td className="py-3 pl-4" onClick={(e) => e.stopPropagation()}>
-                                        <input
-                                            type="checkbox"
-                                            checked={isSelected}
-                                            onChange={() => toggleSelection(rec.symbol)}
-                                            className="rounded border-border-primary text-accent-primary focus:ring-0 cursor-pointer"
-                                        />
-                                    </td>
-                                    <td className="py-3 pl-4">
-                                        <button
-                                            onClick={(e) => handleTagClick(rec.symbol, e)}
-                                            className="w-4 h-4 rounded-full border-2 border-border-primary flex items-center justify-center hover:border-text-primary transition-colors"
-                                            style={{ backgroundColor: rec.userTag || 'transparent', borderColor: rec.userTag ? 'transparent' : undefined }}
-                                        >
-                                            {!rec.userTag && <div className="w-1 h-1 rounded-full bg-text-secondary opacity-0 group-hover:opacity-50" />}
-                                        </button>
-                                    </td>
-                                    <td className="py-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
-                                                <img
-                                                    src={`https://financialmodelingprep.com/image-stock/${rec.symbol}.png`}
-                                                    alt={rec.symbol}
-                                                    className="w-full h-full object-contain"
-                                                    onError={(e) => {
-                                                        e.currentTarget.style.display = 'none';
-                                                        e.currentTarget.parentElement!.classList.add('bg-bg-secondary', 'flex', 'items-center', 'justify-center');
-                                                        const fallback = document.createElement('div');
-                                                        fallback.className = 'text-xs font-bold text-text-primary';
-                                                        fallback.innerText = rec.symbol[0];
-                                                        e.currentTarget.parentElement!.appendChild(fallback);
-                                                    }}
-                                                />
-                                            </div>
-                                            <div className="flex flex-col min-w-0">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-bold text-text-primary text-sm tracking-tight">{rec.symbol}</span>
-                                                    <button
-                                                        onClick={(e) => handleTradingViewClick(rec.symbol, e)}
-                                                        className="text-text-secondary hover:text-accent-primary transition-colors opacity-0 group-hover:opacity-100"
-                                                        title="Open in TradingView"
-                                                    >
-                                                        <ExternalLink className="w-3 h-3" />
-                                                    </button>
+                                return (
+                                    <tr
+                                        key={rec.symbol}
+                                        onClick={() => onRowClick(rec)}
+                                        className={cn(
+                                            "border-b border-border-primary/40 hover:bg-bg-secondary/80 transition-all duration-200 cursor-pointer group",
+                                            isSelected ? "bg-accent-primary/5" : ""
+                                        )}
+                                    >
+                                        <td className="py-3 pl-4" onClick={(e) => e.stopPropagation()}>
+                                            <input
+                                                type="checkbox"
+                                                checked={isSelected}
+                                                onChange={() => toggleSelection(rec.symbol)}
+                                                className="rounded border-border-primary text-accent-primary focus:ring-0 cursor-pointer"
+                                            />
+                                        </td>
+                                        <td className="py-3 pl-4">
+                                            <button
+                                                onClick={(e) => handleTagClick(rec.symbol, e)}
+                                                className="w-4 h-4 rounded-full border-2 border-border-primary flex items-center justify-center hover:border-text-primary transition-colors"
+                                                style={{ backgroundColor: rec.userTag || 'transparent', borderColor: rec.userTag ? 'transparent' : undefined }}
+                                            >
+                                                {!rec.userTag && <div className="w-1 h-1 rounded-full bg-text-secondary opacity-0 group-hover:opacity-50" />}
+                                            </button>
+                                        </td>
+                                        <td className="py-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
+                                                    <img
+                                                        src={`https://financialmodelingprep.com/image-stock/${rec.symbol}.png`}
+                                                        alt={rec.symbol}
+                                                        className="w-full h-full object-contain"
+                                                        onError={(e) => {
+                                                            e.currentTarget.style.display = 'none';
+                                                            e.currentTarget.parentElement!.classList.add('bg-bg-secondary', 'flex', 'items-center', 'justify-center');
+                                                            const fallback = document.createElement('div');
+                                                            fallback.className = 'text-xs font-bold text-text-primary';
+                                                            fallback.innerText = rec.symbol[0];
+                                                            e.currentTarget.parentElement!.appendChild(fallback);
+                                                        }}
+                                                    />
                                                 </div>
-                                                <span className="text-text-secondary truncate max-w-[140px] text-xs font-medium">{rec.name}</span>
+                                                <div className="flex flex-col min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-text-primary text-sm tracking-tight">{rec.symbol}</span>
+                                                        <button
+                                                            onClick={(e) => handleTradingViewClick(rec.symbol, e)}
+                                                            className="text-text-secondary hover:text-accent-primary transition-colors opacity-0 group-hover:opacity-100"
+                                                            title="Open in TradingView"
+                                                        >
+                                                            <ExternalLink className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
+                                                    <span className="text-text-secondary truncate max-w-[140px] text-xs font-medium">{rec.name}</span>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
+                                        </td>
 
-                                    {/* Vol */}
-                                    <td className="py-3 text-right font-mono text-xs text-text-secondary">
-                                        {formattedVol}
-                                    </td>
+                                        {/* Vol */}
+                                        <td className="py-3 text-right font-mono text-xs text-text-secondary">
+                                            {formattedVol}
+                                        </td>
 
-                                    {/* Open */}
-                                    <td className="py-3 text-right font-mono text-xs text-text-secondary">
-                                        {openPrice ? `$${openPrice.toFixed(2)}` : '-'}
-                                    </td>
+                                        {/* Open */}
+                                        <td className="py-3 text-right font-mono text-xs text-text-secondary">
+                                            {openPrice ? `$${openPrice.toFixed(2)}` : '-'}
+                                        </td>
 
-                                    {/* 10:20 Ref */}
-                                    <td className="py-3 text-right font-mono text-xs text-text-secondary">
-                                        {refPrice ? `$${refPrice.toFixed(2)}` : '-'}
-                                    </td>
+                                        {/* 10:20 Ref */}
+                                        <td className="py-3 text-right font-mono text-xs text-text-secondary">
+                                            {refPrice ? `$${refPrice.toFixed(2)}` : '-'}
+                                        </td>
 
-                                    {/* Price RT */}
-                                    <td className="py-3 text-right font-mono text-xs font-medium text-text-primary">
-                                        {livePrice.toFixed(2)}
-                                    </td>
+                                        {/* Price RT */}
+                                        <td className="py-3 text-right font-mono text-xs font-medium text-text-primary">
+                                            {livePrice.toFixed(2)}
+                                        </td>
 
-                                    {/* % Chg 10:20 */}
-                                    <td className="py-3 text-right">
-                                        <span className={cn(
-                                            "inline-block font-mono text-xs font-bold",
-                                            liveChange >= 0 ? "text-emerald-600" : "text-rose-600"
-                                        )}>
-                                            {liveChange >= 0 ? '+' : ''}{liveChange.toFixed(2)}%
-                                        </span>
-                                    </td>
-
-                                    {/* MVSO - Colored Background Box based on Threshold */}
-                                    {/* MVSO 10:20 */}
-                                    <td className="px-3 py-3 whitespace-nowrap text-center">
-                                        <div className={cn(
-                                            "inline-block px-2 py-0.5 rounded-full text-xs font-bold tabular-nums",
-                                            mvso >= mvsoThreshold ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
-                                        )}>
-                                            {mvso > 0 ? '+' : ''}{mvso.toFixed(2)}%
-                                        </div>
-                                    </td>
-
-                                    {showExtraHours && (
-                                        <>
-                                            {/* Ref 11:20 */}
-                                            <td className="px-3 py-3 whitespace-nowrap text-right font-mono text-xs text-text-secondary">
-                                                {rec.refPrice1120 ? `$${rec.refPrice1120.toFixed(2)}` : '-'}
-                                            </td>
-
-                                            {/* MVSO 11:20 */}
-                                            <td className="px-3 py-3 whitespace-nowrap text-center">
-                                                {(() => {
-                                                    if (rec.refPrice1120 && rec.highPost1120) {
-                                                        const mvso1120 = ((rec.highPost1120 - rec.refPrice1120) / rec.refPrice1120) * 100;
-                                                        return (
-                                                            <div className={cn(
-                                                                "inline-block px-2 py-0.5 rounded text-xs font-medium tabular-nums",
-                                                                mvso1120 >= mvsoThreshold ? "text-emerald-600 bg-emerald-500/5" : "text-rose-600 bg-rose-500/5"
-                                                            )}>
-                                                                {mvso1120 > 0 ? '+' : ''}{mvso1120.toFixed(2)}%
-                                                            </div>
-                                                        );
-                                                    }
-                                                    return <span className="text-text-secondary/50">-</span>;
-                                                })()}
-                                            </td>
-
-                                            {/* Ref 12:20 */}
-                                            <td className="px-3 py-3 whitespace-nowrap text-right font-mono text-xs text-text-secondary">
-                                                {rec.refPrice1220 ? `$${rec.refPrice1220.toFixed(2)}` : '-'}
-                                            </td>
-
-                                            {/* MVSO 12:20 */}
-                                            <td className="px-3 py-3 whitespace-nowrap text-center">
-                                                {(() => {
-                                                    if (rec.refPrice1220 && rec.highPost1220) {
-                                                        const mvso1220 = ((rec.highPost1220 - rec.refPrice1220) / rec.refPrice1220) * 100;
-                                                        return (
-                                                            <div className={cn(
-                                                                "inline-block px-2 py-0.5 rounded text-xs font-medium tabular-nums",
-                                                                mvso1220 >= mvsoThreshold ? "text-emerald-600 bg-emerald-500/5" : "text-rose-600 bg-rose-500/5"
-                                                            )}>
-                                                                {mvso1220 > 0 ? '+' : ''}{mvso1220.toFixed(2)}%
-                                                            </div>
-                                                        );
-                                                    }
-                                                    return <span className="text-text-secondary/50">-</span>;
-                                                })()}
-                                            </td>
-                                        </>
-                                    )}
-
-                                    {/* Sector - Abbreviated & Centered */}
-                                    <td className="py-3 text-text-secondary truncate text-center text-xs" title={sector}>
-                                        <span className="px-2 py-1 rounded-full bg-bg-tertiary/50 border border-border-primary/50">
-                                            {shortSector}
-                                        </span>
-                                    </td>
-
-                                    {/* Prob */}
-                                    <td className="py-3">
-                                        <div className="flex items-center gap-2 justify-center">
+                                        {/* % Chg 10:20 */}
+                                        <td className="py-3 text-right">
                                             <span className={cn(
-                                                "text-xs font-bold tabular-nums",
-                                                getProbabilityColor(prob)
+                                                "inline-block font-mono text-xs font-bold",
+                                                liveChange >= 0 ? "text-emerald-600" : "text-rose-600"
                                             )}>
-                                                {prob}%
+                                                {liveChange >= 0 ? '+' : ''}{liveChange.toFixed(2)}%
                                             </span>
-                                            <div className="w-10 h-1.5 bg-bg-tertiary overflow-hidden rounded-full">
-                                                <div
-                                                    className={cn("h-full rounded-full transition-all duration-500",
-                                                        getProbabilityBg(prob)
-                                                    )}
-                                                    style={{ width: `${prob}%` }}
-                                                />
+                                        </td>
+
+                                        {/* MVSO - Colored Background Box based on Threshold */}
+                                        {/* MVSO 10:20 */}
+                                        <td className="px-3 py-3 whitespace-nowrap text-center">
+                                            <div className={cn(
+                                                "inline-block px-2 py-0.5 rounded-full text-xs font-bold tabular-nums",
+                                                mvso >= mvsoThreshold ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
+                                            )}>
+                                                {mvso > 0 ? '+' : ''}{mvso.toFixed(2)}%
                                             </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </div>
+                                        </td>
+
+                                        {showExtraHours && (
+                                            <>
+                                                {/* Ref 11:20 */}
+                                                <td className="px-3 py-3 whitespace-nowrap text-right font-mono text-xs text-text-secondary">
+                                                    {rec.refPrice1120 ? `$${rec.refPrice1120.toFixed(2)}` : '-'}
+                                                </td>
+
+                                                {/* MVSO 11:20 */}
+                                                <td className="px-3 py-3 whitespace-nowrap text-center">
+                                                    {(() => {
+                                                        if (rec.refPrice1120 && rec.highPost1120) {
+                                                            const mvso1120 = ((rec.highPost1120 - rec.refPrice1120) / rec.refPrice1120) * 100;
+                                                            return (
+                                                                <div className={cn(
+                                                                    "inline-block px-2 py-0.5 rounded text-xs font-medium tabular-nums",
+                                                                    mvso1120 >= mvsoThreshold ? "text-emerald-600 bg-emerald-500/5" : "text-rose-600 bg-rose-500/5"
+                                                                )}>
+                                                                    {mvso1120 > 0 ? '+' : ''}{mvso1120.toFixed(2)}%
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return <span className="text-text-secondary/50">-</span>;
+                                                    })()}
+                                                </td>
+
+                                                {/* Ref 12:20 */}
+                                                <td className="px-3 py-3 whitespace-nowrap text-right font-mono text-xs text-text-secondary">
+                                                    {rec.refPrice1220 ? `$${rec.refPrice1220.toFixed(2)}` : '-'}
+                                                </td>
+
+                                                {/* MVSO 12:20 */}
+                                                <td className="px-3 py-3 whitespace-nowrap text-center">
+                                                    {(() => {
+                                                        if (rec.refPrice1220 && rec.highPost1220) {
+                                                            const mvso1220 = ((rec.highPost1220 - rec.refPrice1220) / rec.refPrice1220) * 100;
+                                                            return (
+                                                                <div className={cn(
+                                                                    "inline-block px-2 py-0.5 rounded text-xs font-medium tabular-nums",
+                                                                    mvso1220 >= mvsoThreshold ? "text-emerald-600 bg-emerald-500/5" : "text-rose-600 bg-rose-500/5"
+                                                                )}>
+                                                                    {mvso1220 > 0 ? '+' : ''}{mvso1220.toFixed(2)}%
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return <span className="text-text-secondary/50">-</span>;
+                                                    })()}
+                                                </td>
+                                            </>
+                                        )}
+
+                                        {/* Sector - Abbreviated & Centered */}
+                                        <td className="py-3 text-text-secondary truncate text-center text-xs" title={sector}>
+                                            <span className="px-2 py-1 rounded-full bg-bg-tertiary/50 border border-border-primary/50">
+                                                {shortSector}
+                                            </span>
+                                        </td>
+
+                                        {/* Prob */}
+                                        <td className="py-3">
+                                            <div className="flex items-center gap-2 justify-center">
+                                                <span className={cn(
+                                                    "text-xs font-bold tabular-nums",
+                                                    getProbabilityColor(prob)
+                                                )}>
+                                                    {prob}%
+                                                </span>
+                                                <div className="w-10 h-1.5 bg-bg-tertiary overflow-hidden rounded-full">
+                                                    <div
+                                                        className={cn("h-full rounded-full transition-all duration-500",
+                                                            getProbabilityBg(prob)
+                                                        )}
+                                                        style={{ width: `${prob}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-    {/* Tag Popover */ }
-    {
-        tagPopover && (
-            <>
-                <div className="fixed inset-0 z-40" onClick={() => setTagPopover(null)} />
-                <div
-                    className="fixed z-50 bg-bg-secondary border border-border-primary rounded-lg shadow-xl p-2 grid grid-cols-3 gap-2 animate-in fade-in zoom-in-95 duration-200"
-                    style={{ top: tagPopover.y + 5, left: tagPopover.x }}
-                >
-                    <button
-                        onClick={() => handleColorSelect(null)}
-                        className="w-6 h-6 rounded-full border border-text-secondary/50 flex items-center justify-center hover:bg-bg-tertiary"
-                        title="Clear"
-                    >
-                        <div className="w-3 h-0.5 bg-text-secondary rotate-45" />
-                    </button>
-                    {TAG_COLORS.map((color) => (
-                        <button
-                            key={color}
-                            onClick={() => handleColorSelect(color)}
-                            className="w-6 h-6 rounded-full border border-transparent hover:scale-110 transition-transform"
-                            style={{ backgroundColor: color }}
-                        />
-                    ))}
-                </div>
-            </>
-        )
-    }
-            </div >
-            );
+            {/* Tag Popover */}
+            {
+                tagPopover && (
+                    <>
+                        <div className="fixed inset-0 z-40" onClick={() => setTagPopover(null)} />
+                        <div
+                            className="fixed z-50 bg-bg-secondary border border-border-primary rounded-lg shadow-xl p-2 grid grid-cols-3 gap-2 animate-in fade-in zoom-in-95 duration-200"
+                            style={{ top: tagPopover.y + 5, left: tagPopover.x }}
+                        >
+                            <button
+                                onClick={() => handleColorSelect(null)}
+                                className="w-6 h-6 rounded-full border border-text-secondary/50 flex items-center justify-center hover:bg-bg-tertiary"
+                                title="Clear"
+                            >
+                                <div className="w-3 h-0.5 bg-text-secondary rotate-45" />
+                            </button>
+                            {TAG_COLORS.map((color) => (
+                                <button
+                                    key={color}
+                                    onClick={() => handleColorSelect(color)}
+                                    className="w-6 h-6 rounded-full border border-transparent hover:scale-110 transition-transform"
+                                    style={{ backgroundColor: color }}
+                                />
+                            ))}
+                        </div>
+                    </>
+                )
+            }
+        </div >
+    );
 }
