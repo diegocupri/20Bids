@@ -181,6 +181,32 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
             return 0;
         });
 
+    const [selectedSymbols, setSelectedSymbols] = useState<Set<string>>(new Set());
+
+    const toggleSelection = (symbol: string) => {
+        const newSelection = new Set(selectedSymbols);
+        if (newSelection.has(symbol)) {
+            newSelection.delete(symbol);
+        } else {
+            newSelection.add(symbol);
+        }
+        setSelectedSymbols(newSelection);
+    };
+
+    const toggleAll = () => {
+        if (selectedSymbols.size === sortedData.length) {
+            setSelectedSymbols(new Set());
+        } else {
+            setSelectedSymbols(new Set(sortedData.map(r => r.symbol)));
+        }
+    };
+
+    const handleLaunchGraphs = () => {
+        const symbols = Array.from(selectedSymbols).join(',');
+        const url = `#/graphs?symbols=${symbols}`;
+        window.open(url, '_blank');
+    };
+
     const SortIcon = ({ column }: { column: SortKey }) => {
         if (sortConfig.key !== column) return <ArrowUpDown className="w-3 h-3 text-border-primary ml-1 opacity-0 group-hover:opacity-50" />;
         return sortConfig.direction === 'asc'
@@ -189,7 +215,20 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
     };
 
     return (
-        <div className="flex flex-col h-full bg-bg-primary font-sans">
+        <div className="flex flex-col h-full bg-bg-primary font-sans relative">
+            {/* Launch Button Floating */}
+            {selectedSymbols.size > 0 && (
+                <div className="absolute bottom-8 right-8 z-50 animate-in slide-in-from-bottom-4 duration-300">
+                    <button
+                        onClick={handleLaunchGraphs}
+                        className="bg-accent-primary text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl hover:bg-accent-primary/90 transition-all font-bold flex items-center gap-2"
+                    >
+                        <ExternalLink className="w-4 h-4" />
+                        Launch {selectedSymbols.size} Graphs
+                    </button>
+                </div>
+            )}
+
             {/* Header / Filters */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border-primary/50 bg-bg-primary">
                 <h2 className="text-lg font-bold text-text-primary tracking-tight flex items-center gap-2">
@@ -273,7 +312,15 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                 <table className="w-full border-collapse text-sm table-fixed">
                     <thead className="sticky top-0 bg-bg-primary z-10">
                         <tr className="text-left text-text-secondary border-b border-border-primary/50 text-xs font-medium">
-                            <th className="py-3 pl-4 w-[4%]"></th> {/* Tag Column */}
+                            <th className="py-3 pl-4 w-[4%]">
+                                <input
+                                    type="checkbox"
+                                    className="rounded border-border-primary text-accent-primary focus:ring-0 cursor-pointer"
+                                    checked={selectedSymbols.size === sortedData.length && sortedData.length > 0}
+                                    onChange={toggleAll}
+                                />
+                            </th>
+                            <th className="py-3 w-[4%]"></th> {/* Tag Column */}
 
                             <th className="py-3 font-medium cursor-pointer hover:text-text-primary transition-colors w-[12%]" onClick={() => handleSort('symbol')}>
                                 <div className="flex items-center gap-1">Ticker <SortIcon column="symbol" /></div>
@@ -371,12 +418,25 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
 
                             const prob = rec.probabilityValue || 70;
 
+                            const isSelected = selectedSymbols.has(rec.symbol);
+
                             return (
                                 <tr
                                     key={rec.symbol}
                                     onClick={() => onRowClick(rec)}
-                                    className="border-b border-border-primary/40 hover:bg-bg-secondary/80 transition-all duration-200 cursor-pointer group"
+                                    className={cn(
+                                        "border-b border-border-primary/40 hover:bg-bg-secondary/80 transition-all duration-200 cursor-pointer group",
+                                        isSelected ? "bg-accent-primary/5" : ""
+                                    )}
                                 >
+                                    <td className="py-3 pl-4" onClick={(e) => e.stopPropagation()}>
+                                        <input
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            onChange={() => toggleSelection(rec.symbol)}
+                                            className="rounded border-border-primary text-accent-primary focus:ring-0 cursor-pointer"
+                                        />
+                                    </td>
                                     <td className="py-3 pl-4">
                                         <button
                                             onClick={(e) => handleTagClick(rec.symbol, e)}
@@ -420,31 +480,29 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                     </td>
 
                                     {/* Vol */}
-                                    <td className="py-3 text-right">
-                                        <span className="font-medium text-text-secondary text-sm tabular-nums">
-                                            {formattedVol}
-                                        </span>
+                                    <td className="py-3 text-right font-mono text-xs text-text-secondary">
+                                        {formattedVol}
                                     </td>
 
                                     {/* Open */}
-                                    <td className="py-3 text-right text-text-secondary text-sm tabular-nums">
-                                        {openPrice ? openPrice.toFixed(2) : '-'}
+                                    <td className="py-3 text-right font-mono text-xs text-text-secondary">
+                                        {openPrice ? `$${openPrice.toFixed(2)}` : '-'}
                                     </td>
 
                                     {/* 10:20 Ref */}
-                                    <td className="py-3 text-right text-text-secondary text-sm tabular-nums">
-                                        {refPrice ? refPrice.toFixed(2) : '-'}
+                                    <td className="py-3 text-right font-mono text-xs text-text-secondary">
+                                        {refPrice ? `$${refPrice.toFixed(2)}` : '-'}
                                     </td>
 
                                     {/* Price RT */}
-                                    <td className="py-3 text-right text-text-primary font-bold text-sm tabular-nums">
+                                    <td className="py-3 text-right font-mono text-xs font-medium text-text-primary">
                                         {livePrice.toFixed(2)}
                                     </td>
 
                                     {/* % Chg 10:20 */}
                                     <td className="py-3 text-right">
                                         <span className={cn(
-                                            "inline-block font-medium text-sm tabular-nums",
+                                            "inline-block font-mono text-xs font-bold",
                                             liveChange >= 0 ? "text-emerald-600" : "text-rose-600"
                                         )}>
                                             {liveChange >= 0 ? '+' : ''}{liveChange.toFixed(2)}%
@@ -455,7 +513,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                     {/* MVSO 10:20 */}
                                     <td className="px-3 py-3 whitespace-nowrap text-center">
                                         <div className={cn(
-                                            "inline-block px-2.5 py-1 rounded-md font-bold text-xs tabular-nums",
+                                            "inline-block px-2 py-0.5 rounded-full text-xs font-bold tabular-nums",
                                             mvso >= mvsoThreshold ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
                                         )}>
                                             {mvso > 0 ? '+' : ''}{mvso.toFixed(2)}%
@@ -465,7 +523,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                     {showExtraHours && (
                                         <>
                                             {/* Ref 11:20 */}
-                                            <td className="px-3 py-3 whitespace-nowrap text-right text-sm text-text-secondary/70 tabular-nums">
+                                            <td className="px-3 py-3 whitespace-nowrap text-right font-mono text-xs text-text-secondary">
                                                 {rec.refPrice1120 ? `$${rec.refPrice1120.toFixed(2)}` : '-'}
                                             </td>
 
@@ -488,7 +546,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                             </td>
 
                                             {/* Ref 12:20 */}
-                                            <td className="px-3 py-3 whitespace-nowrap text-right text-sm text-text-secondary/70 tabular-nums">
+                                            <td className="px-3 py-3 whitespace-nowrap text-right font-mono text-xs text-text-secondary">
                                                 {rec.refPrice1220 ? `$${rec.refPrice1220.toFixed(2)}` : '-'}
                                             </td>
 

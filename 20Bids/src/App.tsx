@@ -3,12 +3,15 @@ import { Dashboard } from './components/Dashboard';
 import { UploadPage } from './components/UploadPage';
 import { AnalysisPage } from './pages/Analysis';
 
+import { GraphsPage } from './pages/GraphsPage';
+
 function App() {
   return (
     <HashRouter>
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/analysis" element={<AnalysisPage />} />
+        <Route path="/graphs" element={<GraphsPage />} />
         <Route path="/upload" element={<UploadPage />} />
       </Routes>
     </HashRouter>
