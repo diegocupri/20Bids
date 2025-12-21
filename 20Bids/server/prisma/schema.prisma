@@ -10,7 +10,10 @@ datasource db {
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
+  password  String   // Hashed password
   name      String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
   tags      Tag[]
   watchlist Watchlist[]
 }

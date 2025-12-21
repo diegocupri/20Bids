@@ -403,4 +403,75 @@ export async function fetchMarketIndices() {
         console.error('Error fetching indices:', error);
         return [];
     }
+
+}
+
+export async function fetchTickerNews(ticker: string, limit: number = 20) {
+    if (!API_KEY) return [];
+
+    // /v2/reference/news?ticker={ticker}
+    const url = `${BASE_URL}/v2/reference/news`;
+
+    try {
+        const res = await axios.get(url, {
+            params: {
+                apiKey: API_KEY,
+                ticker: ticker,
+                limit: limit,
+                sort: 'published_utc',
+                order: 'desc'
+            }
+        });
+        return res.data.results || [];
+    } catch (e) {
+        console.error(`[Polygon] Error fetching news for ${ticker}:`, (e as any).message);
+        return [];
+    }
+}
+
+// NOTE: Polygon doesn't have a specific "Social Sentiment" endpoint in the Basic plan.
+// We will mock this or use FMP if available in future.
+// For now, we return empty or mock data structure for the frontend to consume.
+export async function fetchSocialSentiment(ticker: string) {
+    // Mock data for demonstration as per request "Tweets/Social"
+    // In a real scenario with FMP Enterprise or other providers, we'd fetch here.
+
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    return {
+        sentiment: Math.random() > 0.5 ? 'Bullish' : 'Bearish',
+        score: (Math.random() * 100).toFixed(0),
+        volume: Math.floor(Math.random() * 5000),
+        tweets: [
+            {
+                id: '1',
+                user: 'StockTraderPro',
+                text: `$${ticker} looking strong at support! 🚀`,
+                time: '10m ago',
+                sentiment: 'Bullish'
+            },
+            {
+                id: '2',
+                user: 'MarketWatchDog',
+                text: `Volume spike in $${ticker}. Something is brewing.`,
+                time: '25m ago',
+                sentiment: 'Bullish'
+            },
+            {
+                id: '3',
+                user: 'BearTrap',
+                text: `$${ticker} hitting resistance, time to short?`,
+                time: '1h ago',
+                sentiment: 'Bearish'
+            },
+            {
+                id: '4',
+                user: 'ChartWizard',
+                text: `Technical breakout on $${ticker} daily chart.`,
+                time: '2h ago',
+                sentiment: 'Bullish'
+            }
+        ]
+    };
 }

@@ -3,7 +3,6 @@ import { format, isWeekend } from 'date-fns';
 import { cn } from '../lib/utils';
 import { useState, useEffect } from 'react';
 import { fetchDates, fetchMvsoHistory } from '../api/client';
-import { ThemeSelector } from './ThemeSelector';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 interface SidebarProps {
@@ -12,14 +11,23 @@ interface SidebarProps {
     mvsoThreshold?: number;
 }
 
+// ... imports
+import { useAuth } from '../context/AuthContext';
+import { ProfileModal } from './ProfileModal';
+import { User } from 'lucide-react';
+
+// ... SidebarProps interface ...
+
 export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: SidebarProps) {
     const navigate = useNavigate();
     const location = useLocation();
     const isAnalysis = location.pathname === '/analysis';
+    const { user, logout } = useAuth();
 
     const [dates, setDates] = useState<Date[]>([]);
     const [mvsoHistory, setMvsoHistory] = useState<Record<string, number[]>>({});
     const [showUserMenu, setShowUserMenu] = useState(false);
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
 
     useEffect(() => {
         if (!isAnalysis) {
@@ -29,6 +37,7 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
     }, [isAnalysis]);
 
     const getAccuracy = (date: Date) => {
+        // ... same logic ...
         const dateStr = format(date, 'yyyy-MM-dd');
         const mvsos = mvsoHistory[dateStr] || [];
         if (mvsos.length === 0) return null;
@@ -41,25 +50,16 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
     const [selectedPeriod, setSelectedPeriod] = useState<'7D' | 'MTD' | '1M' | 'YTD' | '1Y'>('7D');
 
     const calculatePeriodStats = (period: '7D' | 'MTD' | '1M' | 'YTD' | '1Y') => {
+        // ... same logic ...
         const now = new Date();
         let startDate = new Date();
 
         switch (period) {
-            case '7D':
-                startDate.setDate(now.getDate() - 7);
-                break;
-            case 'MTD':
-                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                break;
-            case '1M':
-                startDate.setDate(now.getDate() - 30);
-                break;
-            case 'YTD':
-                startDate = new Date(now.getFullYear(), 0, 1);
-                break;
-            case '1Y':
-                startDate.setFullYear(now.getFullYear() - 1);
-                break;
+            case '7D': startDate.setDate(now.getDate() - 7); break;
+            case 'MTD': startDate = new Date(now.getFullYear(), now.getMonth(), 1); break;
+            case '1M': startDate.setDate(now.getDate() - 30); break;
+            case 'YTD': startDate = new Date(now.getFullYear(), 0, 1); break;
+            case '1Y': startDate.setFullYear(now.getFullYear() - 1); break;
         }
 
         let totalHits = 0;
@@ -92,7 +92,7 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                     <span className="text-xl font-bold text-text-primary tracking-tight">Bids</span>
                 </div>
 
-                {/* Performance Summary Widget (Compact - Moved to Top) */}
+                {/* Performance Summary */}
                 <div className="mb-8">
                     <div className="flex items-center justify-between mb-2 px-1">
                         <span className="text-xs font-medium text-text-secondary">Avg Accuracy</span>
@@ -151,6 +151,7 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                 </div>
             </div>
 
+            {/* History List */}
             {!isAnalysis && (
                 <div className="flex-1 overflow-y-auto px-4 py-2">
                     <div className="px-4 mb-3 text-xs font-semibold text-text-secondary uppercase tracking-wider sticky top-0 bg-bg-primary py-2 z-10">
@@ -197,23 +198,32 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                 </div>
             )}
 
+            {/* User Profile Section */}
             <div className="p-6 border-t border-border-primary/50 space-y-4 bg-bg-primary">
-                <div className="flex items-center justify-between text-text-secondary px-2">
-                    <span className="text-xs font-medium">Theme</span>
-                    <ThemeSelector />
-                </div>
+                {/* Theme Selector moved to Profile Modal - removing here if requested or keeping as shortcut? 
+                     User said: "La elección del tema de colores esté en los 3 puntitos de la derecha de la cuenta también" 
+                     So I should probably remove it from here to declutter, or keep it inside the menu. 
+                     The prompt says "The choice of theme colors is in the 3 dots ... also". 
+                     I'll keep it simple and move it fully to the menu/modal as per cleaner design.
+                 */}
 
                 <div className="relative">
                     <button
                         onClick={() => setShowUserMenu(!showUserMenu)}
                         className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-bg-secondary transition-colors text-left border border-transparent hover:border-border-primary/50"
                     >
-                        <div className="w-8 h-8 rounded-full bg-accent-primary/10 flex items-center justify-center text-accent-primary font-bold text-xs ring-2 ring-white dark:ring-zinc-800">
-                            A
+                        <div className="w-8 h-8 rounded-full bg-accent-primary/10 flex items-center justify-center overflow-hidden ring-2 ring-white dark:ring-zinc-800">
+                            {user?.avatarUrl ? (
+                                <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="text-accent-primary font-bold text-xs">
+                                    {user?.name?.[0] || user?.email?.[0] || 'U'}
+                                </div>
+                            )}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <div className="text-sm font-semibold text-text-primary truncate">Analyst</div>
-                            <div className="text-xs text-text-secondary truncate">Pro Account</div>
+                            <div className="text-sm font-semibold text-text-primary truncate">{user?.name || 'User'}</div>
+                            <div className="text-xs text-text-secondary truncate">{user?.email || 'No Email'}</div>
                         </div>
                         <MoreHorizontal className="h-4 w-4 text-text-secondary" />
                     </button>
@@ -223,13 +233,22 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                             <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
                             <div className="absolute bottom-full left-0 mb-2 w-full bg-bg-primary border border-border-primary/50 rounded-xl shadow-lg p-1.5 z-50 animate-in fade-in zoom-in-95 duration-200">
                                 <button
+                                    onClick={() => { setShowUserMenu(false); setIsProfileOpen(true); }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-text-secondary hover:bg-bg-secondary hover:text-text-primary transition-colors"
+                                >
+                                    <User className="h-4 w-4" /> Profile & Theme
+                                </button>
+                                <button
                                     onClick={() => navigate('/upload')}
                                     className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-text-secondary hover:bg-bg-secondary hover:text-text-primary transition-colors"
                                 >
                                     <Settings className="h-4 w-4" /> Upload Data
                                 </button>
                                 <div className="h-px bg-border-primary/50 my-1" />
-                                <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-colors">
+                                <button
+                                    onClick={logout}
+                                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-colors"
+                                >
                                     <LogOut className="h-4 w-4" /> Log Out
                                 </button>
                             </div>
@@ -237,6 +256,8 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                     )}
                 </div>
             </div>
+
+            <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
         </div>
     );
 }

@@ -2,8 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
 import { subDays, format } from 'date-fns';
-import { fetchRealTimePrices, fetchTickerDetails, fetchGroupedDaily, fetchDailyStats, getReferencePrice, fetchSectorPerformance, fetchMarketIndices, getIntradayStats } from './services/polygon';
+import { fetchRealTimePrices, fetchTickerDetails, fetchGroupedDaily, fetchDailyStats, getReferencePrice, fetchSectorPerformance, fetchMarketIndices, getIntradayStats, fetchTickerNews, fetchSocialSentiment } from './services/polygon';
 import { parse } from 'csv-parse/sync';
+import authRouter from './routes/auth';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -17,6 +18,9 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.text({ type: 'text/csv', limit: '10mb' }));
+
+// Auth Routes
+app.use('/api/auth', authRouter);
 
 // Health Check for Render
 app.get('/', (req, res) => {
@@ -215,7 +219,7 @@ app.post('/api/tags', async (req, res) => {
     await prisma.user.upsert({
         where: { id: userId },
         update: {},
-        create: { id: userId, email: 'demo@example.com', name: 'Analyst' }
+        create: { id: userId, email: 'demo@example.com', name: 'Analyst', password: '' }
     });
 
     if (!color) {
@@ -281,6 +285,34 @@ app.get('/api/indices', async (req, res) => {
     } catch (error) {
         console.error('Error fetching indices:', error);
         res.status(500).json({ error: 'Failed to fetch indices' });
+    }
+});
+
+// Get Ticker News
+app.get('/api/external/news', async (req, res) => {
+    try {
+        const ticker = req.query.ticker as string;
+        if (!ticker) return res.status(400).json({ error: 'Ticker is required' });
+
+        const news = await fetchTickerNews(ticker);
+        res.json(news);
+    } catch (error) {
+        console.error('Error fetching news:', error);
+        res.status(500).json({ error: 'Failed to fetch news' });
+    }
+});
+
+// Get Social Sentiment
+app.get('/api/external/sentiment', async (req, res) => {
+    try {
+        const ticker = req.query.ticker as string;
+        if (!ticker) return res.status(400).json({ error: 'Ticker is required' });
+
+        const sentiment = await fetchSocialSentiment(ticker);
+        res.json(sentiment);
+    } catch (error) {
+        console.error('Error fetching sentiment:', error);
+        res.status(500).json({ error: 'Failed to fetch sentiment' });
     }
 });
 

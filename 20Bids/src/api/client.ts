@@ -61,3 +61,16 @@ export const uploadRecommendations = async (formData: FormData) => {
     });
     return response.json();
 };
+
+export const fetchTickerNews = async (ticker: string) => {
+    const response = await fetch(`${API_URL}/external/news?ticker=${ticker}`);
+    if (!response.ok) throw new Error('Failed to fetch news');
+    return response.json();
+};
+
+export const fetchSocialSentiment = async (ticker: string) => {
+    const response = await fetch(`${API_URL}/external/sentiment?ticker=${ticker}`);
+    if (!response.ok) throw new Error('Failed to fetch sentiment');
+    return response.json();
+};
+
