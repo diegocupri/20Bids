@@ -85,7 +85,6 @@ export function Dashboard() {
                     selectedTicker={calculatorData?.ticker || null}
                     selectedPrice={calculatorData?.price || null}
                     selectedSector={calculatorData?.sector || null}
-                    selectedDate={selectedDate}
                 />
             </div>
         </div>

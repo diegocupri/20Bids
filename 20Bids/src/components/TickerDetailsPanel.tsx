@@ -8,7 +8,6 @@ interface TickerDetailsPanelProps {
     selectedTicker: string | null;
     selectedPrice: number | null;
     selectedSector: string | null;
-    selectedDate: Date;
     isOpen: boolean;
     onClose: () => void;
 }
