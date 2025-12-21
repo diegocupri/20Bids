@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { Sidebar } from './Sidebar';
 import { RecommendationsTable } from './RecommendationsTable';
 import { TickerDetailsPanel } from './TickerDetailsPanel';
@@ -7,15 +8,31 @@ import { SkeletonTable } from './SkeletonTable';
 import { fetchDates } from '../api/client';
 
 export function Dashboard() {
+    const { user, updateUser } = useAuth();
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
     const [calculatorData, setCalculatorData] = useState<{ ticker: string, price: number, sector: string } | null>(null);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [recommendations, setRecommendations] = useState<any[]>([]);
-    const [mvsoThreshold, setMvsoThreshold] = useState<number>(() => {
-        const saved = localStorage.getItem('mvsoThreshold');
-        return saved ? parseFloat(saved) : 0.5;
-    });
+    const [mvsoThreshold, setMvsoThreshold] = useState<number>(0.5);
+
+    // Load initial settings
+    useEffect(() => {
+        const saved = user?.settings?.mvsoThreshold ?? localStorage.getItem('mvsoThreshold');
+        if (saved !== undefined && saved !== null) {
+            setMvsoThreshold(Number(saved));
+        }
+    }, [user]);
+
+    // Save settings when changed
+    const handleThresholdChange = (val: number) => {
+        setMvsoThreshold(val);
+        localStorage.setItem('mvsoThreshold', val.toString());
+        if (user) {
+            // Debounce could be good here, but for now direct update is fine for a infrequent action
+            updateUser({ settings: { ...user.settings, mvsoThreshold: val } });
+        }
+    };
 
     // Initial Date Load
     useEffect(() => {
@@ -71,7 +88,7 @@ export function Dashboard() {
                                 onRowClick={handleRowClick}
                                 onDataLoaded={handleDataLoaded}
                                 mvsoThreshold={mvsoThreshold}
-                                onMvsoThresholdChange={setMvsoThreshold}
+                                onMvsoThresholdChange={handleThresholdChange}
                             />
                         )}
                     </div>

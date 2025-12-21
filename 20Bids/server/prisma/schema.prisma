@@ -13,6 +13,7 @@ model User {
   password  String   // Hashed password
   name      String?
   avatarUrl String?
+  settings  Json?
   createdAt DateTime @default(now())
   tags      Tag[]
   watchlist Watchlist[]

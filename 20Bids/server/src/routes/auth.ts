@@ -38,7 +38,7 @@ router.post('/register', async (req: Request, res: Response) => {
         // Generate Token
         const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
-        res.json({ token, user: { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl } });
+        res.json({ token, user: { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl, settings: user.settings } });
 
     } catch (error) {
         console.error('Register error:', error);
@@ -65,7 +65,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
         const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
-        res.json({ token, user: { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl } });
+        res.json({ token, user: { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl, settings: user.settings } });
 
     } catch (error) {
         console.error('Login error:', error);
@@ -84,7 +84,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
 
         const user = await prisma.user.findUnique({
             where: { id: req.user.id },
-            select: { id: true, email: true, name: true, avatarUrl: true, createdAt: true }
+            select: { id: true, email: true, name: true, avatarUrl: true, createdAt: true, settings: true }
         });
 
         if (!user) {
@@ -102,7 +102,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
 // @ts-ignore
 router.put('/profile', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-        const { name, avatarUrl, password } = req.body;
+        const { name, avatarUrl, password, settings } = req.body;
         const userId = req.user?.id;
 
         if (!userId) {
@@ -116,11 +116,18 @@ router.put('/profile', authenticateToken, async (req: AuthRequest, res: Response
         if (password) {
             updateData.password = await bcrypt.hash(password, 10);
         }
+        if (settings) {
+            // Merge existing settings with new ones if possible, but simplest is replacement or deep merge
+            // Prisma Json replacement is standard behavior. Frontend should send full settings object or we merge here?
+            // Let's do a simple merge on the backend if we could read it first, but for now replace is fine if frontend sends whole object.
+            // Better: updateData.settings = settings
+            updateData.settings = settings; // Valid if settings is a JSON object
+        }
 
         const user = await prisma.user.update({
             where: { id: userId },
             data: updateData,
-            select: { id: true, email: true, name: true, avatarUrl: true }
+            select: { id: true, email: true, name: true, avatarUrl: true, settings: true }
         });
 
         res.json(user);

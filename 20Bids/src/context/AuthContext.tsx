@@ -5,6 +5,11 @@ interface User {
     email: string;
     name?: string;
     avatarUrl?: string;
+    settings?: {
+        theme?: string;
+        mvsoThreshold?: number;
+        [key: string]: any;
+    };
 }
 
 interface AuthContextType {
@@ -17,6 +22,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
@@ -39,6 +45,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(newUser);
         localStorage.setItem('token', newToken);
         localStorage.setItem('user', JSON.stringify(newUser));
+
+        // Apply settings immediately on login
+        if (newUser.settings?.theme) {
+            document.documentElement.setAttribute('data-theme', newUser.settings.theme);
+            localStorage.setItem('theme', newUser.settings.theme);
+        }
     };
 
     const logout = () => {
@@ -46,15 +58,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        // Optional: Redirect to login handled by protected route or component
         window.location.href = '/login';
     };
 
-    const updateUser = (updates: Partial<User>) => {
-        if (!user) return;
+    const updateUser = async (updates: Partial<User>) => {
+        if (!user || !token) return;
+
+        // Optimistic UI update
         const updatedUser = { ...user, ...updates };
+        if (updates.settings) {
+            updatedUser.settings = { ...(user.settings || {}), ...updates.settings };
+        }
+
         setUser(updatedUser);
         localStorage.setItem('user', JSON.stringify(updatedUser));
+
+        // Sync with backend if not just local updates?
+        // Actually ProfileModal calls API directly then calls this.
+        // But for things like Theme/Filters, we might want this function to call API.
+        // Let's make this function handle the API call if it's a settings update, 
+        // to simplify standard usage.
+
+        if (updates.settings) {
+            try {
+                await fetch(`${API_URL}/auth/profile`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ settings: updatedUser.settings })
+                });
+            } catch (err) {
+                console.error("Failed to sync settings:", err);
+                // Revert? Nah, keep local for now.
+            }
+        }
     };
 
     if (isLoading) {

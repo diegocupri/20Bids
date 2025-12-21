@@ -1,6 +1,7 @@
 import { Palette } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { cn } from '../lib/utils';
+import { useAuth } from '../context/AuthContext';
 
 const themes = [
     { id: 'midnight', name: 'Midnight', colors: ['#09090b', '#09090b', '#27272a'] },
@@ -14,20 +15,27 @@ const themes = [
 export type ThemeId = typeof themes[number]['id'];
 
 export function ThemeSelector() {
+    const { user, updateUser } = useAuth();
     const [theme, setTheme] = useState<ThemeId>('midnight');
     const [isOpen, setIsOpen] = useState(false);
 
     useEffect(() => {
-        const savedTheme = localStorage.getItem('theme') as ThemeId;
+        // Priority: User Settings > Local Storage > Default
+        const savedTheme = (user?.settings?.theme as ThemeId) || (localStorage.getItem('theme') as ThemeId);
         if (savedTheme && themes.some(t => t.id === savedTheme)) {
             setTheme(savedTheme);
         }
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         const root = window.document.documentElement;
         root.setAttribute('data-theme', theme);
         localStorage.setItem('theme', theme);
+
+        // Sync with user profile if logged in and different
+        if (user && user.settings?.theme !== theme) {
+            updateUser({ settings: { ...user.settings, theme } });
+        }
     }, [theme]);
 
     return (
