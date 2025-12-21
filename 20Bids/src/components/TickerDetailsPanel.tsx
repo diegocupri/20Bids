@@ -15,8 +15,7 @@ interface TickerDetailsPanelProps {
 // ... imports
 import { useState, useEffect } from 'react';
 import { fetchTickerNews } from '../api/client';
-import { NewsTab } from './ticker-details/NewsTab';
-import { ExternalLink, Newspaper } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, DollarSign, Activity, BarChart2, Calendar, Newspaper, MessageCircle } from 'lucide-react';
 import { getProbabilityColor } from '../lib/colors';
 
 // ... interface TickerDetailsPanelProps ...

@@ -1,8 +1,35 @@
-import axios from 'axios';
 import { format } from 'date-fns';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 console.log('[Client] Using API URL:', API_URL);
+
+// ... existing functions ...
+
+export async function fetchDailyNote(date: Date): Promise<{ content: string }> {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const res = await fetch(`${API_URL}/notes/${dateStr}`, {
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+    });
+    if (!res.ok) {
+        if (res.status === 404) return { content: '' };
+        throw new Error('Failed to fetch note');
+    }
+    return res.json();
+}
+
+export async function saveDailyNote(date: Date, content: string): Promise<void> {
+    const res = await fetch(`${API_URL}/notes`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ date, content })
+    });
+    if (!res.ok) throw new Error('Failed to save note');
+}
 
 export async function fetchDates(): Promise<Date[]> {
     const res = await fetch(`${API_URL}/dates`);
