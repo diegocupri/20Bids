@@ -1,4 +1,4 @@
-import { X, ExternalLink } from 'lucide-react';
+import { X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useMemo } from 'react';
 
@@ -123,59 +123,54 @@ export function TickerDetailsPanel({
                                 </div>
                             </div>
 
-                            {/* Price & Stats */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 rounded-xl bg-bg-secondary/50 border border-border-primary/50">
-                                    <span className="text-xs text-text-secondary font-medium">Ref Price</span>
-                                    <div className="text-lg font-bold text-text-primary tabular-nums">
-                                        ${selectedPrice?.toFixed(2)}
-                                    </div>
-                                </div>
-                                <div className="p-4 rounded-xl bg-bg-secondary/50 border border-border-primary/50">
-                                    <span className="text-xs text-text-secondary font-medium">Probability</span>
-                                    <div className={cn(
-                                        "text-lg font-bold tabular-nums",
-                                        (tickerDetails?.probabilityValue || 0) >= 90 ? "text-emerald-600" :
-                                            (tickerDetails?.probabilityValue || 0) >= 80 ? "text-amber-600" : "text-text-secondary"
-                                    )}>
-                                        {tickerDetails?.probabilityValue}%
-                                    </div>
-                                </div>
+                            {/* Compact Summary Table */}
+                            <div className="bg-bg-secondary/30 rounded-xl border border-border-primary/50 overflow-hidden">
+                                <table className="w-full text-sm">
+                                    <tbody className="divide-y divide-border-primary/30">
+                                        <tr className="bg-bg-secondary/20">
+                                            <td className="px-4 py-2 text-text-secondary font-medium w-1/3">Price</td>
+                                            <td className="px-4 py-2 text-text-primary font-bold tabular-nums text-right">${selectedPrice?.toFixed(2)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="px-4 py-2 text-text-secondary font-medium">Probability</td>
+                                            <td className={cn(
+                                                "px-4 py-2 font-bold tabular-nums text-right",
+                                                (tickerDetails?.probabilityValue || 0) >= 90 ? "text-emerald-600" :
+                                                    (tickerDetails?.probabilityValue || 0) >= 80 ? "text-amber-600" : "text-text-primary"
+                                            )}>
+                                                {tickerDetails?.probabilityValue}%
+                                            </td>
+                                        </tr>
+                                        <tr className="bg-bg-secondary/20">
+                                            <td className="px-4 py-2 text-text-secondary font-medium">Signal</td>
+                                            <td className={cn(
+                                                "px-4 py-2 font-bold text-right",
+                                                tickerDetails?.type === 'Long' ? "text-emerald-600" : "text-rose-600"
+                                            )}>
+                                                {tickerDetails?.type}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td className="px-4 py-2 text-text-secondary font-medium">Volume</td>
+                                            <td className="px-4 py-2 text-text-primary tabular-nums text-right">
+                                                {((tickerDetails?.volume || 0) / 1000000).toFixed(2)}M
+                                            </td>
+                                        </tr>
+                                        <tr className="bg-bg-secondary/20">
+                                            <td className="px-4 py-2 text-text-secondary font-medium">Stop Loss</td>
+                                            <td className="px-4 py-2 text-text-primary tabular-nums text-right">${tickerDetails?.stopLoss?.toFixed(2)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="px-4 py-2 text-text-secondary font-medium">Target</td>
+                                            <td className="px-4 py-2 text-text-primary tabular-nums text-right">${tickerDetails?.priceTarget?.toFixed(2)}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
 
-                            {/* Sector Context */}
-                            {sectorStats && (
-                                <div className="space-y-3">
-                                    <h4 className="text-sm font-bold text-text-primary uppercase tracking-wider">Sector Context</h4>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-sm py-2 border-b border-border-primary/30">
-                                            <span className="text-text-secondary">Related Tickers</span>
-                                            <span className="font-medium text-text-primary">{sectorStats.count}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm py-2 border-b border-border-primary/30">
-                                            <span className="text-text-secondary">Sector Avg Prob</span>
-                                            <span className="font-medium text-text-primary tabular-nums">{sectorStats.avgProb.toFixed(1)}%</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm py-2 border-b border-border-primary/30">
-                                            <span className="text-text-secondary">Sector Avg Vol</span>
-                                            <span className="font-medium text-text-primary tabular-nums">{(sectorStats.avgVol / 1000000).toFixed(2)}M</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Actions */}
-                            <button
-                                onClick={() => window.open(`https://www.tradingview.com/chart/?symbol=${selectedTicker}`, '_blank')}
-                                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-accent-primary text-white font-bold hover:bg-accent-primary/90 transition-all shadow-sm"
-                            >
-                                <ExternalLink className="w-4 h-4" />
-                                Open TradingView Chart
-                            </button>
-
-                            <div className="pt-6 border-t border-border-primary/50">
-                                <h4 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
-                                    <Newspaper className="w-5 h-5" />
+                            <div className="pt-2 border-t border-border-primary/50">
+                                <h4 className="text-sm font-bold text-text-primary mb-3 flex items-center gap-2 uppercase tracking-wider">
+                                    <Newspaper className="w-4 h-4" />
                                     Latest News
                                 </h4>
                                 <NewsTab news={news} isLoading={isLoadingDetails} />
