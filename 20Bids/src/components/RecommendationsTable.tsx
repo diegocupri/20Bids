@@ -332,10 +332,10 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
             </div>
 
             {/* Table */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-0 relative z-10">
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 pt-2 relative z-10">
                 <table className="w-full border-collapse text-sm table-fixed">
-                    <thead className="sticky top-0 bg-bg-primary z-20 shadow-sm">
-                        <tr className="text-left text-text-secondary border-b border-border-primary/50 text-xs font-medium backdrop-blur-sm">
+                    <thead className="sticky top-0 bg-bg-primary z-20">
+                        <tr className="text-left text-text-secondary border-b border-border-primary/50 text-xs font-medium">
                             <th className="py-3 pl-4 w-[4%]">
                                 <input
                                     type="checkbox"
@@ -604,37 +604,34 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                         </span>
                                     </td>
 
-                                    {/* Prob - Circular Ring Gauge */}
+                                    {/* Prob - Minimal Ring */}
                                     <td className="py-3">
                                         <div className="flex items-center justify-center">
-                                            <div className="relative w-10 h-10">
-                                                {/* Background circle */}
-                                                <svg className="w-10 h-10 transform -rotate-90" viewBox="0 0 36 36">
+                                            <div className="relative w-8 h-8">
+                                                <svg className="w-8 h-8 transform -rotate-90" viewBox="0 0 36 36">
                                                     <circle
-                                                        cx="18" cy="18" r="14"
+                                                        cx="18" cy="18" r="15"
                                                         fill="none"
                                                         stroke="currentColor"
-                                                        strokeWidth="3"
-                                                        className="text-bg-tertiary"
+                                                        strokeWidth="2"
+                                                        className="text-bg-tertiary/50"
                                                     />
-                                                    {/* Progress circle */}
                                                     <circle
-                                                        cx="18" cy="18" r="14"
+                                                        cx="18" cy="18" r="15"
                                                         fill="none"
-                                                        strokeWidth="3"
+                                                        strokeWidth="2"
                                                         strokeLinecap="round"
-                                                        strokeDasharray={`${prob * 0.88} 88`}
+                                                        strokeDasharray={`${prob * 0.94} 94`}
                                                         className={cn(
-                                                            "transition-all duration-500",
+                                                            "transition-all duration-300",
                                                             prob > 80 ? "stroke-emerald-500" :
-                                                                prob >= 75 ? "stroke-amber-500" : "stroke-rose-500"
+                                                                prob >= 75 ? "stroke-amber-500" : "stroke-rose-400"
                                                         )}
                                                     />
                                                 </svg>
-                                                {/* Center text */}
                                                 <div className="absolute inset-0 flex items-center justify-center">
                                                     <span className={cn(
-                                                        "text-[10px] font-bold tabular-nums",
+                                                        "text-[9px] font-semibold tabular-nums",
                                                         prob > 80 ? "text-emerald-600" :
                                                             prob >= 75 ? "text-amber-600" : "text-rose-500"
                                                     )}>
