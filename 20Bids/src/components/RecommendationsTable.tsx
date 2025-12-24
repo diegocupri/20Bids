@@ -604,24 +604,43 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                         </span>
                                     </td>
 
-                                    {/* Prob */}
+                                    {/* Prob - Circular Ring Gauge */}
                                     <td className="py-3">
-                                        <div className="flex items-center gap-2 justify-center">
-                                            <span className={cn(
-                                                "text-xs font-bold tabular-nums",
-                                                prob >= 90 ? "text-emerald-600" :
-                                                    prob >= 80 ? "text-amber-600" : "text-text-secondary"
-                                            )}>
-                                                {prob}%
-                                            </span>
-                                            <div className="w-10 h-1.5 bg-bg-tertiary overflow-hidden rounded-full">
-                                                <div
-                                                    className={cn("h-full rounded-full transition-all duration-500",
-                                                        prob >= 90 ? "bg-emerald-500" :
-                                                            prob >= 80 ? "bg-amber-500" : "bg-rose-500"
-                                                    )}
-                                                    style={{ width: `${prob}% ` }}
-                                                />
+                                        <div className="flex items-center justify-center">
+                                            <div className="relative w-10 h-10">
+                                                {/* Background circle */}
+                                                <svg className="w-10 h-10 transform -rotate-90" viewBox="0 0 36 36">
+                                                    <circle
+                                                        cx="18" cy="18" r="14"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        strokeWidth="3"
+                                                        className="text-bg-tertiary"
+                                                    />
+                                                    {/* Progress circle */}
+                                                    <circle
+                                                        cx="18" cy="18" r="14"
+                                                        fill="none"
+                                                        strokeWidth="3"
+                                                        strokeLinecap="round"
+                                                        strokeDasharray={`${prob * 0.88} 88`}
+                                                        className={cn(
+                                                            "transition-all duration-500",
+                                                            prob > 80 ? "stroke-emerald-500" :
+                                                                prob >= 75 ? "stroke-amber-500" : "stroke-rose-500"
+                                                        )}
+                                                    />
+                                                </svg>
+                                                {/* Center text */}
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <span className={cn(
+                                                        "text-[10px] font-bold tabular-nums",
+                                                        prob > 80 ? "text-emerald-600" :
+                                                            prob >= 75 ? "text-amber-600" : "text-rose-500"
+                                                    )}>
+                                                        {prob}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </td>
