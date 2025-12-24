@@ -231,7 +231,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
     };
 
     return (
-        <div className="flex flex-col h-full bg-bg-primary font-sans relative">
+        <div className="flex flex-col h-full min-h-0 bg-bg-primary font-sans relative overflow-hidden">
             {/* Launch Button Floating - Compact */}
             {selectedSymbols.size > 0 && (
                 <div className="absolute bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
@@ -332,7 +332,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
             </div>
 
             {/* Table */}
-            <div className="flex-1 overflow-y-auto px-6 py-4" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
                 <table className="w-full border-collapse text-sm table-fixed">
                     <thead className="sticky top-0 bg-bg-primary z-10">
                         <tr className="text-left text-text-secondary border-b border-border-primary/50 text-xs font-medium">

@@ -77,21 +77,19 @@ export function Dashboard() {
                 mvsoThreshold={mvsoThreshold}
             />
 
-            <div className="flex-1 flex flex-col min-w-0 relative">
-                <div className="flex-1 flex flex-col min-h-0">
-                    <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
-                        {isLoading ? (
-                            <SkeletonTable />
-                        ) : (
-                            <RecommendationsTable
-                                selectedDate={selectedDate}
-                                onRowClick={handleRowClick}
-                                onDataLoaded={handleDataLoaded}
-                                mvsoThreshold={mvsoThreshold}
-                                onMvsoThresholdChange={handleThresholdChange}
-                            />
-                        )}
-                    </div>
+            <div className="flex-1 flex flex-col min-h-0 min-w-0 relative">
+                <div className="flex-1 min-h-0 overflow-hidden">
+                    {isLoading ? (
+                        <SkeletonTable />
+                    ) : (
+                        <RecommendationsTable
+                            selectedDate={selectedDate}
+                            onRowClick={handleRowClick}
+                            onDataLoaded={handleDataLoaded}
+                            mvsoThreshold={mvsoThreshold}
+                            onMvsoThresholdChange={handleThresholdChange}
+                        />
+                    )}
                 </div>
 
                 {/* Side Panel */}
@@ -107,4 +105,3 @@ export function Dashboard() {
         </div>
     );
 }
-
