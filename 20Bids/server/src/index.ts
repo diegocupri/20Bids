@@ -622,6 +622,40 @@ app.get('/api/stats/analysis', async (req, res) => {
 
 
 // Admin: Refresh or Delete Intraday Data for a specific date
+// Dedicated Diagnostic Endpoint
+app.get('/api/admin/diagnose-ticker', async (req, res) => {
+    try {
+        const { symbol, date } = req.query;
+        if (!symbol || !date) return res.status(400).json({ error: 'Missing symbol or date' });
+
+        const dateStr = date as string;
+        const ticker = symbol as string;
+
+        console.log(`[Diagnostic] checking ${ticker} on ${dateStr}`);
+
+        // 1. Fetch raw Polygon data
+        const stats = await getIntradayStats(ticker, dateStr);
+
+        // 2. Check DB state
+        const dbRec = await prisma.recommendation.findUnique({
+            where: { symbol_date: { symbol: ticker, date: new Date(dateStr) } }
+        });
+
+        res.json({
+            status: 'Diagnostic Run',
+            inputs: { ticker, dateStr },
+            polygon_calculation: stats,
+            db_current_state: dbRec,
+            server_time: new Date().toISOString(),
+            timezone_check: new Date().toLocaleString("en-US", { timeZone: "America/New_York" })
+        });
+
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: (e as any).message });
+    }
+});
+
 app.post('/api/admin/refresh-day', async (req, res) => {
     try {
         const { date, action } = req.query;

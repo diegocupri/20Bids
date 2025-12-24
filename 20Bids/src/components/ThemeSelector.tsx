@@ -12,10 +12,21 @@ export function ThemeSelector() {
     const [theme, setTheme] = useState<ThemeId>('polar');
 
     useEffect(() => {
-        // Priority: User Settings > Local Storage > Default (Polar)
-        const savedTheme = (user?.settings?.theme as ThemeId) || (localStorage.getItem('theme') as ThemeId);
-        if (savedTheme === 'midnight' || savedTheme === 'polar') {
-            setTheme(savedTheme);
+        // Force reset to Polar if not on v1
+        const currentVersion = 'v1_polar_default';
+        const storedVersion = localStorage.getItem('theme_version');
+
+        if (storedVersion !== currentVersion) {
+            // First time on new version: Force Polar
+            setTheme('polar');
+            localStorage.setItem('theme', 'polar');
+            localStorage.setItem('theme_version', currentVersion);
+        } else {
+            // Restore saved preference
+            const savedTheme = (user?.settings?.theme as ThemeId) || (localStorage.getItem('theme') as ThemeId);
+            if (savedTheme === 'midnight' || savedTheme === 'polar') {
+                setTheme(savedTheme);
+            }
         }
     }, [user]);
 
