@@ -110,54 +110,58 @@ export async function getIntradayStats(ticker: string, dateStr: string): Promise
         if (res.data.results && res.data.results.length > 0) {
             const bars = res.data.results;
 
-            // Logic Update (User Request): MVSO = (Low of Day - Ref) / Ref if Short? 
-            // User said: "COGER EL VALOR MÁS HIGH DEL DÍA VS EL DE LAS 10.20H"
-            // Assuming LONG strategy by default for MVSO calculation positive side.
-            // We will use the DAY'S HIGH (09:30 - 16:00) regardless of entry time.
+            const calculateMvso = (targetHour: number, targetMinute: number) => {
+                const refBarIndex = bars.findIndex((bar: any) => {
+                    const barDate = new Date(bar.t);
+                    const barET = new Date(barDate.toLocaleString("en-US", { timeZone: "America/New_York" }));
+                    const h = barET.getHours();
+                    const m = barET.getMinutes();
+                    return (h > targetHour) || (h === targetHour && m >= targetMinute);
+                });
 
-            let dayHigh = -Infinity;
-            let dayLow = Infinity;
+                if (refBarIndex === -1) return null;
 
-            // Find Day High/Low (9:30 - 16:00)
-            // Optimization: We can do this once outside the function, but bars are here.
-            // Or just scan the whole bars array since 'bars' is the whole day 1-min aggs.
+                const refPrice = bars[refBarIndex].c;
 
-            for (const b of bars) {
-                const bDate = new Date(b.t);
-                const bET = new Date(bDate.toLocaleString("en-US", { timeZone: "America/New_York" }));
-                const h = bET.getHours();
-                const m = bET.getMinutes();
+                // Logic Update (User Request): MVSO = (Low of Day - Ref) / Ref if Short? 
+                // User said: "COGER EL VALOR MÁS HIGH DEL DÍA VS EL DE LAS 10.20H"
+                // Assuming LONG strategy by default for MVSO calculation positive side.
+                // We will use the DAY'S HIGH (09:30 - 16:00) regardless of entry time.
 
-                // Filter regular market hours 9:30 - 16:00
-                const timeVal = h * 100 + m;
-                if (timeVal >= 930 && timeVal < 1600) {
-                    if (b.h > dayHigh) dayHigh = b.h;
-                    if (b.l < dayLow) dayLow = b.l;
+                let dayHigh = -Infinity;
+
+                for (const b of bars) {
+                    const bDate = new Date(b.t);
+                    const bET = new Date(bDate.toLocaleString("en-US", { timeZone: "America/New_York" }));
+                    const h = bET.getHours();
+                    const m = bET.getMinutes();
+
+                    // Filter regular market hours 9:30 - 16:00
+                    const timeVal = h * 100 + m;
+                    if (timeVal >= 930 && timeVal < 1600) {
+                        if (b.h > dayHigh) dayHigh = b.h;
+                    }
                 }
-            }
 
-            // Fallback if no bars found in range
-            if (dayHigh === -Infinity) dayHigh = refPrice;
-            if (dayLow === Infinity) dayLow = refPrice;
+                // Fallback if no bars found in range
+                if (dayHigh === -Infinity) dayHigh = refPrice;
 
-            // For the "High Post" field, we will now store "Day High" as per user request.
-            // "ESTE LO QUE HACE ES COGER EL VALOR MÁS HIGH DEL DÍA VS EL DE LAS 10.20H"
+                // For the "High Post" field, we will now store "Day High" as per user request.
+                const highPost = dayHigh;
 
-            const highPost = dayHigh;
+                return { refPrice, highPost };
+            };
 
-            return { refPrice, highPost };
-        };
-
-        return {
-            mvso1020: calculateMvso(10, 20),
-            mvso1120: calculateMvso(11, 20),
-            mvso1220: calculateMvso(12, 20)
-        };
-    }
+            return {
+                mvso1020: calculateMvso(10, 20),
+                mvso1120: calculateMvso(11, 20),
+                mvso1220: calculateMvso(12, 20)
+            };
+        }
     } catch (e) {
-    console.error(`Error fetching intraday stats for ${ticker}:`, (e as any).message);
-}
-return null;
+        console.error(`Error fetching intraday stats for ${ticker}:`, (e as any).message);
+    }
+    return null;
 }
 
 // Cache for ticker details (Sector, Name, etc.)
