@@ -1,15 +1,8 @@
-import { Moon, Sun } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-
-
-
-export type ThemeId = 'polar' | 'midnight';
 
 export function ThemeSelector() {
     const { user, updateUser } = useAuth();
-    // Default to 'polar'
-    const [theme, setTheme] = useState<ThemeId>('polar');
 
     useEffect(() => {
         // Enforce Polar theme always
