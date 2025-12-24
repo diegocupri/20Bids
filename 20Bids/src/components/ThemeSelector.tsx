@@ -2,10 +2,7 @@ import { Moon, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-const THEMES = {
-    POLAR: { id: 'polar', colors: ['#ffffff', '#f3f4f6', '#111827'] },
-    MIDNIGHT: { id: 'midnight', colors: ['#09090b', '#09090b', '#27272a'] }
-};
+
 
 export type ThemeId = 'polar' | 'midnight';
 
