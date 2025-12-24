@@ -332,7 +332,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
             </div>
 
             {/* Table */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
+            <div className="flex-1 overflow-y-auto px-6 py-4" style={{ maxHeight: 'calc(100vh - 280px)' }}>
                 <table className="w-full border-collapse text-sm table-fixed">
                     <thead className="sticky top-0 bg-bg-primary z-10">
                         <tr className="text-left text-text-secondary border-b border-border-primary/50 text-xs font-medium">
@@ -410,10 +410,10 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
 
                             // Calculate change vs 10:20 if available, else use daily change
                             // User Feedback: Always show standard Daily Change
-                            // Fallback: Calculate from open/price if changePercent is 0
+                            // Fallback: Calculate from high/open for historical data (where price often equals open)
                             let liveChange = update.change ?? rec.changePercent;
-                            if (liveChange === 0 && openPrice > 0 && livePrice > 0) {
-                                liveChange = ((livePrice - openPrice) / openPrice) * 100;
+                            if (liveChange === 0 && openPrice > 0 && highPrice > 0) {
+                                liveChange = ((highPrice - openPrice) / openPrice) * 100;
                             }
 
                             // Calculate MVSO: ((High - Ref1020) / Ref1020) * 100
