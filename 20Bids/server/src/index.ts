@@ -617,6 +617,51 @@ app.get('/api/stats/analysis', async (req, res) => {
         res.status(500).json({ error: 'Failed to generate analysis' });
     }
 });
+
+// DEBUG ENDPOINT
+app.get('/api/admin/debug-cleanup', async (req, res) => {
+    try {
+        console.log("Running Debug Cleanup...");
+        const allRecs = await prisma.recommendation.findMany();
+
+        // Cleanup Dec 21
+        const dec21 = allRecs.filter(r => {
+            const d = new Date(r.date);
+            return d.getDate() === 21 && d.getMonth() === 11;
+        });
+        console.log(`Found ${dec21.length} records for Dec 21`);
+
+        let deleted = 0;
+        if (dec21.length > 0) {
+            const ids = dec21.map(r => r.id);
+            await prisma.recommendation.deleteMany({ where: { id: { in: ids } } });
+            deleted = ids.length;
+        }
+
+        // Investigate Dec 23
+        const dec23 = allRecs.filter(r => {
+            const d = new Date(r.date);
+            return d.getDate() === 23 && d.getMonth() === 11;
+        });
+
+        const missing1120 = dec23.filter(r => !r.refPrice1120).length;
+        const missing1220 = dec23.filter(r => !r.refPrice1220).length;
+
+        res.json({
+            success: true,
+            dec21_found: dec21.length,
+            dec21_deleted: deleted,
+            dec23_total: dec23.length,
+            dec23_missing_1120: missing1120,
+            dec23_missing_1220: missing1220,
+            sample_dec23: dec23.slice(0, 1)
+        });
+    } catch (e: any) {
+        console.error(e);
+        res.status(500).json({ error: e.toString() });
+    }
+});
+
 // Upload Recommendations (File Upload with Polygon Enrichment)
 import multer from 'multer';
 const upload = multer({ storage: multer.memoryStorage() });
