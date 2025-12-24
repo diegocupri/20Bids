@@ -332,7 +332,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
             </div>
 
             {/* Table */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-6 pt-2 relative z-10">
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 relative z-10">
                 <table className="w-full border-collapse text-sm table-fixed">
                     <thead className="sticky top-0 bg-bg-primary z-20">
                         <tr className="text-left text-text-secondary border-b border-border-primary/50 text-xs font-medium align-bottom">
