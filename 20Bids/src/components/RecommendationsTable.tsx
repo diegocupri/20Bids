@@ -231,7 +231,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
     };
 
     return (
-        <div className="flex flex-col h-full min-h-0 bg-bg-primary font-sans relative overflow-hidden">
+        <div className="flex flex-col h-full min-h-0 bg-bg-primary font-sans relative">
             {/* Launch Button Floating - Compact */}
             {selectedSymbols.size > 0 && (
                 <div className="absolute bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
@@ -248,7 +248,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
             )}
 
             {/* Header / Filters */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border-primary/50 bg-bg-primary">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border-primary/50 bg-bg-primary relative z-20">
                 <h2 className="text-lg font-bold text-text-primary tracking-tight flex items-center gap-2">
                     Market Opportunities
                 </h2>
@@ -332,7 +332,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
             </div>
 
             {/* Table */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-0 relative z-10">
                 <table className="w-full border-collapse text-sm table-fixed">
                     <thead className="sticky top-0 bg-bg-primary z-10">
                         <tr className="text-left text-text-secondary border-b border-border-primary/50 text-xs font-medium">
