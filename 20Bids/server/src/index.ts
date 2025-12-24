@@ -62,14 +62,12 @@ async function refreshIntradayData(recommendations: any[]) {
                 await prisma.recommendation.update({
                     where: { id: rec.id },
                     data: {
+                        high: stats.mvso1020?.highPost, // Day High for main MVSO
                         refPrice1020: stats.mvso1020?.refPrice,
                         refPrice1120: stats.mvso1120?.refPrice,
                         highPost1120: stats.mvso1120?.highPost,
                         refPrice1220: stats.mvso1220?.refPrice,
                         highPost1220: stats.mvso1220?.highPost,
-                        // Could also update high/ref1020 if needed, but keeping existing structure
-                        // Ideally: high should be highPost1020
-                        // refPrice1020 should be stats.mvso1020?.refPrice
                     }
                 });
             }
