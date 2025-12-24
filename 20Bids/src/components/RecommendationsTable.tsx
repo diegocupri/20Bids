@@ -553,8 +553,8 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                             {/* MVSO 11:20 */}
                                             <td className="px-3 py-3 whitespace-nowrap text-center">
                                                 {(() => {
-                                                    if (rec.refPrice1120 && rec.highPost1120 && rec.refPrice1020) {
-                                                        const mvso1120 = ((rec.highPost1120 - rec.refPrice1120) / rec.refPrice1020) * 100;
+                                                    if (rec.highPost1120 && rec.refPrice1020) {
+                                                        const mvso1120 = ((rec.highPost1120 - rec.refPrice1020) / rec.refPrice1020) * 100;
                                                         return (
                                                             <div className={cn(
                                                                 "inline-block px-2 py-0.5 rounded text-xs font-medium tabular-nums",
@@ -576,8 +576,8 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                             {/* MVSO 12:20 */}
                                             <td className="px-3 py-3 whitespace-nowrap text-center">
                                                 {(() => {
-                                                    if (rec.refPrice1220 && rec.highPost1220 && rec.refPrice1020) {
-                                                        const mvso1220 = ((rec.highPost1220 - rec.refPrice1220) / rec.refPrice1020) * 100;
+                                                    if (rec.highPost1220 && rec.refPrice1020) {
+                                                        const mvso1220 = ((rec.highPost1220 - rec.refPrice1020) / rec.refPrice1020) * 100;
                                                         return (
                                                             <div className={cn(
                                                                 "inline-block px-2 py-0.5 rounded text-xs font-medium tabular-nums",
