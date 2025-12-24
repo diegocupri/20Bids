@@ -618,47 +618,37 @@ app.get('/api/stats/analysis', async (req, res) => {
     }
 });
 
-// DEBUG ENDPOINT
-app.get('/api/admin/debug-cleanup', async (req, res) => {
+
+
+
+// Admin: Refresh Intraday Data for a specific date
+app.post('/api/admin/refresh-day', async (req, res) => {
     try {
-        console.log("Running Debug Cleanup...");
-        const allRecs = await prisma.recommendation.findMany();
+        const { date } = req.query;
+        if (!date) return res.status(400).json({ error: 'Date is required (YYYY-MM-DD)' });
 
-        // Cleanup Dec 21
-        const dec21 = allRecs.filter(r => {
-            const d = new Date(r.date);
-            return d.getDate() === 21 && d.getMonth() === 11;
+        const dateStr = date as string;
+        console.log(`[Admin] Refreshing data for ${dateStr}...`);
+
+        const startOfDay = new Date(dateStr);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        const endOfDay = new Date(dateStr);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+
+        const recs = await prisma.recommendation.findMany({
+            where: { date: { gte: startOfDay, lte: endOfDay } }
         });
-        console.log(`Found ${dec21.length} records for Dec 21`);
 
-        let deleted = 0;
-        if (dec21.length > 0) {
-            const ids = dec21.map(r => r.id);
-            await prisma.recommendation.deleteMany({ where: { id: { in: ids } } });
-            deleted = ids.length;
+        console.log(`[Admin] Found ${recs.length} records.`);
+
+        if (recs.length > 0) {
+            await refreshIntradayData(recs);
         }
 
-        // Investigate Dec 23
-        const dec23 = allRecs.filter(r => {
-            const d = new Date(r.date);
-            return d.getDate() === 23 && d.getMonth() === 11;
-        });
-
-        const missing1120 = dec23.filter(r => !r.refPrice1120).length;
-        const missing1220 = dec23.filter(r => !r.refPrice1220).length;
-
-        res.json({
-            success: true,
-            dec21_found: dec21.length,
-            dec21_deleted: deleted,
-            dec23_total: dec23.length,
-            dec23_missing_1120: missing1120,
-            dec23_missing_1220: missing1220,
-            sample_dec23: dec23.slice(0, 1)
-        });
-    } catch (e: any) {
-        console.error(e);
-        res.status(500).json({ error: e.toString() });
+        res.json({ success: true, count: recs.length, message: 'Refresh process triggered in background (awaited).' });
+    } catch (error) {
+        console.error('[Admin] Error refreshing day:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
