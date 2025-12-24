@@ -31,9 +31,25 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
     const [indices, setIndices] = useState<any[]>([]);
     const [tagPopover, setTagPopover] = useState<{ symbol: string, x: number, y: number } | null>(null);
     const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: 'asc' | 'desc' }>({ key: 'probabilityValue', direction: 'desc' });
-    const [showExtraHours, setShowExtraHours] = useState(false);
-    const [minVolume, setMinVolume] = useState<number>(0);
-    const [minOpenPrice, setMinOpenPrice] = useState<number>(0);
+
+    // Persistent Filter States
+    const [showExtraHours, setShowExtraHours] = useState(() => {
+        const saved = localStorage.getItem('showExtraHours');
+        return saved ? JSON.parse(saved) : false;
+    });
+    const [minVolume, setMinVolume] = useState<number>(() => {
+        const saved = localStorage.getItem('minVolume');
+        return saved ? parseFloat(saved) : 0;
+    });
+    const [minOpenPrice, setMinOpenPrice] = useState<number>(() => {
+        const saved = localStorage.getItem('minOpenPrice');
+        return saved ? parseFloat(saved) : 0;
+    });
+
+    // Save filters on change
+    useEffect(() => { localStorage.setItem('showExtraHours', JSON.stringify(showExtraHours)); }, [showExtraHours]);
+    useEffect(() => { localStorage.setItem('minVolume', minVolume.toString()); }, [minVolume]);
+    useEffect(() => { localStorage.setItem('minOpenPrice', minOpenPrice.toString()); }, [minOpenPrice]);
 
     // Fetch Indices
     useEffect(() => {
@@ -393,9 +409,8 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                             const highPrice = update.high || rec.high || 0;
 
                             // Calculate change vs 10:20 if available, else use daily change
-                            const liveChange = refPrice
-                                ? ((livePrice - refPrice) / refPrice) * 100
-                                : (update.change || rec.changePercent);
+                            // User Feedback: Always show standard Daily Change
+                            const liveChange = update.change ?? rec.changePercent;
 
                             // Calculate MVSO: ((High - Ref1020) / Ref1020) * 100
                             const mvso = (highPrice && refPrice)

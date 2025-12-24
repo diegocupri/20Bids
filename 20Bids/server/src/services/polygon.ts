@@ -126,12 +126,27 @@ export async function getIntradayStats(ticker: string, dateStr: string): Promise
                 let minLow = refPrice;
 
                 if (refBarIndex < bars.length - 1) {
-                    maxHigh = bars[refBarIndex + 1].h;
-                    minLow = bars[refBarIndex + 1].l;
+                    // Check next bar immediately
+                    const nextBar = bars[refBarIndex + 1];
+                    const nextBarDate = new Date(nextBar.t);
+                    const nextBarET = new Date(nextBarDate.toLocaleString("en-US", { timeZone: "America/New_York" }));
 
-                    for (let i = refBarIndex + 2; i < bars.length; i++) {
-                        if (bars[i].h > maxHigh) maxHigh = bars[i].h;
-                        if (bars[i].l < minLow) minLow = bars[i].l;
+                    // Only process if before 16:00
+                    if (nextBarET.getHours() < 16) {
+                        maxHigh = nextBar.h;
+                        minLow = nextBar.l;
+
+                        for (let i = refBarIndex + 2; i < bars.length; i++) {
+                            const b = bars[i];
+                            const bDate = new Date(b.t);
+                            const bET = new Date(bDate.toLocaleString("en-US", { timeZone: "America/New_York" }));
+
+                            // Stop if we hit 16:00 (Market Close)
+                            if (bET.getHours() >= 16) break;
+
+                            if (b.h > maxHigh) maxHigh = b.h;
+                            if (b.l < minLow) minLow = b.l;
+                        }
                     }
                 }
 
