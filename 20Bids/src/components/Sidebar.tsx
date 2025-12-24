@@ -158,40 +158,57 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                         History (30 Days)
                     </div>
                     <div className="space-y-1">
-                        {dates.filter(d => format(d, 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd')).map((date) => {
+                        {dates.filter(d => format(d, 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd')).map((date, index, arr) => {
                             const stats = getAccuracy(date);
                             const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString();
+
+                            // Calculate week separator
+                            const currentWeek = format(date, 'w');
+                            const prevDate = index > 0 ? arr[index - 1] : null;
+                            const prevWeek = prevDate ? format(prevDate, 'w') : null;
+                            const showSeparator = prevWeek && currentWeek !== prevWeek;
+
                             return (
-                                <button
-                                    key={date.toISOString()}
-                                    onClick={() => onDateSelect?.(date)}
-                                    className={cn(
-                                        "w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm transition-all duration-200 border border-transparent",
-                                        isSelected
-                                            ? "bg-white dark:bg-zinc-800 border-border-primary/50 shadow-sm text-text-primary font-medium"
-                                            : "text-text-secondary hover:bg-bg-secondary hover:text-text-primary"
-                                    )}
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <span>{format(date, 'MMM dd')}</span>
-                                        {isWeekend(date) && (
-                                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-bg-secondary text-text-secondary border border-border-primary/50">
-                                                W
+                                <div key={date.toISOString()}>
+                                    {showSeparator && (
+                                        <div className="flex items-center gap-2 my-3 px-2">
+                                            <div className="h-px bg-border-primary/40 flex-1"></div>
+                                            <span className="text-[10px] uppercase font-bold text-text-secondary/50 tracking-widest">
+                                                Week {currentWeek}
                                             </span>
-                                        )}
-                                    </div>
-                                    {stats && (
-                                        <div className="flex items-center gap-2">
-                                            <span className={cn(
-                                                "text-xs font-bold tabular-nums",
-                                                stats.accuracy >= 80 ? "text-emerald-600" :
-                                                    stats.accuracy >= 50 ? "text-amber-600" : "text-rose-600"
-                                            )}>
-                                                {stats.accuracy}%
-                                            </span>
+                                            <div className="h-px bg-border-primary/40 flex-1"></div>
                                         </div>
                                     )}
-                                </button>
+                                    <button
+                                        onClick={() => onDateSelect?.(date)}
+                                        className={cn(
+                                            "w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm transition-all duration-200 border border-transparent",
+                                            isSelected
+                                                ? "bg-white dark:bg-zinc-800 border-border-primary/50 shadow-sm text-text-primary font-medium"
+                                                : "text-text-secondary hover:bg-bg-secondary hover:text-text-primary"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span>{format(date, 'MMM dd')}</span>
+                                            {isWeekend(date) && (
+                                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-bg-secondary text-text-secondary border border-border-primary/50">
+                                                    W
+                                                </span>
+                                            )}
+                                        </div>
+                                        {stats && (
+                                            <div className="flex items-center gap-2">
+                                                <span className={cn(
+                                                    "text-xs font-bold tabular-nums",
+                                                    stats.accuracy >= 80 ? "text-emerald-600" :
+                                                        stats.accuracy >= 50 ? "text-amber-600" : "text-rose-600"
+                                                )}>
+                                                    {stats.accuracy}%
+                                                </span>
+                                            </div>
+                                        )}
+                                    </button>
+                                </div>
                             );
                         })}
                     </div>
