@@ -10,6 +10,11 @@
     <title>20Bids Terminal</title>
   </head>
   <body>
+    <script>
+      // Force Polar theme BEFORE React loads (prevents flash of dark mode)
+      document.documentElement.setAttribute('data-theme', 'polar');
+      localStorage.setItem('theme', 'polar');
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
