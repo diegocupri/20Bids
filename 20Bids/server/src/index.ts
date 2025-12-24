@@ -621,14 +621,14 @@ app.get('/api/stats/analysis', async (req, res) => {
 
 
 
-// Admin: Refresh Intraday Data for a specific date
+// Admin: Refresh or Delete Intraday Data for a specific date
 app.post('/api/admin/refresh-day', async (req, res) => {
     try {
-        const { date } = req.query;
+        const { date, action } = req.query;
         if (!date) return res.status(400).json({ error: 'Date is required (YYYY-MM-DD)' });
 
         const dateStr = date as string;
-        console.log(`[Admin] Refreshing data for ${dateStr}...`);
+        console.log(`[Admin] Managing data for ${dateStr} (Action: ${action || 'refresh'})...`);
 
         const startOfDay = new Date(dateStr);
         startOfDay.setUTCHours(0, 0, 0, 0);
@@ -641,13 +641,24 @@ app.post('/api/admin/refresh-day', async (req, res) => {
 
         console.log(`[Admin] Found ${recs.length} records.`);
 
+        if (action === 'delete') {
+            if (recs.length > 0) {
+                const ids = recs.map(r => r.id);
+                await prisma.recommendation.deleteMany({ where: { id: { in: ids } } });
+                console.log(`[Admin] Deleted ${ids.length} records.`);
+                return res.json({ success: true, count: ids.length, message: 'Records deleted successfully.' });
+            } else {
+                return res.json({ success: true, count: 0, message: 'No records found to delete.' });
+            }
+        }
+
         if (recs.length > 0) {
             await refreshIntradayData(recs);
         }
 
         res.json({ success: true, count: recs.length, message: 'Refresh process triggered in background (awaited).' });
     } catch (error) {
-        console.error('[Admin] Error refreshing day:', error);
+        console.error('[Admin] Error refreshing/deleting day:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
