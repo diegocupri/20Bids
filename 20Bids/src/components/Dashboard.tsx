@@ -77,31 +77,29 @@ export function Dashboard() {
                 mvsoThreshold={mvsoThreshold}
             />
 
-            <div className="flex-1 flex flex-col min-h-0 min-w-0 relative">
-                <div className="flex-1 min-h-0 overflow-hidden">
-                    {isLoading ? (
-                        <SkeletonTable />
-                    ) : (
-                        <RecommendationsTable
-                            selectedDate={selectedDate}
-                            onRowClick={handleRowClick}
-                            onDataLoaded={handleDataLoaded}
-                            mvsoThreshold={mvsoThreshold}
-                            onMvsoThresholdChange={handleThresholdChange}
-                        />
-                    )}
-                </div>
-
-                {/* Side Panel */}
-                <TickerDetailsPanel
-                    isOpen={isPanelOpen}
-                    onClose={() => setIsPanelOpen(false)}
-                    recommendations={recommendations}
-                    selectedTicker={calculatorData?.ticker || null}
-                    selectedPrice={calculatorData?.price || null}
-                    selectedSector={calculatorData?.sector || null}
-                />
+            <div className="flex-1 min-h-0 min-w-0">
+                {isLoading ? (
+                    <SkeletonTable />
+                ) : (
+                    <RecommendationsTable
+                        selectedDate={selectedDate}
+                        onRowClick={handleRowClick}
+                        onDataLoaded={handleDataLoaded}
+                        mvsoThreshold={mvsoThreshold}
+                        onMvsoThresholdChange={handleThresholdChange}
+                    />
+                )}
             </div>
+
+            {/* Side Panel */}
+            <TickerDetailsPanel
+                isOpen={isPanelOpen}
+                onClose={() => setIsPanelOpen(false)}
+                recommendations={recommendations}
+                selectedTicker={calculatorData?.ticker || null}
+                selectedPrice={calculatorData?.price || null}
+                selectedSector={calculatorData?.sector || null}
+            />
         </div>
     );
 }
