@@ -158,7 +158,7 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                         History (30 Days)
                     </div>
                     <div className="space-y-1">
-                        {dates.filter(d => format(d, 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd')).map((date, index, arr) => {
+                        {dates.map((date, index, arr) => {
                             const stats = getAccuracy(date);
                             const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString();
 
