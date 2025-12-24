@@ -335,8 +335,8 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
             <div className="flex-1 min-h-0 overflow-y-auto px-6 pt-2 relative z-10">
                 <table className="w-full border-collapse text-sm table-fixed">
                     <thead className="sticky top-0 bg-bg-primary z-20">
-                        <tr className="text-left text-text-secondary border-b border-border-primary/50 text-xs font-medium">
-                            <th className="py-3 pl-4 w-[4%]">
+                        <tr className="text-left text-text-secondary border-b border-border-primary/50 text-xs font-medium align-bottom">
+                            <th className="pt-6 pb-3 pl-4 w-[4%]">
                                 <input
                                     type="checkbox"
                                     className="rounded border-border-primary text-accent-primary focus:ring-0 cursor-pointer"
@@ -344,58 +344,58 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                     onChange={toggleAll}
                                 />
                             </th>
-                            <th className="py-3 w-[4%]"></th> {/* Tag Column */}
+                            <th className="pt-6 pb-3 w-[4%]"></th> {/* Tag Column */}
 
-                            <th className="py-3 font-medium cursor-pointer hover:text-text-primary transition-colors w-[12%]" onClick={() => handleSort('symbol')}>
+                            <th className="pt-6 pb-3 font-medium cursor-pointer hover:text-text-primary transition-colors w-[12%]" onClick={() => handleSort('symbol')}>
                                 <div className="flex items-center gap-1">Ticker <SortIcon column="symbol" /></div>
                             </th>
 
-                            <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('volume')}>
+                            <th className="pt-6 pb-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('volume')}>
                                 <div className="flex items-center justify-end gap-1">Vol <SortIcon column="volume" /></div>
                             </th>
 
-                            <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('open')}>
+                            <th className="pt-6 pb-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('open')}>
                                 <div className="flex items-center justify-end gap-1">Open <SortIcon column="open" /></div>
                             </th>
 
-                            <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('refPrice1020')}>
+                            <th className="pt-6 pb-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('refPrice1020')}>
                                 <div className="flex items-center justify-end gap-1">10:20 Ref <SortIcon column="refPrice1020" /></div>
                             </th>
 
-                            <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('price')}>
+                            <th className="pt-6 pb-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('price')}>
                                 <div className="flex items-center justify-end gap-1">Price <SortIcon column="price" /></div>
                             </th>
 
-                            <th className="py-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('change')}>
+                            <th className="pt-6 pb-3 font-medium text-right cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('change')}>
                                 <div className="flex items-center justify-end gap-1">% Chg <SortIcon column="change" /></div>
                             </th>
 
-                            <th className="py-3 font-medium text-center cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('mvso')}>
+                            <th className="pt-6 pb-3 font-medium text-center cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('mvso')}>
                                 <div className="flex items-center justify-center gap-1">MVSO <SortIcon column="mvso" /></div>
                             </th>
 
                             {showExtraHours && (
                                 <>
-                                    <th className="py-3 font-medium text-right w-[8%] text-text-secondary/70">
+                                    <th className="pt-6 pb-3 font-medium text-right w-[8%] text-text-secondary/70">
                                         <div className="flex items-center justify-end gap-1">Ref 11:20</div>
                                     </th>
-                                    <th className="py-3 font-medium text-center w-[8%] text-text-secondary/70">
+                                    <th className="pt-6 pb-3 font-medium text-center w-[8%] text-text-secondary/70">
                                         <div className="flex items-center justify-center gap-1">MVSO 11:20</div>
                                     </th>
-                                    <th className="py-3 font-medium text-right w-[8%] text-text-secondary/70">
+                                    <th className="pt-6 pb-3 font-medium text-right w-[8%] text-text-secondary/70">
                                         <div className="flex items-center justify-end gap-1">Ref 12:20</div>
                                     </th>
-                                    <th className="py-3 font-medium text-center w-[8%] text-text-secondary/70">
+                                    <th className="pt-6 pb-3 font-medium text-center w-[8%] text-text-secondary/70">
                                         <div className="flex items-center justify-center gap-1">MVSO 12:20</div>
                                     </th>
                                 </>
                             )}
 
-                            <th className="py-3 font-medium text-center cursor-pointer hover:text-text-primary transition-colors w-[10%]" onClick={() => handleSort('sector')}>
+                            <th className="pt-6 pb-3 font-medium text-center cursor-pointer hover:text-text-primary transition-colors w-[10%]" onClick={() => handleSort('sector')}>
                                 <div className="flex items-center justify-center gap-1">Sector <SortIcon column="sector" /></div>
                             </th>
 
-                            <th className="py-3 font-medium text-center cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('probabilityValue')}>
+                            <th className="pt-6 pb-3 font-medium text-center cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('probabilityValue')}>
                                 <div className="flex items-center justify-center gap-1">Prob <SortIcon column="probabilityValue" /></div>
                             </th>
                         </tr>
@@ -631,7 +631,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                                 </svg>
                                                 <div className="absolute inset-0 flex items-center justify-center">
                                                     <span className={cn(
-                                                        "text-[9px] font-semibold tabular-nums",
+                                                        "text-[11px] font-bold tabular-nums",
                                                         prob > 80 ? "text-emerald-600" :
                                                             prob >= 75 ? "text-amber-600" : "text-rose-500"
                                                     )}>
