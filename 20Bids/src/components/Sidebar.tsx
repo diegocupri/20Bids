@@ -189,6 +189,13 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                                         )}
                                     >
                                         <div className="flex items-center gap-2">
+                                            {/* Pulsing green dot for current day (LIVE) */}
+                                            {format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && (
+                                                <span className="relative flex h-2 w-2">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                                </span>
+                                            )}
                                             <span>{format(date, 'MMM dd')}</span>
                                             {isWeekend(date) && (
                                                 <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-bg-secondary text-text-secondary border border-border-primary/50">
