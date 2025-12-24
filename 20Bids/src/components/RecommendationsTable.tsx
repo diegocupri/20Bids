@@ -334,8 +334,8 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
             {/* Table */}
             <div className="flex-1 min-h-0 overflow-y-auto px-6 py-0 relative z-10">
                 <table className="w-full border-collapse text-sm table-fixed">
-                    <thead className="sticky top-0 bg-bg-primary z-10">
-                        <tr className="text-left text-text-secondary border-b border-border-primary/50 text-xs font-medium">
+                    <thead className="sticky top-0 bg-bg-primary z-20 shadow-sm">
+                        <tr className="text-left text-text-secondary border-b border-border-primary/50 text-xs font-medium backdrop-blur-sm">
                             <th className="py-3 pl-4 w-[4%]">
                                 <input
                                     type="checkbox"
