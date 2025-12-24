@@ -410,7 +410,11 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
 
                             // Calculate change vs 10:20 if available, else use daily change
                             // User Feedback: Always show standard Daily Change
-                            const liveChange = update.change ?? rec.changePercent;
+                            // Fallback: Calculate from open/price if changePercent is 0
+                            let liveChange = update.change ?? rec.changePercent;
+                            if (liveChange === 0 && openPrice > 0 && livePrice > 0) {
+                                liveChange = ((livePrice - openPrice) / openPrice) * 100;
+                            }
 
                             // Calculate MVSO: ((High - Ref1020) / Ref1020) * 100
                             const mvso = (highPrice && refPrice)
