@@ -54,11 +54,25 @@ export function AnalysisPage() {
     const [isCumulative, setIsCumulative] = useState(true);
     const [periodGranularity, setPeriodGranularity] = useState<'days' | 'weeks' | 'months'>('days');
 
+    const [debouncedTakeProfit, setDebouncedTakeProfit] = useState<number>(takeProfit);
+
+    // Debounce Take Profit
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedTakeProfit(takeProfit);
+        }, 800); // Wait 800ms after last keystroke
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [takeProfit]);
+
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const result = await fetchAnalysis(takeProfit);
+                // Pass debounced takeProfit to backend
+                const result = await fetchAnalysis(debouncedTakeProfit);
                 setData(result);
             } catch (error) {
                 console.error('Failed to fetch analysis data', error);
@@ -67,7 +81,7 @@ export function AnalysisPage() {
             }
         };
         fetchData();
-    }, [takeProfit]);
+    }, [debouncedTakeProfit]); // Refetch only when debounced value changes
 
     // Theme observer hook
     useEffect(() => {
