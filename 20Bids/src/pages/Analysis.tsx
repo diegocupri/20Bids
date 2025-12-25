@@ -427,7 +427,7 @@ export function AnalysisPage() {
                             {/* Daily Avg Returns Line Chart */}
                             <ChartCard title="DAILY PROFITABILITY TREND (AVG %)" height={200}>
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart data={dailyAverages}> {/* Note: dailyAverages currently isn't filtered, usually it should be. For simplicity keeping as is or need to filter too. Filtering it is better */}
+                                    <ComposedChart data={dailyAverages}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
                                         <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(5)} minTickGap={50} axisLine={false} tickLine={false} />
                                         <YAxis stroke="#94a3b8" fontSize={11} domain={['auto', 'auto']} axisLine={false} tickLine={false} />
@@ -438,12 +438,73 @@ export function AnalysisPage() {
                                                 borderRadius: '6px',
                                                 boxShadow: 'none',
                                                 color: '#1f2937',
-                                                fontFamily: '\"Source Sans 3\", system-ui, sans-serif',
+                                                fontFamily: '"Source Sans 3", system-ui, sans-serif',
                                                 fontSize: '12px'
                                             }}
                                         />
                                         <Line type="linear" dataKey="avgReturn" stroke={safeColor} strokeWidth={2} dot={false} />
                                     </ComposedChart>
+                                </ResponsiveContainer>
+                            </ChartCard>
+
+                            {/* Scatter Plot: Price vs Return - MOVED TO MAIN COLUMN */}
+                            <ChartCard title="" height={300}>
+                                <div className="flex items-center justify-between mb-3 -mt-2">
+                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
+                                        PRICE vs PROFITABILITY
+                                    </h3>
+                                    <span className="text-[10px] text-text-secondary/70 font-sans">Dot size = Signal Volume</span>
+                                </div>
+                                <ResponsiveContainer width="100%" height="90%">
+                                    <ScatterChart margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} />
+                                        <XAxis
+                                            type="number"
+                                            dataKey="avgPrice"
+                                            name="Avg Price"
+                                            unit="$"
+                                            stroke="#94a3b8"
+                                            fontSize={11}
+                                            axisLine={false}
+                                            tickLine={false}
+                                            domain={['dataMin', 'dataMax']}
+                                        />
+                                        <YAxis
+                                            type="number"
+                                            dataKey="avgReturn"
+                                            name="Avg Return"
+                                            unit="%"
+                                            stroke="#94a3b8"
+                                            fontSize={11}
+                                            axisLine={false}
+                                            tickLine={false}
+                                            domain={['dataMin', 'dataMax']}
+                                        />
+                                        <ZAxis
+                                            type="number"
+                                            dataKey="count"
+                                            range={[50, 400]}
+                                            name="Volume"
+                                        />
+                                        <Tooltip
+                                            cursor={{ strokeDasharray: '3 3' }}
+                                            contentStyle={{
+                                                backgroundColor: 'rgba(255,255,255,0.95)',
+                                                border: '1px solid #e5e7eb',
+                                                borderRadius: '6px',
+                                                boxShadow: 'none',
+                                                color: '#1f2937',
+                                                fontFamily: '"Source Sans 3", system-ui, sans-serif',
+                                                fontSize: '12px'
+                                            }}
+                                        />
+                                        <Scatter
+                                            name="Price/Return"
+                                            data={dailyAverages}
+                                            fill={chartColor}
+                                            fillOpacity={0.7}
+                                        />
+                                    </ScatterChart>
                                 </ResponsiveContainer>
                             </ChartCard>
                         </div>
@@ -475,73 +536,6 @@ export function AnalysisPage() {
                                         <Bar yAxisId="left" dataKey="count" name="Vol" fill={secondaryColor} barSize={20} radius={[2, 2, 0, 0]} opacity={0.6} />
                                         <Line yAxisId="right" type="linear" dataKey="avgMvso" name="Avg %" stroke={chartColor} strokeWidth={2} dot={{ r: 3 }} />
                                     </ComposedChart>
-                                </ResponsiveContainer>
-                            </ChartCard>
-
-                            {/* Scatter Plot: Price vs Return (Size = Volume) */}
-                            <ChartCard title="" height={350}>
-                                <div className="flex items-center justify-between mb-3 -mt-2">
-                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
-                                        PRICE vs PROFITABILITY
-                                    </h3>
-                                    <span className="text-[10px] text-text-secondary/70 font-sans">Dot size = Signal Volume</span>
-                                </div>
-                                <ResponsiveContainer width="100%" height="90%">
-                                    <ScatterChart margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} />
-                                        <XAxis
-                                            type="number"
-                                            dataKey="avgPrice"
-                                            name="Avg Price"
-                                            unit="$"
-                                            stroke="#94a3b8"
-                                            fontSize={11}
-                                            axisLine={false}
-                                            tickLine={false}
-                                            domain={['auto', 'auto']}
-                                        />
-                                        <YAxis
-                                            type="number"
-                                            dataKey="avgReturn"
-                                            name="Avg Return"
-                                            unit="%"
-                                            stroke="#94a3b8"
-                                            fontSize={11}
-                                            axisLine={false}
-                                            tickLine={false}
-                                            domain={['auto', 'auto']}
-                                        />
-                                        <ZAxis
-                                            type="number"
-                                            dataKey="count"
-                                            range={[50, 400]}
-                                            name="Volume"
-                                        />
-                                        <Tooltip
-                                            cursor={{ strokeDasharray: '3 3' }}
-                                            contentStyle={{
-                                                backgroundColor: 'rgba(255,255,255,0.95)',
-                                                border: '1px solid #e5e7eb',
-                                                borderRadius: '6px',
-                                                boxShadow: 'none',
-                                                color: '#1f2937',
-                                                fontFamily: '"Source Sans 3", system-ui, sans-serif',
-                                                fontSize: '12px'
-                                            }}
-                                            formatter={(value: number, name: string) => [
-                                                name === 'Avg Price' ? `$${value.toFixed(2)}` :
-                                                    name === 'Avg Return' ? `${value.toFixed(2)}%` :
-                                                        value,
-                                                name
-                                            ]}
-                                        />
-                                        <Scatter
-                                            name="Price/Return"
-                                            data={dailyAverages.filter(d => d.avgPrice > 0)}
-                                            fill={chartColor}
-                                            fillOpacity={0.7}
-                                        />
-                                    </ScatterChart>
                                 </ResponsiveContainer>
                             </ChartCard>
 
@@ -633,95 +627,45 @@ export function AnalysisPage() {
                                 </div>
                             </ChartCard>
 
-                            {/* Violin Plot: Expectancy Distribution */}
-                            <ChartCard title="" height={300}>
+                            {/* Expectancy Distribution - Bar Chart */}
+                            <ChartCard title="" height={250}>
                                 <div className="flex items-center justify-between mb-3 -mt-2">
                                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
                                         EXPECTANCY DISTRIBUTION
                                     </h3>
                                 </div>
-                                <div className="h-full flex items-center justify-center">
-                                    <svg viewBox="0 0 400 200" className="w-full h-full max-h-52">
-                                        {/* Grid lines */}
-                                        <line x1="50" y1="100" x2="350" y2="100" stroke="#e5e5e5" strokeWidth="1" />
-                                        <line x1="50" y1="50" x2="350" y2="50" stroke="#e5e5e5" strokeWidth="0.5" strokeDasharray="3" />
-                                        <line x1="50" y1="150" x2="350" y2="150" stroke="#e5e5e5" strokeWidth="0.5" strokeDasharray="3" />
-
-                                        {/* Violin body - mirrored area */}
-                                        {(() => {
-                                            if (!distribution.length) return null;
-                                            const maxCount = Math.max(...distribution.map(d => d.count));
-                                            const width = 300 / distribution.length;
-                                            const centerY = 100;
-                                            const maxHeight = 70;
-
-                                            // Build path for top half
-                                            let topPath = `M 50 ${centerY}`;
-                                            let bottomPath = `L 50 ${centerY}`;
-
-                                            distribution.forEach((d, i) => {
-                                                const x = 50 + (i * width) + (width / 2);
-                                                const scaledHeight = maxCount > 0 ? (d.count / maxCount) * maxHeight : 0;
-                                                topPath += ` L ${x} ${centerY - scaledHeight}`;
-                                            });
-
-                                            // Close top and build bottom path
-                                            topPath += ` L ${350} ${centerY}`;
-
-                                            distribution.slice().reverse().forEach((d, i) => {
-                                                const x = 350 - (i * width) - (width / 2);
-                                                const scaledHeight = maxCount > 0 ? (d.count / maxCount) * maxHeight : 0;
-                                                bottomPath = ` L ${x} ${centerY + scaledHeight}` + bottomPath;
-                                            });
-
-                                            const fullPath = topPath + bottomPath + ' Z';
-
-                                            return (
-                                                <>
-                                                    <defs>
-                                                        <linearGradient id="violinGradient" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="0%" stopColor={chartColor} stopOpacity="0.4" />
-                                                            <stop offset="50%" stopColor={chartColor} stopOpacity="0.8" />
-                                                            <stop offset="100%" stopColor={chartColor} stopOpacity="0.4" />
-                                                        </linearGradient>
-                                                    </defs>
-                                                    <path
-                                                        d={fullPath}
-                                                        fill="url(#violinGradient)"
-                                                        stroke={chartColor}
-                                                        strokeWidth="2"
-                                                    />
-                                                    {/* Median line */}
-                                                    <line x1="200" y1="30" x2="200" y2="170" stroke={chartColor} strokeWidth="2" strokeDasharray="4" opacity="0.5" />
-                                                </>
-                                            );
-                                        })()}
-
-                                        {/* X-axis labels */}
-                                        {distribution.map((d, i) => {
-                                            const width = 300 / distribution.length;
-                                            const x = 50 + (i * width) + (width / 2);
-                                            return (
-                                                <text
-                                                    key={i}
-                                                    x={x}
-                                                    y="190"
-                                                    textAnchor="middle"
-                                                    fontSize="10"
-                                                    fill="#94a3b8"
-                                                    fontFamily="Source Sans 3, system-ui, sans-serif"
-                                                >
-                                                    {d.name.replace('%', '')}
-                                                </text>
-                                            );
-                                        })}
-
-                                        {/* Y-axis labels */}
-                                        <text x="45" y="105" textAnchor="end" fontSize="10" fill="#94a3b8" fontFamily="Source Sans 3, system-ui, sans-serif">0</text>
-                                        <text x="45" y="55" textAnchor="end" fontSize="10" fill="#94a3b8" fontFamily="Source Sans 3, system-ui, sans-serif">+</text>
-                                        <text x="45" y="155" textAnchor="end" fontSize="10" fill="#94a3b8" fontFamily="Source Sans 3, system-ui, sans-serif">-</text>
-                                    </svg>
-                                </div>
+                                <ResponsiveContainer width="100%" height="85%">
+                                    <BarChart data={distribution} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
+                                        <XAxis
+                                            dataKey="name"
+                                            stroke="#94a3b8"
+                                            fontSize={10}
+                                            tickFormatter={(v) => v.replace('%', '')}
+                                            axisLine={false}
+                                            tickLine={false}
+                                        />
+                                        <YAxis stroke="#94a3b8" fontSize={10} axisLine={false} tickLine={false} />
+                                        <Tooltip
+                                            cursor={{ fill: '#f3f4f6', opacity: 0.5 }}
+                                            contentStyle={{
+                                                backgroundColor: 'rgba(255,255,255,0.95)',
+                                                border: '1px solid #e5e7eb',
+                                                borderRadius: '6px',
+                                                boxShadow: 'none',
+                                                color: '#1f2937',
+                                                fontFamily: '"Source Sans 3", system-ui, sans-serif',
+                                                fontSize: '12px'
+                                            }}
+                                        />
+                                        <Bar
+                                            dataKey="count"
+                                            fill={chartColor}
+                                            radius={[4, 4, 0, 0]}
+                                            fillOpacity={0.8}
+                                        />
+                                    </BarChart>
+                                </ResponsiveContainer>
                             </ChartCard>
                         </div>
                     </div>
