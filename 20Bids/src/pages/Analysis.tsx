@@ -528,7 +528,7 @@ export function AnalysisPage() {
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             {/* Top Tickers Leaderboard */}
                             <ChartCard title="" height={280}>
-                                <div className="flex items-center justify-between mb-3 -mt-2">
+                                <div className="flex items-center justify-between mb-3">
                                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
                                         TOP TICKERS PERFORMANCE
                                     </h3>
@@ -562,7 +562,7 @@ export function AnalysisPage() {
 
                             {/* Top Periods Table */}
                             <ChartCard title="" height={280}>
-                                <div className="flex items-center justify-between mb-3 -mt-2">
+                                <div className="flex items-center justify-between mb-3">
                                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
                                         TOP PERIODS
                                     </h3>
@@ -612,7 +612,7 @@ export function AnalysisPage() {
 
                             {/* Top Sectors Leaderboard */}
                             <ChartCard title="" height={280}>
-                                <div className="flex items-center justify-between mb-3 -mt-2">
+                                <div className="flex items-center justify-between mb-3">
                                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
                                         OUTPERFORMING SECTORS
                                     </h3>
@@ -651,7 +651,7 @@ export function AnalysisPage() {
 
                         {/* ROW 3: Expectancy Distribution (Full Width) */}
                         <ChartCard title="" height={280}>
-                            <div className="flex items-center justify-between mb-3 -mt-2">
+                            <div className="flex items-center justify-between mb-3">
                                 <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
                                     EXPECTANCY DISTRIBUTION
                                 </h3>
