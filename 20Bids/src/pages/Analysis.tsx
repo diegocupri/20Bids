@@ -12,7 +12,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { Calendar, Info, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface AnalysisData {
-    equityCurve: { date: string, return: number, equity: number, drawdown: number }[];
+    equityCurve: { date: string, return: number, equity: number, drawdown: number, hitTP?: number, hitSL?: number, other?: number, count?: number }[];
     dailyAverages: { date: string, avgReturn: number, avgPrice: number, count: number }[];
     distribution: { name: string, count: number }[];
     seasonality: { name: string, count: number, avgMvso: number, winRate: number }[];
