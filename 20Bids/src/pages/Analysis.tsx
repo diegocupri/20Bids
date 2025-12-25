@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    AreaChart, Area, ComposedChart, Line, Legend, ScatterChart, Scatter, ZAxis
+    AreaChart, Area, ComposedChart, Line, Legend
 } from 'recharts';
 import { cn } from '../lib/utils';
 import { fetchAnalysis } from '../api/client';
@@ -447,47 +447,32 @@ export function AnalysisPage() {
                                 </ResponsiveContainer>
                             </ChartCard>
 
-                            {/* Scatter Plot: Price vs Return - MOVED TO MAIN COLUMN */}
+                            {/* Top Tickers Performance */}
                             <ChartCard title="" height={300}>
                                 <div className="flex items-center justify-between mb-3 -mt-2">
                                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
-                                        PRICE vs PROFITABILITY
+                                        TOP TICKERS PERFORMANCE
                                     </h3>
-                                    <span className="text-[10px] text-text-secondary/70 font-sans">Dot size = Signal Volume</span>
+                                    <span className="text-[10px] text-text-secondary/70 font-sans">Avg Return % by Ticker</span>
                                 </div>
                                 <ResponsiveContainer width="100%" height="90%">
-                                    <ScatterChart margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} />
-                                        <XAxis
-                                            type="number"
-                                            dataKey="avgPrice"
-                                            name="Avg Price"
-                                            unit="$"
-                                            stroke="#94a3b8"
-                                            fontSize={11}
-                                            axisLine={false}
-                                            tickLine={false}
-                                            domain={['dataMin', 'dataMax']}
-                                        />
+                                    <BarChart
+                                        data={topTickers.slice(0, 10)}
+                                        layout="vertical"
+                                        margin={{ top: 5, right: 30, left: 60, bottom: 5 }}
+                                    >
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} horizontal={true} vertical={false} />
+                                        <XAxis type="number" stroke="#94a3b8" fontSize={10} axisLine={false} tickLine={false} unit="%" />
                                         <YAxis
-                                            type="number"
-                                            dataKey="avgReturn"
-                                            name="Avg Return"
-                                            unit="%"
+                                            type="category"
+                                            dataKey="name"
                                             stroke="#94a3b8"
-                                            fontSize={11}
+                                            fontSize={10}
                                             axisLine={false}
                                             tickLine={false}
-                                            domain={['dataMin', 'dataMax']}
-                                        />
-                                        <ZAxis
-                                            type="number"
-                                            dataKey="count"
-                                            range={[50, 400]}
-                                            name="Volume"
+                                            width={55}
                                         />
                                         <Tooltip
-                                            cursor={{ strokeDasharray: '3 3' }}
                                             contentStyle={{
                                                 backgroundColor: 'rgba(255,255,255,0.95)',
                                                 border: '1px solid #e5e7eb',
@@ -497,14 +482,15 @@ export function AnalysisPage() {
                                                 fontFamily: '"Source Sans 3", system-ui, sans-serif',
                                                 fontSize: '12px'
                                             }}
+                                            formatter={(value: number) => [`${value.toFixed(2)}%`, 'Avg Return']}
                                         />
-                                        <Scatter
-                                            name="Price/Return"
-                                            data={dailyAverages}
+                                        <Bar
+                                            dataKey="avgMvso"
                                             fill={chartColor}
-                                            fillOpacity={0.7}
+                                            radius={[0, 4, 4, 0]}
+                                            fillOpacity={0.8}
                                         />
-                                    </ScatterChart>
+                                    </BarChart>
                                 </ResponsiveContainer>
                             </ChartCard>
                         </div>
