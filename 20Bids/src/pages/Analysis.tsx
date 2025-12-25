@@ -487,19 +487,49 @@ export function AnalysisPage() {
                                             <YAxis yAxisId="left" stroke={chartColor} fontSize={11} domain={['auto', 'auto']} axisLine={false} tickLine={false} unit="%" />
                                             <YAxis yAxisId="right" orientation="right" stroke={safeColor} fontSize={11} domain={[0, 5]} axisLine={false} tickLine={false} unit="%" />
                                             <Tooltip
-                                                contentStyle={{
-                                                    backgroundColor: 'rgba(255,255,255,0.95)',
-                                                    border: '1px solid #e5e7eb',
-                                                    borderRadius: '6px',
-                                                    boxShadow: 'none',
-                                                    color: '#1f2937',
-                                                    fontFamily: '"Source Sans 3", system-ui, sans-serif',
-                                                    fontSize: '12px'
+                                                content={({ active, payload, label }) => {
+                                                    if (!active || !payload || !payload.length) return null;
+                                                    const data = payload[0]?.payload;
+                                                    return (
+                                                        <div style={{
+                                                            backgroundColor: 'rgba(255,255,255,0.98)',
+                                                            border: '1px solid #e5e7eb',
+                                                            borderRadius: '8px',
+                                                            padding: '10px 14px',
+                                                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                                            fontFamily: '"Source Sans 3", system-ui, sans-serif',
+                                                            fontSize: '12px',
+                                                            minWidth: '160px'
+                                                        }}>
+                                                            <div style={{ fontWeight: 600, marginBottom: '8px', color: '#1f2937', borderBottom: '1px solid #e5e7eb', paddingBottom: '6px' }}>
+                                                                {label}
+                                                            </div>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                                <span style={{ color: '#64748b' }}>Total Return:</span>
+                                                                <span style={{ fontWeight: 600, color: data?.return >= 0 ? '#22c55e' : '#ef4444' }}>{data?.return?.toFixed(2)}%</span>
+                                                            </div>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                                <span style={{ color: '#64748b' }}>Avg Return:</span>
+                                                                <span style={{ fontWeight: 500 }}>{data?.avgReturn?.toFixed(2)}%</span>
+                                                            </div>
+                                                            <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '8px', paddingTop: '8px' }}>
+                                                                <div style={{ fontSize: '10px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '6px' }}>Breakdown ({data?.count || 0} trades)</div>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                                                                    <span style={{ color: '#22c55e' }}>✓ Hit TP ({takeProfit}%):</span>
+                                                                    <span style={{ fontWeight: 600 }}>{data?.hitTP || 0}</span>
+                                                                </div>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                                                                    <span style={{ color: '#ef4444' }}>✗ Hit SL ({stopLoss === 100 ? 'Off' : `-${stopLoss}%`}):</span>
+                                                                    <span style={{ fontWeight: 600 }}>{data?.hitSL || 0}</span>
+                                                                </div>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                    <span style={{ color: '#64748b' }}>○ Other:</span>
+                                                                    <span style={{ fontWeight: 600 }}>{data?.other || 0}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
                                                 }}
-                                                formatter={(value: number, name: string) => [
-                                                    `${value.toFixed(2)}%`,
-                                                    name === 'return' ? 'Total Return' : 'Avg Return'
-                                                ]}
                                             />
                                             <Legend
                                                 verticalAlign="top"

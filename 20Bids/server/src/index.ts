@@ -453,7 +453,7 @@ app.get('/api/stats/analysis', async (req, res) => {
         let currentLossStreak = 0;
         let maxLossStreak = 0;
 
-        const dailyMap: Record<string, { total: number, count: number, totalPrice: number }> = {};
+        const dailyMap: Record<string, { total: number, count: number, totalPrice: number, hitTP: number, hitSL: number, other: number }> = {};
 
         // DEBUG: Sample MVSO Calculations
         let debugSamples = 0;
@@ -469,9 +469,13 @@ app.get('/api/stats/analysis', async (req, res) => {
                 ? ((rec.lowBeforePeak - rec.refPrice1020) / rec.refPrice1020) * 100
                 : 0;
 
+            // Determine trade outcome category
+            const wasStoppedOut = maxDD < -stopLoss;
+            const hitTakeProfit = !wasStoppedOut && mvso >= takeProfit;
+
             // Apply Stop Loss: if Max DD exceeds -SL, trade was stopped out at -SL
             let effectiveMvso = mvso;
-            if (maxDD < -stopLoss) {
+            if (wasStoppedOut) {
                 effectiveMvso = -stopLoss;
             }
 
@@ -479,7 +483,7 @@ app.get('/api/stats/analysis', async (req, res) => {
             const clampedMvso = effectiveMvso > 0 ? Math.min(effectiveMvso, takeProfit) : effectiveMvso;
 
             if (debugSamples < 5) {
-                console.log(`[Analysis Debug] ${rec.symbol} on ${format(rec.date, 'yyyy-MM-dd')}: High=${rec.high}, Ref=${rec.refPrice1020} => MVSO=${mvso.toFixed(2)}% (Clamped: ${clampedMvso.toFixed(2)}%)`);
+                console.log(`[Analysis Debug] ${rec.symbol} on ${format(rec.date, 'yyyy-MM-dd')}: High=${rec.high}, Ref=${rec.refPrice1020} => MVSO=${mvso.toFixed(2)}% (Clamped: ${clampedMvso.toFixed(2)}%) | TP:${hitTakeProfit} SL:${wasStoppedOut}`);
                 debugSamples++;
             }
 
@@ -505,29 +509,36 @@ app.get('/api/stats/analysis', async (req, res) => {
             const currentDrawdown = peakEquity - cumulativeReturn;
             if (currentDrawdown > maxDrawdown) maxDrawdown = currentDrawdown;
             const dateStr = format(rec.date, 'yyyy-MM-dd');
-            // Only push last point for each day to avoid too much noise, or push every point?
-            // Let's push every point for granular equity curve, but maybe aggregated by day is cleaner.
-            // Simplified: Aggregating by day in frontend or just pushing all. 
-            // Better: Aggregate daily return for the chart.
 
             const existingDay = analysis.cumulativePerformance.find(d => d.date === dateStr);
             if (existingDay) {
                 existingDay.return += clampedMvso;
                 existingDay.equity = cumulativeReturn;
-                existingDay.drawdown = currentDrawdown * -1; // Store as negative for underwater chart
+                existingDay.drawdown = currentDrawdown * -1;
+                (existingDay as any).hitTP = ((existingDay as any).hitTP || 0) + (hitTakeProfit ? 1 : 0);
+                (existingDay as any).hitSL = ((existingDay as any).hitSL || 0) + (wasStoppedOut ? 1 : 0);
+                (existingDay as any).other = ((existingDay as any).other || 0) + (!hitTakeProfit && !wasStoppedOut ? 1 : 0);
+                (existingDay as any).count = ((existingDay as any).count || 0) + 1;
             } else {
                 analysis.cumulativePerformance.push({
                     date: dateStr,
                     return: clampedMvso,
                     equity: cumulativeReturn,
-                    drawdown: currentDrawdown * -1
-                });
+                    drawdown: currentDrawdown * -1,
+                    hitTP: hitTakeProfit ? 1 : 0,
+                    hitSL: wasStoppedOut ? 1 : 0,
+                    other: !hitTakeProfit && !wasStoppedOut ? 1 : 0,
+                    count: 1
+                } as any);
             }
 
             // Daily Average Aggregation
-            if (!dailyMap[dateStr]) dailyMap[dateStr] = { total: 0, count: 0, totalPrice: 0 };
+            if (!dailyMap[dateStr]) dailyMap[dateStr] = { total: 0, count: 0, totalPrice: 0, hitTP: 0, hitSL: 0, other: 0 };
             dailyMap[dateStr].total += clampedMvso;
             dailyMap[dateStr].count++;
+            dailyMap[dateStr].hitTP += hitTakeProfit ? 1 : 0;
+            dailyMap[dateStr].hitSL += wasStoppedOut ? 1 : 0;
+            dailyMap[dateStr].other += (!hitTakeProfit && !wasStoppedOut) ? 1 : 0;
             // Use refPrice1020 as entry price proxy, consistent with MVSO calc
             dailyMap[dateStr].totalPrice += (rec.refPrice1020 || rec.open || 0);
 
