@@ -285,20 +285,20 @@ export function AnalysisPage() {
 
                     {/* Risk & Efficiency Grid */}
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-                        <TerminalMetric label="Profit Factor" value={riskMetrics.profitFactor.toFixed(2)} trend={riskMetrics.profitFactor > 1.5 ? 'up' : 'neutral'} theme={theme} tooltip="Ratio of Gross Win / Gross Loss. > 1.5 is good." />
-                        <TerminalMetric label="Max Drawdown" value={`-${riskMetrics.maxDrawdown.toFixed(2)}%`} trend="down" color={dangerColor} theme={theme} tooltip="Largest peak-to-valley decline in equity." />
-                        <TerminalMetric label="Win Streak" value={riskMetrics.maxWinStreak.toString()} theme={theme} tooltip="Max consecutive winning trades." />
-                        <TerminalMetric label="Loss Streak" value={riskMetrics.maxLossStreak.toString()} color={dangerColor} theme={theme} tooltip="Max consecutive losing trades." />
-                        <TerminalMetric label="Best Day" value={bestDay?.name?.slice(0, 3).toUpperCase() || '-'} subValue={`${bestDay?.winRate}% WR`} theme={theme} tooltip="Day of week with highest win rate." />
-                        <TerminalMetric label="Avg R (Est)" value="1.2" subValue="Risk/Reward" theme={theme} tooltip="Estimated Average Profit / Average Loss." />
-                        <TerminalMetric label="Expectancy" value={`${(topTickers.slice(0, 10).reduce((acc, curr) => acc + curr.avgMvso, 0) / 10).toFixed(2)}%`} trend="up" theme={theme} tooltip="Avg return of top 10 tickers." />
-                        <TerminalMetric label="Reliability" value="High" color={safeColor} theme={theme} tooltip="Overall consistency based on win rate and drawdown." />
+                        <TerminalMetric label="Profit Factor" value={riskMetrics.profitFactor.toFixed(2)} trend={riskMetrics.profitFactor > 1.5 ? 'up' : 'neutral'} tooltip="Ratio of Gross Win / Gross Loss. > 1.5 is good." />
+                        <TerminalMetric label="Max Drawdown" value={`-${riskMetrics.maxDrawdown.toFixed(2)}%`} trend="down" color={dangerColor} tooltip="Largest peak-to-valley decline in equity." />
+                        <TerminalMetric label="Win Streak" value={riskMetrics.maxWinStreak.toString()} tooltip="Max consecutive winning trades." />
+                        <TerminalMetric label="Loss Streak" value={riskMetrics.maxLossStreak.toString()} color={dangerColor} tooltip="Max consecutive losing trades." />
+                        <TerminalMetric label="Best Day" value={bestDay?.name?.slice(0, 3).toUpperCase() || '-'} subValue={`${bestDay?.winRate}% WR`} tooltip="Day of week with highest win rate." />
+                        <TerminalMetric label="Avg R (Est)" value="1.2" subValue="Risk/Reward" tooltip="Estimated Average Profit / Average Loss." />
+                        <TerminalMetric label="Expectancy" value={`${(topTickers.slice(0, 10).reduce((acc, curr) => acc + curr.avgMvso, 0) / 10).toFixed(2)}%`} trend="up" tooltip="Avg return of top 10 tickers." />
+                        <TerminalMetric label="Reliability" value="High" color={safeColor} tooltip="Overall consistency based on win rate and drawdown." />
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Main Equity Curve & Trend Analysis */}
                         <div className="lg:col-span-2 space-y-6">
-                            <ChartCard title="" height={350} theme={theme}>
+                            <ChartCard title="" height={350}>
                                 {/* Metric Selector */}
                                 <div className="flex items-center justify-between mb-4 -mt-2">
                                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2">
@@ -372,7 +372,7 @@ export function AnalysisPage() {
                             </ChartCard>
 
                             {/* Daily Avg Returns Line Chart */}
-                            <ChartCard title="DAILY PROFITABILITY TREND (AVG %)" height={200} theme={theme}>
+                            <ChartCard title="DAILY PROFITABILITY TREND (AVG %)" height={200}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <ComposedChart data={dailyAverages}> {/* Note: dailyAverages currently isn't filtered, usually it should be. For simplicity keeping as is or need to filter too. Filtering it is better */}
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
@@ -398,7 +398,7 @@ export function AnalysisPage() {
                         {/* Side Stats & Leaderboards */}
                         <div className="space-y-6">
 
-                            <ChartCard title="SEASONALITY (PROFITABILITY VS VOL)" height={250} theme={theme}>
+                            <ChartCard title="SEASONALITY (PROFITABILITY VS VOL)" height={250}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <ComposedChart data={seasonality}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
@@ -426,7 +426,7 @@ export function AnalysisPage() {
                             </ChartCard>
 
                             {/* Comparative Chart */}
-                            <ChartCard title="VOLUME & PRICE vs PROFITABILITY" height={300} theme={theme}>
+                            <ChartCard title="VOLUME & PRICE vs PROFITABILITY" height={300}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <ComposedChart data={dailyAverages}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
@@ -455,7 +455,7 @@ export function AnalysisPage() {
 
                             {/* Top Periods Table */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <ChartCard title="TOP DAYS" height={200} theme={theme}>
+                                <ChartCard title="TOP DAYS" height={200}>
                                     <div className="overflow-y-auto h-full pr-1">
                                         <table className="w-full text-xs text-left text-text-secondary">
                                             <thead>
@@ -475,7 +475,7 @@ export function AnalysisPage() {
                                         </table>
                                     </div>
                                 </ChartCard>
-                                <ChartCard title="TOP WEEKS" height={200} theme={theme}>
+                                <ChartCard title="TOP WEEKS" height={200}>
                                     <div className="overflow-y-auto h-full pr-1">
                                         <table className="w-full text-xs text-left text-text-secondary">
                                             <thead>
@@ -495,7 +495,7 @@ export function AnalysisPage() {
                                         </table>
                                     </div>
                                 </ChartCard>
-                                <ChartCard title="TOP MONTHS" height={200} theme={theme}>
+                                <ChartCard title="TOP MONTHS" height={200}>
                                     <div className="overflow-y-auto h-full pr-1">
                                         <table className="w-full text-xs text-left text-text-secondary">
                                             <thead>
@@ -518,7 +518,7 @@ export function AnalysisPage() {
                             </div>
 
                             {/* Top Sectors Leaderboard */}
-                            <ChartCard title="OUTPERFORMING SECTORS" height={250} theme={theme}>
+                            <ChartCard title="OUTPERFORMING SECTORS" height={250}>
                                 <div className="overflow-y-auto h-full pr-1">
                                     <table className="w-full text-xs text-left text-text-secondary">
                                         <thead>
@@ -543,7 +543,7 @@ export function AnalysisPage() {
                                 </div>
                             </ChartCard>
 
-                            <ChartCard title="EXPECTANCY DISTRIBUTION" height={200} theme={theme}>
+                            <ChartCard title="EXPECTANCY DISTRIBUTION" height={200}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={distribution}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
@@ -585,7 +585,7 @@ function InfoTooltip({ text }: { text: string }) {
     );
 }
 
-function TerminalMetric({ label, value, subValue, trend, color, theme, tooltip }: { label: string, value: string, subValue?: string, trend?: 'up' | 'down' | 'neutral', color?: string, theme: string, tooltip?: string }) {
+function TerminalMetric({ label, value, subValue, trend, color, tooltip }: { label: string, value: string, subValue?: string, trend?: 'up' | 'down' | 'neutral', color?: string, tooltip?: string }) {
     return (
         <div className={cn(
             "border border-border-primary/30 rounded-lg p-3 flex flex-col justify-between bg-bg-primary hover:border-border-primary/50 transition-colors",
@@ -610,12 +610,11 @@ function TerminalMetric({ label, value, subValue, trend, color, theme, tooltip }
     );
 }
 
-function ChartCard({ title, children, height = 300 }: { title: string, children: React.ReactNode, height?: number, theme?: string }) {
+function ChartCard({ title, height, children }: { title: string, height: number, children: React.ReactNode }) {
     return (
-        <div
-            className="border border-border-primary/30 rounded-lg p-4 flex flex-col bg-bg-primary"
-            style={{ height }}
-        >
+        <div className={cn(
+            "border border-border-primary/30 rounded-lg p-4 bg-bg-primary overflow-hidden flex flex-col",
+        )} style={{ height }}>
             {title && (
                 <h3 className="text-xs font-semibold text-text-secondary mb-4 flex items-center gap-2">
                     {title}
