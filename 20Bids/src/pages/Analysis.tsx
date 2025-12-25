@@ -737,7 +737,7 @@ function TerminalMetric({ label, value, subValue, trend, color, tooltip }: { lab
 function ChartCard({ title, height, children }: { title: string, height: number, children: React.ReactNode }) {
     return (
         <div className={cn(
-            "border border-border-primary/30 rounded-lg p-1 bg-bg-primary overflow-hidden flex flex-col",
+            "border border-border-primary/30 rounded-lg p-3 bg-bg-primary overflow-hidden flex flex-col",
         )} style={{ height }}>
             {title && (
                 <h3 className="text-xs font-semibold text-text-secondary mb-4 flex items-center gap-2">
