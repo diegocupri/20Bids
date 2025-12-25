@@ -31,6 +31,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
     const [indices, setIndices] = useState<any[]>([]);
     const [tagPopover, setTagPopover] = useState<{ symbol: string, x: number, y: number } | null>(null);
     const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: 'asc' | 'desc' }>({ key: 'probabilityValue', direction: 'desc' });
+    const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
     // Persistent Filter States
     const [showExtraHours, setShowExtraHours] = useState(() => {
@@ -475,20 +476,17 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                     </td>
                                     <td className="py-3">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
-                                                <img
-                                                    src={`https://financialmodelingprep.com/image-stock/${rec.symbol}.png`}
-                                                    alt={rec.symbol}
-                                                    className="w-full h-full object-contain"
-                                                    onError={(e) => {
-                                                        e.currentTarget.style.display = 'none';
-                                                        e.currentTarget.parentElement!.classList.add('bg-bg-secondary', 'flex', 'items-center', 'justify-center');
-                                                        const fallback = document.createElement('div');
-                                                        fallback.className = 'text-xs font-bold text-text-primary';
-                                                        fallback.innerText = rec.symbol[0];
-                                                        e.currentTarget.parentElement!.appendChild(fallback);
-                                                    }}
-                                                />
+                                            <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-bg-secondary flex items-center justify-center">
+                                                {!failedImages.has(rec.symbol) ? (
+                                                    <img
+                                                        src={`https://financialmodelingprep.com/image-stock/${rec.symbol}.png`}
+                                                        alt={rec.symbol}
+                                                        className="w-full h-full object-contain"
+                                                        onError={() => setFailedImages(prev => new Set(prev).add(rec.symbol))}
+                                                    />
+                                                ) : (
+                                                    <span className="text-xs font-bold text-text-primary">{rec.symbol[0]}</span>
+                                                )}
                                             </div>
                                             <div className="flex flex-col min-w-0">
                                                 <div className="flex items-center gap-2">

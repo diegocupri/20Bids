@@ -37,6 +37,7 @@ export function AnalysisPage() {
         return 'midnight';
     });
     const [timeRange, setTimeRange] = useState<TimeRange>('ALL');
+    const [chartMetric, setChartMetric] = useState<'equity' | 'mvso' | 'winRate' | 'avgReturn'>('equity');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -234,18 +235,55 @@ export function AnalysisPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Main Equity Curve & Trend Analysis */}
                         <div className="lg:col-span-2 space-y-6">
-                            <ChartCard title="CUMULATIVE EQUITY & TREND" height={350} theme={theme}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={equityCurve}>
+                            <ChartCard title="" height={350} theme={theme}>
+                                {/* Metric Selector */}
+                                <div className="flex items-center justify-between mb-4 -mt-2">
+                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2">
+                                        PERFORMANCE EVOLUTION
+                                    </h3>
+                                    <div className="flex bg-bg-tertiary/30 rounded-md p-0.5 border border-border-primary">
+                                        {[
+                                            { key: 'equity', label: 'Equity' },
+                                            { key: 'mvso', label: 'MVSO' },
+                                            { key: 'avgReturn', label: 'Avg %' },
+                                            { key: 'winRate', label: 'Win Rate' }
+                                        ].map(({ key, label }) => (
+                                            <button
+                                                key={key}
+                                                onClick={() => setChartMetric(key as any)}
+                                                className={cn(
+                                                    "px-2 py-1 text-[10px] font-medium rounded transition-all",
+                                                    chartMetric === key
+                                                        ? "bg-accent-primary text-white shadow-sm"
+                                                        : "text-text-secondary hover:text-text-primary"
+                                                )}
+                                            >
+                                                {label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <ResponsiveContainer width="100%" height="85%">
+                                    <AreaChart data={
+                                        chartMetric === 'equity' ? equityCurve :
+                                            chartMetric === 'mvso' ? dailyAverages.map(d => ({ ...d, value: d.avgReturn })) :
+                                                chartMetric === 'avgReturn' ? dailyAverages.map(d => ({ ...d, value: d.avgReturn })) :
+                                                    equityCurve.map((d, i, arr) => {
+                                                        // Calculate running win rate
+                                                        const slice = arr.slice(0, i + 1);
+                                                        const wins = slice.filter(x => x.return > 0).length;
+                                                        return { ...d, value: slice.length > 0 ? (wins / slice.length) * 100 : 0 };
+                                                    })
+                                    }>
                                         <defs>
-                                            <linearGradient id="colorEquity" x1="0" y1="0" x2="0" y2="1">
+                                            <linearGradient id="colorMetric" x1="0" y1="0" x2="0" y2="1">
                                                 <stop offset="5%" stopColor={chartColor} stopOpacity={0.3} />
                                                 <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
                                         <CartesianGrid strokeDasharray="3 3" stroke={isTradingView ? "#2a2e39" : "#333"} opacity={isTradingView ? 1 : 0.3} vertical={false} />
                                         <XAxis dataKey="date" stroke="#666" fontSize={10} tickFormatter={(val) => val.slice(5)} minTickGap={50} axisLine={false} tickLine={false} />
-                                        <YAxis stroke="#666" fontSize={10} domain={['auto', 'auto']} axisLine={false} tickLine={false} />
+                                        <YAxis stroke="#666" fontSize={10} domain={['auto', 'auto']} axisLine={false} tickLine={false} unit={chartMetric === 'winRate' ? '%' : ''} />
                                         <Tooltip
                                             contentStyle={{
                                                 backgroundColor: isTerminal ? '#000' : isTradingView ? '#1e222d' : '#1e293b',
@@ -253,9 +291,16 @@ export function AnalysisPage() {
                                                 color: chartColor,
                                                 fontFamily: isTradingView ? 'sans-serif' : 'monospace'
                                             }}
-                                            formatter={(value: number) => [`${value.toFixed(2)}%`, 'Return']}
+                                            formatter={(value: number) => [`${value.toFixed(2)}${chartMetric === 'winRate' ? '%' : chartMetric === 'equity' ? '%' : ''}`, chartMetric === 'equity' ? 'Equity' : chartMetric === 'mvso' ? 'MVSO' : chartMetric === 'winRate' ? 'Win Rate' : 'Avg Return']}
                                         />
-                                        <Area type="monotone" dataKey="equity" stroke={chartColor} fillOpacity={1} fill="url(#colorEquity)" strokeWidth={2} />
+                                        <Area
+                                            type="monotone"
+                                            dataKey={chartMetric === 'equity' ? 'equity' : 'value'}
+                                            stroke={chartColor}
+                                            fillOpacity={1}
+                                            fill="url(#colorMetric)"
+                                            strokeWidth={2}
+                                        />
                                     </AreaChart>
                                 </ResponsiveContainer>
                             </ChartCard>
