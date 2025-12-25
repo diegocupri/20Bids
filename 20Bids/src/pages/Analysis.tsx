@@ -7,6 +7,9 @@ import {
 import { cn } from '../lib/utils';
 import { fetchAnalysis } from '../api/client';
 import { startOfYear, subWeeks, subMonths, isAfter } from 'date-fns';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { Calendar } from 'lucide-react';
 
 interface AnalysisData {
     equityCurve: { date: string, return: number, equity: number, drawdown: number }[];
@@ -38,6 +41,8 @@ export function AnalysisPage() {
     });
     const [timeRange, setTimeRange] = useState<TimeRange>('ALL');
     const [chartMetric, setChartMetric] = useState<'equity' | 'mvso' | 'winRate' | 'avgReturn'>('equity');
+    const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
+    const [customStartDate, customEndDate] = dateRange;
 
     useEffect(() => {
         const fetchData = async () => {
@@ -74,20 +79,26 @@ export function AnalysisPage() {
         if (!data) return null;
 
         const now = new Date();
-        let startDate: Date | null = null;
+        let filterStart: Date | null = null;
 
-        switch (timeRange) {
-            case '1W': startDate = subWeeks(now, 1); break;
-            case '1M': startDate = subMonths(now, 1); break;
-            case '3M': startDate = subMonths(now, 3); break;
-            case 'YTD': startDate = startOfYear(now); break;
-            case '1Y': startDate = subMonths(now, 12); break;
-            case 'ALL': startDate = null; break;
+        // If custom date range is set, use it
+        if (customStartDate && customEndDate) {
+            filterStart = new Date(customStartDate);
+            filterStart.setHours(0, 0, 0, 0);
+        } else {
+            switch (timeRange) {
+                case '1W': filterStart = subWeeks(now, 1); break;
+                case '1M': filterStart = subMonths(now, 1); break;
+                case '3M': filterStart = subMonths(now, 3); break;
+                case 'YTD': filterStart = startOfYear(now); break;
+                case '1Y': filterStart = subMonths(now, 12); break;
+                case 'ALL': break;
+            }
         }
 
         // Filter Equity Curve
-        const filteredEquity = startDate
-            ? data.equityCurve.filter(d => isAfter(new Date(d.date), startDate!))
+        const filteredEquity = filterStart
+            ? data.equityCurve.filter(d => isAfter(new Date(d.date), filterStart!))
             : data.equityCurve;
 
         if (filteredEquity.length === 0) return data; // Fallback
@@ -200,10 +211,13 @@ export function AnalysisPage() {
                                 {(['1W', '1M', '3M', 'YTD', '1Y', 'ALL'] as TimeRange[]).map((range) => (
                                     <button
                                         key={range}
-                                        onClick={() => setTimeRange(range)}
+                                        onClick={() => {
+                                            setTimeRange(range);
+                                            setDateRange([null, null]); // Clear custom range
+                                        }}
                                         className={cn(
                                             "px-3 py-1 text-xs font-medium rounded transition-all",
-                                            timeRange === range
+                                            timeRange === range && !customStartDate
                                                 ? "bg-accent-primary text-white shadow-sm"
                                                 : "text-text-secondary hover:text-text-primary hover:bg-bg-tertiary"
                                         )}
@@ -211,6 +225,27 @@ export function AnalysisPage() {
                                         {range}
                                     </button>
                                 ))}
+                            </div>
+
+                            {/* Custom Date Range Picker */}
+                            <div className="relative">
+                                <DatePicker
+                                    selectsRange={true}
+                                    startDate={customStartDate}
+                                    endDate={customEndDate}
+                                    onChange={(update) => {
+                                        setDateRange(update as [Date | null, Date | null]);
+                                        if (update[0] && update[1]) {
+                                            setTimeRange('ALL'); // Clear time filter when custom range is set
+                                        }
+                                    }}
+                                    placeholderText="Custom Range"
+                                    className="bg-bg-tertiary/30 border border-border-primary rounded-md px-3 py-1.5 text-xs text-text-primary w-44 cursor-pointer placeholder:text-text-secondary focus:outline-none focus:ring-1 focus:ring-accent-primary"
+                                    dateFormat="MMM dd, yyyy"
+                                    isClearable={true}
+                                    maxDate={new Date()}
+                                />
+                                <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-secondary pointer-events-none" />
                             </div>
 
                             <div className="flex gap-4 text-xs text-text-secondary border-l border-border-primary pl-4">
