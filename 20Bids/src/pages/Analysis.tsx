@@ -363,7 +363,7 @@ export function AnalysisPage() {
                         <div className="lg:col-span-2 space-y-6">
                             <ChartCard title="" height={350}>
                                 {/* Chart Header */}
-                                <div className="flex items-center justify-between mb-4 -mt-2">
+                                <div className="flex items-center justify-between mb-4">
                                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 font-sans">
                                         PERFORMANCE EVOLUTION
                                         <span className="text-[10px] font-normal text-text-secondary/70">
