@@ -434,7 +434,7 @@ export function AnalysisPage() {
                                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
                                             <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(5)} minTickGap={50} axisLine={false} tickLine={false} />
                                             <YAxis yAxisId="left" stroke={chartColor} fontSize={11} domain={['auto', 'auto']} axisLine={false} tickLine={false} unit="%" />
-                                            <YAxis yAxisId="right" orientation="right" stroke={safeColor} fontSize={11} domain={['auto', 'auto']} axisLine={false} tickLine={false} unit="%" />
+                                            <YAxis yAxisId="right" orientation="right" stroke={safeColor} fontSize={11} domain={[0, 5]} axisLine={false} tickLine={false} unit="%" />
                                             <Tooltip
                                                 contentStyle={{
                                                     backgroundColor: 'rgba(255,255,255,0.95)',
