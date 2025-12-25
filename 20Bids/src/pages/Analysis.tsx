@@ -155,6 +155,36 @@ export function AnalysisPage() {
 
     }, [data, timeRange]);
 
+    // Top Periods Calculation (Moved before conditional return)
+    const topPeriods = useMemo(() => {
+        const equity = filteredMetrics?.equityCurve;
+        if (!equity) return { days: [], weeks: [], months: [] };
+
+        // Top Days
+        const days = [...equity].map(d => ({ date: d.date, return: d.return })).sort((a, b) => b.return - a.return).slice(0, 5);
+
+        // Aggregate Weeks & Months
+        const weekMap: Record<string, number> = {};
+        const monthMap: Record<string, number> = {};
+
+        equity.forEach(d => {
+            const date = new Date(d.date);
+            const weekKey = format(startOfWeek(date), 'yyyy-MM-dd'); // Week of...
+            const monthKey = format(startOfMonth(date), 'yyyy-MM');
+
+            weekMap[weekKey] = (weekMap[weekKey] || 0) + d.return;
+            monthMap[monthKey] = (monthMap[monthKey] || 0) + d.return;
+        });
+
+        const weeks = Object.entries(weekMap).map(([date, ret]) => ({ date, return: ret }))
+            .sort((a, b) => b.return - a.return).slice(0, 5);
+
+        const months = Object.entries(monthMap).map(([date, ret]) => ({ date, return: ret }))
+            .sort((a, b) => b.return - a.return).slice(0, 5);
+
+        return { days, weeks, months };
+    }, [filteredMetrics]);
+
     if (isLoading || !filteredMetrics) {
         return (
             <div className="flex h-screen bg-bg-primary">
@@ -187,34 +217,7 @@ export function AnalysisPage() {
 
     const bestDay = [...seasonality].sort((a, b) => b.winRate - a.winRate)[0];
 
-    // Top Periods Calculation
-    const topPeriods = useMemo(() => {
-        if (!equityCurve) return { days: [], weeks: [], months: [] };
 
-        // Top Days
-        const days = [...equityCurve].map(d => ({ date: d.date, return: d.return })).sort((a, b) => b.return - a.return).slice(0, 5);
-
-        // Aggregate Weeks & Months
-        const weekMap: Record<string, number> = {};
-        const monthMap: Record<string, number> = {};
-
-        equityCurve.forEach(d => {
-            const date = new Date(d.date);
-            const weekKey = format(startOfWeek(date), 'yyyy-MM-dd'); // Week of...
-            const monthKey = format(startOfMonth(date), 'yyyy-MM');
-
-            weekMap[weekKey] = (weekMap[weekKey] || 0) + d.return;
-            monthMap[monthKey] = (monthMap[monthKey] || 0) + d.return;
-        });
-
-        const weeks = Object.entries(weekMap).map(([date, ret]) => ({ date, return: ret }))
-            .sort((a, b) => b.return - a.return).slice(0, 5);
-
-        const months = Object.entries(monthMap).map(([date, ret]) => ({ date, return: ret }))
-            .sort((a, b) => b.return - a.return).slice(0, 5);
-
-        return { days, weeks, months };
-    }, [equityCurve]);
 
     return (
         <div className="flex h-screen bg-bg-primary overflow-hidden font-sans">
