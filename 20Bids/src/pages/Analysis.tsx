@@ -9,7 +9,7 @@ import { fetchAnalysis } from '../api/client';
 import { startOfYear, subWeeks, subMonths, isAfter, startOfWeek, startOfMonth, format } from 'date-fns';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { Calendar, Info, TrendingUp, TrendingDown } from 'lucide-react';
+import { Calendar, Info } from 'lucide-react';
 
 interface AnalysisData {
     equityCurve: { date: string, return: number, equity: number, drawdown: number, hitTP?: number, hitSL?: number, other?: number, count?: number }[];
@@ -52,8 +52,13 @@ export function AnalysisPage() {
         }
         return 'midnight';
     });
-    const [timeRange, setTimeRange] = useState<TimeRange>('ALL');
-    const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
+    const [timeRange, setTimeRange] = useState<TimeRange>('ALL'); // Default to ALL but wil be overridden by dateRange
+    const [dateRange, setDateRange] = useState<[Date | null, Date | null]>(() => {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - 30);
+        return [start, end];
+    });
     const [customStartDate, customEndDate] = dateRange;
 
     // New UX Controls
@@ -359,6 +364,7 @@ export function AnalysisPage() {
                             <p className="text-xs text-text-secondary mt-1 tracking-tight">INTRADAY ALGORITHMIC ANALYSIS // {new Date().toLocaleDateString()}</p>
                         </div>
 
+                        {/* RIGHT: Time Filters & Date Picker */}
                         <div className="flex items-center gap-4">
                             {/* Time Filters */}
                             <div className="flex bg-bg-tertiary/30 rounded-md p-1 border border-border-primary">
@@ -370,10 +376,10 @@ export function AnalysisPage() {
                                             setDateRange([null, null]); // Clear custom range
                                         }}
                                         className={cn(
-                                            "px-3 py-1 text-xs font-medium rounded transition-all",
+                                            "px-3 py-1.5 text-[11px] font-medium rounded-md transition-all uppercase tracking-wide",
                                             timeRange === range && !customStartDate
                                                 ? "bg-accent-primary text-white shadow-sm"
-                                                : "text-text-secondary hover:text-text-primary hover:bg-bg-tertiary"
+                                                : "bg-bg-tertiary/30 text-text-secondary hover:text-text-primary hover:bg-bg-tertiary"
                                         )}
                                     >
                                         {range}
@@ -381,7 +387,7 @@ export function AnalysisPage() {
                                 ))}
                             </div>
 
-                            {/* Custom Date Range Picker */}
+                            {/* Date Picker */}
                             <div className="relative">
                                 <DatePicker
                                     selectsRange={true}
@@ -389,117 +395,119 @@ export function AnalysisPage() {
                                     endDate={customEndDate}
                                     onChange={(update) => {
                                         setDateRange(update as [Date | null, Date | null]);
-                                        if (update[0] && update[1]) {
-                                            setTimeRange('ALL'); // Clear time filter when custom range is set
-                                        }
+                                        if (update[0] && update[1]) setTimeRange('ALL');
                                     }}
                                     placeholderText="Custom Range"
-                                    className="bg-bg-tertiary/30 border border-border-primary rounded-md px-3 py-1.5 text-xs text-text-primary w-44 cursor-pointer placeholder:text-text-secondary focus:outline-none focus:ring-1 focus:ring-accent-primary font-sans"
-                                    dateFormat="MMM dd, yyyy"
+                                    className="bg-bg-tertiary/30 border border-border-primary rounded-md pl-9 pr-3 py-1.5 text-xs text-text-primary w-40 cursor-pointer placeholder:text-text-secondary focus:outline-none focus:ring-1 focus:ring-accent-primary font-sans"
+                                    dateFormat="MMM dd, yy"
                                     isClearable={true}
                                     maxDate={new Date()}
                                 />
-                                <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-secondary pointer-events-none" />
+                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-secondary pointer-events-none" />
+                            </div>
+                        </div>
+
+                        {/* RIGHT: Filters (TP, SL, FILTERS) */}
+                        <div className="flex flex-wrap items-center gap-3 justify-end">
+                            {/* Strategy Params Group */}
+                            <div className="flex items-center gap-2 bg-bg-secondary/50 p-1 rounded-lg border border-border-primary/50">
+                                {/* TP */}
+                                <div className="flex items-center gap-1.5 bg-bg-tertiary/50 rounded px-2 py-1">
+                                    <span className="text-[10px] text-text-secondary font-bold font-sans">TP</span>
+                                    <input
+                                        type="number"
+                                        min="0.1"
+                                        max="100"
+                                        step="0.1"
+                                        value={takeProfit}
+                                        onChange={(e) => {
+                                            const val = parseFloat(e.target.value) || 2.0;
+                                            setTakeProfit(val);
+                                            localStorage.setItem('takeProfit', val.toString());
+                                        }}
+                                        className="w-10 bg-transparent border-0 text-text-primary text-xs font-bold font-sans text-right focus:outline-none focus:ring-0 p-0"
+                                    />
+                                    <span className="text-[10px] text-text-secondary">%</span>
+                                </div>
+
+                                {/* SL */}
+                                <div className="flex items-center gap-1.5 bg-bg-tertiary/50 rounded px-2 py-1">
+                                    <span className="text-[10px] text-text-secondary font-bold font-sans">SL</span>
+                                    <input
+                                        type="number"
+                                        min="0.1"
+                                        max="100"
+                                        step="0.1"
+                                        value={stopLoss === 100 ? '' : stopLoss}
+                                        placeholder="Off"
+                                        onChange={(e) => {
+                                            const val = e.target.value === '' ? 100 : (parseFloat(e.target.value) || 100);
+                                            setStopLoss(val);
+                                        }}
+                                        className="w-10 bg-transparent border-0 text-text-primary text-xs font-bold font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
+                                    />
+                                    <span className="text-[10px] text-text-secondary">%</span>
+                                </div>
                             </div>
 
-                            {/* Take Profit Input */}
-                            <div className="flex items-center gap-2 bg-bg-tertiary/30 rounded-md px-3 py-1.5 border border-border-primary">
-                                <TrendingUp className="w-3.5 h-3.5 text-text-secondary" />
-                                <span className="text-[10px] text-text-secondary uppercase font-medium">TP</span>
-                                <input
-                                    type="number"
-                                    min="0.1"
-                                    max="100"
-                                    step="0.1"
-                                    value={takeProfit}
-                                    onChange={(e) => {
-                                        const val = parseFloat(e.target.value) || 2.0;
-                                        setTakeProfit(val);
-                                        localStorage.setItem('takeProfit', val.toString());
-                                    }}
-                                    className="w-14 bg-transparent border-0 text-text-primary text-sm font-sans font-medium text-right focus:outline-none focus:ring-0"
-                                />
-                                <span className="text-xs text-text-secondary">%</span>
+                            {/* Filters Group */}
+                            <div className="flex items-center gap-2 bg-bg-secondary/50 p-1 rounded-lg border border-border-primary/50">
+                                {/* Volume */}
+                                <div className="flex items-center gap-1.5 bg-bg-tertiary/50 rounded px-2 py-1">
+                                    <span className="text-[10px] text-text-secondary font-bold font-sans">Vol</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="100000"
+                                        value={minVolume === 0 ? '' : minVolume}
+                                        placeholder="Any"
+                                        onChange={(e) => setMinVolume(parseFloat(e.target.value) || 0)}
+                                        className="w-12 bg-transparent border-0 text-text-primary text-xs font-bold font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
+                                    />
+                                </div>
+
+                                {/* Price */}
+                                <div className="flex items-center gap-1.5 bg-bg-tertiary/50 rounded px-2 py-1">
+                                    <span className="text-[10px] text-text-secondary font-bold font-sans">Min $</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        value={minPrice === 0 ? '' : minPrice}
+                                        placeholder="0"
+                                        onChange={(e) => setMinPrice(parseFloat(e.target.value) || 0)}
+                                        className="w-8 bg-transparent border-0 text-text-primary text-xs font-bold font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
+                                    />
+                                </div>
+
+                                {/* Probability */}
+                                <div className="flex items-center gap-1.5 bg-bg-tertiary/50 rounded px-2 py-1">
+                                    <span className="text-[10px] text-text-secondary font-bold font-sans">Prob</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="5"
+                                        value={minProb === 0 ? '' : minProb}
+                                        placeholder="0"
+                                        onChange={(e) => setMinProb(parseInt(e.target.value) || 0)}
+                                        className="w-8 bg-transparent border-0 text-text-primary text-xs font-bold font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
+                                    />
+                                    <span className="text-[10px] text-text-secondary">%</span>
+                                </div>
                             </div>
 
-                            {/* Stop Loss Input */}
-                            <div className="flex items-center gap-2 bg-bg-tertiary/30 rounded-md px-3 py-1.5 border border-border-primary">
-                                <TrendingDown className="w-3.5 h-3.5 text-rose-500" />
-                                <span className="text-[10px] text-text-secondary uppercase font-medium">SL</span>
-                                <input
-                                    type="number"
-                                    min="0.1"
-                                    max="100"
-                                    step="0.1"
-                                    value={stopLoss === 100 ? '' : stopLoss}
-                                    placeholder="Off"
-                                    onChange={(e) => {
-                                        const val = e.target.value === '' ? 100 : (parseFloat(e.target.value) || 100);
-                                        setStopLoss(val);
-                                    }}
-                                    className="w-14 bg-transparent border-0 text-text-primary text-sm font-sans font-medium text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50"
-                                />
-                                <span className="text-xs text-text-secondary">%</span>
-                            </div>
-
-                            {/* Separator */}
-                            <div className="h-6 w-px bg-border-primary/40"></div>
-
-                            {/* Min Volume Filter */}
-                            <div className="flex items-center gap-2 bg-bg-tertiary/30 rounded-md px-2 py-1.5 border border-border-primary">
-                                <span className="text-[9px] text-text-secondary uppercase font-medium">Vol≥</span>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="100000"
-                                    value={minVolume === 0 ? '' : minVolume}
-                                    placeholder="0"
-                                    onChange={(e) => setMinVolume(parseFloat(e.target.value) || 0)}
-                                    className="w-16 bg-transparent border-0 text-text-primary text-xs font-sans font-medium text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50"
-                                />
-                            </div>
-
-                            {/* Min Price Filter */}
-                            <div className="flex items-center gap-2 bg-bg-tertiary/30 rounded-md px-2 py-1.5 border border-border-primary">
-                                <span className="text-[9px] text-text-secondary uppercase font-medium">$≥</span>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                    value={minPrice === 0 ? '' : minPrice}
-                                    placeholder="0"
-                                    onChange={(e) => setMinPrice(parseFloat(e.target.value) || 0)}
-                                    className="w-12 bg-transparent border-0 text-text-primary text-xs font-sans font-medium text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50"
-                                />
-                            </div>
-
-                            {/* Min Probability Filter */}
-                            <div className="flex items-center gap-2 bg-bg-tertiary/30 rounded-md px-2 py-1.5 border border-border-primary">
-                                <span className="text-[9px] text-text-secondary uppercase font-medium">Prob≥</span>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    step="5"
-                                    value={minProb === 0 ? '' : minProb}
-                                    placeholder="0"
-                                    onChange={(e) => setMinProb(parseInt(e.target.value) || 0)}
-                                    className="w-10 bg-transparent border-0 text-text-primary text-xs font-sans font-medium text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50"
-                                />
-                                <span className="text-[9px] text-text-secondary">%</span>
-                            </div>
-
-                            {/* Cumulative Toggle */}
+                            {/* Toggle */}
                             <button
                                 onClick={() => setIsCumulative(!isCumulative)}
                                 className={cn(
-                                    "px-3 py-1.5 text-[10px] font-medium rounded-md border transition-all uppercase tracking-wide",
+                                    "px-3 py-1.5 text-[10px] font-bold rounded-lg border transition-all uppercase tracking-wide",
                                     isCumulative
-                                        ? "bg-accent-primary/10 text-accent-primary border-accent-primary/30"
-                                        : "bg-bg-tertiary/30 text-text-secondary border-border-primary hover:text-text-primary"
+                                        ? "bg-accent-primary text-white border-accent-primary shadow-sm"
+                                        : "bg-bg-tertiary text-text-secondary border-border-primary hover:text-text-primary"
                                 )}
                             >
-                                {isCumulative ? 'Cumulative' : 'Daily'}
+                                {isCumulative ? 'CUMUL' : 'DAILY'}
                             </button>
 
                             <div className="flex gap-4 text-xs text-text-secondary border-l border-border-primary pl-4">
@@ -685,87 +693,81 @@ export function AnalysisPage() {
                                         const otherPct = total > 0 ? (totals.other / total) * 100 : 0;
 
                                         return (
-                                            <div className="flex flex-col h-full">
+                                            <div className="flex flex-col h-full pl-6">
                                                 {/* Header */}
-                                                <div className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-4 font-sans flex items-center gap-2">
-                                                    <div className="w-2 h-2 rounded-full bg-accent-primary"></div>
-                                                    PERIOD SUMMARY
+                                                <div className="flex items-center gap-2 mb-8">
+                                                    <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+                                                    <div className="text-[10px] font-bold text-text-secondary uppercase tracking-widest font-sans">
+                                                        PERIOD SUMMARY
+                                                    </div>
                                                 </div>
 
-                                                {/* Main Stats */}
-                                                <div className="flex-1 flex flex-col justify-center space-y-5">
-                                                    {/* Total Return - Hero Stat */}
-                                                    <div className="text-center py-3 bg-gradient-to-r from-transparent via-bg-tertiary/20 to-transparent rounded-lg">
-                                                        <div className="text-[10px] font-medium text-text-secondary uppercase tracking-wider mb-1">Total Return</div>
-                                                        <div className={cn(
-                                                            "text-3xl font-bold font-sans tracking-tight",
-                                                            totals.return >= 0 ? "text-accent-primary" : "text-red-500"
-                                                        )}>
-                                                            {totals.return >= 0 ? '+' : ''}{totals.return.toFixed(2)}%
-                                                        </div>
+                                                {/* Total Return */}
+                                                <div className="flex flex-col items-center mb-8">
+                                                    <div className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-1 font-sans opacity-60">TOTAL RETURN</div>
+                                                    <div className="text-4xl font-bold text-blue-600 font-sans tracking-tight">
+                                                        {totals.return >= 0 ? '+' : ''}{totals.return.toFixed(2)}%
+                                                    </div>
+                                                </div>
+
+                                                {/* Avg Return */}
+                                                <div className="flex justify-between items-center mb-12 px-1">
+                                                    <span className="text-xs text-text-secondary font-sans font-medium">Avg Return / Trade</span>
+                                                    <span className="text-sm font-extrabold text-text-primary font-sans">
+                                                        {avgReturn >= 0 ? '+' : ''}{avgReturn.toFixed(2)}%
+                                                    </span>
+                                                </div>
+
+                                                {/* Trade Outcomes */}
+                                                <div>
+                                                    <div className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-3 font-sans opacity-60">
+                                                        TRADE OUTCOMES ({totals.count})
                                                     </div>
 
-                                                    {/* Avg Return */}
-                                                    <div className="flex justify-between items-center px-2">
-                                                        <span className="text-xs text-text-secondary font-sans">Avg Return / Trade</span>
-                                                        <span className={cn(
-                                                            "text-sm font-bold font-sans",
-                                                            avgReturn >= 0 ? "text-text-primary" : "text-red-400"
-                                                        )}>
-                                                            {avgReturn >= 0 ? '+' : ''}{avgReturn.toFixed(2)}%
-                                                        </span>
+                                                    {/* Progress Bar */}
+                                                    <div className="h-3.5 rounded-full overflow-hidden flex w-full mb-4">
+                                                        {tpPct > 0 && <div className="bg-[#10b981] h-full" style={{ width: `${tpPct}%` }}></div>}
+                                                        {slPct > 0 && <div className="bg-[#ef4444] h-full" style={{ width: `${slPct}%` }}></div>}
+                                                        {otherPct > 0 && <div className="bg-[#94a3b8] h-full" style={{ width: `${otherPct}%` }}></div>}
                                                     </div>
 
-                                                    {/* Breakdown Section */}
-                                                    <div className="pt-3 border-t border-border-primary/20">
-                                                        <div className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-3 font-sans px-2">
-                                                            Trade Outcomes ({totals.count})
-                                                        </div>
-
-                                                        {/* Stacked Progress Bar */}
-                                                        <div className="h-3 rounded-full overflow-hidden bg-bg-tertiary/30 mb-4 mx-2 flex">
-                                                            {tpPct > 0 && <div className="bg-green-500 h-full transition-all" style={{ width: `${tpPct}%` }}></div>}
-                                                            {slPct > 0 && <div className="bg-red-500 h-full transition-all" style={{ width: `${slPct}%` }}></div>}
-                                                            {otherPct > 0 && <div className="bg-slate-400 h-full transition-all" style={{ width: `${otherPct}%` }}></div>}
-                                                        </div>
-
-                                                        {/* Legend with counts */}
-                                                        <div className="space-y-2 px-2">
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="w-3 h-3 rounded-sm bg-green-500"></div>
-                                                                    <span className="text-xs text-text-secondary font-sans">Hit TP ({takeProfit}%)</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-xs text-text-secondary">{tpPct.toFixed(0)}%</span>
-                                                                    <span className="text-sm font-bold text-text-primary font-sans w-8 text-right">{totals.hitTP}</span>
-                                                                </div>
+                                                    {/* Legend */}
+                                                    <div className="space-y-2.5">
+                                                        <div className="flex items-center justify-between text-xs">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-2.5 h-2.5 rounded-[2px] bg-[#10b981]"></div>
+                                                                <span className="text-text-secondary font-medium font-sans">Hit TP ({takeProfit}%)</span>
                                                             </div>
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="w-3 h-3 rounded-sm bg-red-500"></div>
-                                                                    <span className="text-xs text-text-secondary font-sans">Hit SL ({stopLoss === 100 ? 'Off' : `-${stopLoss}%`})</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-xs text-text-secondary">{slPct.toFixed(0)}%</span>
-                                                                    <span className="text-sm font-bold text-text-primary font-sans w-8 text-right">{totals.hitSL}</span>
-                                                                </div>
+                                                            <div className="flex items-center gap-4">
+                                                                <span className="text-text-secondary/60 w-8 text-right font-sans">{tpPct.toFixed(0)}%</span>
+                                                                <span className="text-text-primary font-bold w-6 text-right font-sans">{totals.hitTP}</span>
                                                             </div>
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="w-3 h-3 rounded-sm bg-slate-400"></div>
-                                                                    <span className="text-xs text-text-secondary font-sans">Other</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-xs text-text-secondary">{otherPct.toFixed(0)}%</span>
-                                                                    <span className="text-sm font-bold text-text-primary font-sans w-8 text-right">{totals.other}</span>
-                                                                </div>
+                                                        </div>
+                                                        <div className="flex items-center justify-between text-xs">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-2.5 h-2.5 rounded-[2px] bg-[#ef4444]"></div>
+                                                                <span className="text-text-secondary font-medium font-sans">Hit SL ({stopLoss === 100 ? 'Off' : `-${stopLoss}%`})</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-4">
+                                                                <span className="text-text-secondary/60 w-8 text-right font-sans">{slPct.toFixed(0)}%</span>
+                                                                <span className="text-text-primary font-bold w-6 text-right font-sans">{totals.hitSL}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center justify-between text-xs">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-2.5 h-2.5 rounded-[2px] bg-[#94a3b8]"></div>
+                                                                <span className="text-text-secondary font-medium font-sans">Other</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-4">
+                                                                <span className="text-text-secondary/60 w-8 text-right font-sans">{otherPct.toFixed(0)}%</span>
+                                                                <span className="text-text-primary font-bold w-6 text-right font-sans">{totals.other}</span>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         );
+
                                     })()}
                                 </div>
                             </ChartCard>
@@ -938,7 +940,7 @@ export function AnalysisPage() {
                         </ChartCard>
                     </div>
                 </div>
-            </div>
+            </div >
         </div >
     );
 }
