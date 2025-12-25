@@ -397,8 +397,8 @@ export function AnalysisPage() {
                     </div>
 
                     <div className="space-y-6">
-                        {/* ROW 1: Charts (Performance Evolution + Seasonality) */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* ROW 1: Charts (Performance Evolution 75% + Seasonality 25%) */}
+                        <div className="grid grid-cols-1 lg:grid-cols-[3fr_1fr] gap-6">
                             {/* Performance Evolution Chart */}
                             <ChartCard title="" height={350}>
                                 <div className="flex items-center justify-between mb-4">
