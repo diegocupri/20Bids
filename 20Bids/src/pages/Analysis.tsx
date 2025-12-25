@@ -495,89 +495,47 @@ export function AnalysisPage() {
                                     )}
                                 </ResponsiveContainer>
                             </ChartCard>
+                        </div>
 
+                        {/* 3-Column Grid for Leaderboards */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-
-                            {/* Top Tickers Performance */}
-                            <ChartCard title="" height={300}>
+                            {/* Top Tickers Leaderboard (Converted from Chart) */}
+                            <ChartCard title="" height={280}>
                                 <div className="flex items-center justify-between mb-3 -mt-2">
                                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
                                         TOP TICKERS PERFORMANCE
                                     </h3>
-                                    <span className="text-[10px] text-text-secondary/70 font-sans">Avg Return % by Ticker</span>
                                 </div>
-                                <ResponsiveContainer width="100%" height="90%">
-                                    <BarChart
-                                        data={topTickers.slice(0, 10)}
-                                        layout="vertical"
-                                        margin={{ top: 5, right: 30, left: 60, bottom: 5 }}
-                                    >
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} horizontal={true} vertical={false} />
-                                        <XAxis type="number" stroke="#94a3b8" fontSize={10} axisLine={false} tickLine={false} unit="%" />
-                                        <YAxis
-                                            type="category"
-                                            dataKey="name"
-                                            stroke="#94a3b8"
-                                            fontSize={10}
-                                            axisLine={false}
-                                            tickLine={false}
-                                            width={55}
-                                        />
-                                        <Tooltip
-                                            contentStyle={{
-                                                backgroundColor: 'rgba(255,255,255,0.95)',
-                                                border: '1px solid #e5e7eb',
-                                                borderRadius: '6px',
-                                                boxShadow: 'none',
-                                                color: '#1f2937',
-                                                fontFamily: '"Source Sans 3", system-ui, sans-serif',
-                                                fontSize: '12px'
-                                            }}
-                                            formatter={(value: number) => [`${value.toFixed(2)}%`, 'Avg Return']}
-                                        />
-                                        <Bar
-                                            dataKey="avgMvso"
-                                            fill={chartColor}
-                                            radius={[0, 4, 4, 0]}
-                                            fillOpacity={0.8}
-                                        />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </ChartCard>
-                        </div>
-
-                        {/* Side Stats & Leaderboards */}
-                        <div className="space-y-6">
-
-                            <ChartCard title="SEASONALITY (PROFITABILITY VS VOL)" height={350}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart data={seasonality}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
-                                        <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(0, 3).toUpperCase()} axisLine={false} tickLine={false} />
-                                        <YAxis yAxisId="left" stroke="#94a3b8" fontSize={11} hide />
-                                        <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" fontSize={11} unit="%" />
-
-                                        <Tooltip
-                                            cursor={{ fill: '#f3f4f6', opacity: 0.5 }}
-                                            contentStyle={{
-                                                backgroundColor: 'rgba(255,255,255,0.95)',
-                                                border: '1px solid #e5e7eb',
-                                                borderRadius: '6px',
-                                                boxShadow: 'none',
-                                                color: '#1f2937',
-                                                fontFamily: '\"Source Sans 3\", system-ui, sans-serif',
-                                                fontSize: '12px'
-                                            }}
-                                        />
-                                        <Legend />
-                                        <Bar yAxisId="left" dataKey="count" name="Vol" fill={secondaryColor} barSize={20} radius={[2, 2, 0, 0]} opacity={0.6} />
-                                        <Line yAxisId="right" type="linear" dataKey="avgMvso" name="Avg %" stroke={chartColor} strokeWidth={2} dot={{ r: 3 }} />
-                                    </ComposedChart>
-                                </ResponsiveContainer>
+                                <div className="overflow-y-auto h-full pr-1">
+                                    <table className="w-full text-xs text-left text-text-secondary font-sans border-separate border-spacing-y-1">
+                                        <thead>
+                                            <tr className="border-b border-border-primary text-[10px] uppercase">
+                                                <th className="pb-2 font-medium pl-2">Rank</th>
+                                                <th className="pb-2 font-medium">Ticker</th>
+                                                <th className="pb-2 font-medium text-right pr-2">Avg Return</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {topTickers.slice(0, 10).map((ticker, idx) => (
+                                                <tr key={idx} className="bg-bg-tertiary/20 hover:bg-bg-tertiary/40 transition-colors rounded-md">
+                                                    <td className="py-2 pl-2 font-mono text-text-secondary/70 max-w-[40px]">#{idx + 1}</td>
+                                                    <td className="py-2 font-bold text-text-primary">{ticker.name}</td>
+                                                    <td className={cn(
+                                                        "py-2 pr-2 text-right font-bold",
+                                                        ticker.avgMvso > 0 ? "text-emerald-500" : "text-rose-500"
+                                                    )}>
+                                                        {ticker.avgMvso > 0 ? '+' : ''}{ticker.avgMvso.toFixed(2)}%
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </ChartCard>
 
-                            {/* Top Periods Table - Unified */}
-                            <ChartCard title="" height={250}>
+                            {/* Top Periods Table */}
+                            <ChartCard title="" height={280}>
                                 <div className="flex items-center justify-between mb-3 -mt-2">
                                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
                                         TOP PERIODS
@@ -664,14 +622,45 @@ export function AnalysisPage() {
                                 </div>
                             </ChartCard>
 
-                            {/* Expectancy Distribution - Bar Chart */}
-                            <ChartCard title="" height={250}>
+                        </div>
+
+                        {/* Bottom Charts Row (Seasonality & Distribution) */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                            <ChartCard title="SEASONALITY (PROFITABILITY VS VOL)" height={280}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <ComposedChart data={seasonality}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
+                                        <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(0, 3).toUpperCase()} axisLine={false} tickLine={false} />
+                                        <YAxis yAxisId="left" stroke="#94a3b8" fontSize={11} hide />
+                                        <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" fontSize={11} unit="%" />
+
+                                        <Tooltip
+                                            cursor={{ fill: '#f3f4f6', opacity: 0.5 }}
+                                            contentStyle={{
+                                                backgroundColor: 'rgba(255,255,255,0.95)',
+                                                border: '1px solid #e5e7eb',
+                                                borderRadius: '6px',
+                                                boxShadow: 'none',
+                                                color: '#1f2937',
+                                                fontFamily: '"Source Sans 3", system-ui, sans-serif',
+                                                fontSize: '12px'
+                                            }}
+                                        />
+                                        <Legend />
+                                        <Bar yAxisId="left" dataKey="count" name="Vol" fill={secondaryColor} barSize={20} radius={[2, 2, 0, 0]} opacity={0.6} />
+                                        <Line yAxisId="right" type="linear" dataKey="avgMvso" name="Avg %" stroke={chartColor} strokeWidth={2} dot={{ r: 3 }} />
+                                    </ComposedChart>
+                                </ResponsiveContainer>
+                            </ChartCard>
+
+                            <ChartCard title="" height={280}>
                                 <div className="flex items-center justify-between mb-3 -mt-2">
                                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
                                         EXPECTANCY DISTRIBUTION
                                     </h3>
                                 </div>
-                                <ResponsiveContainer width="100%" height="85%">
+                                <ResponsiveContainer width="100%" height="90%">
                                     <BarChart data={distribution} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
                                         <XAxis
