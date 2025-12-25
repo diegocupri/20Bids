@@ -325,7 +325,7 @@ export function AnalysisPage() {
                                                 borderRadius: '6px',
                                                 boxShadow: 'none',
                                                 color: '#1f2937',
-                                                fontFamily: 'Inter, system-ui, sans-serif',
+                                                fontFamily: '\"Source Sans 3\", system-ui, sans-serif',
                                                 fontSize: '12px'
                                             }}
                                             formatter={(value: number) => [`${value.toFixed(2)}${chartMetric === 'winRate' ? '%' : chartMetric === 'equity' ? '%' : ''}`, chartMetric === 'equity' ? 'Equity' : chartMetric === 'mvso' ? 'MVSO' : chartMetric === 'winRate' ? 'Win Rate' : 'Avg Return']}
@@ -356,7 +356,7 @@ export function AnalysisPage() {
                                                 borderRadius: '6px',
                                                 boxShadow: 'none',
                                                 color: '#1f2937',
-                                                fontFamily: 'Inter, system-ui, sans-serif',
+                                                fontFamily: '\"Source Sans 3\", system-ui, sans-serif',
                                                 fontSize: '12px'
                                             }}
                                         />
@@ -385,7 +385,7 @@ export function AnalysisPage() {
                                                 borderRadius: '6px',
                                                 boxShadow: 'none',
                                                 color: '#1f2937',
-                                                fontFamily: 'Inter, system-ui, sans-serif',
+                                                fontFamily: '\"Source Sans 3\", system-ui, sans-serif',
                                                 fontSize: '12px'
                                             }}
                                         />
@@ -435,7 +435,7 @@ export function AnalysisPage() {
                                                 borderRadius: '6px',
                                                 boxShadow: 'none',
                                                 color: '#1f2937',
-                                                fontFamily: 'Inter, system-ui, sans-serif',
+                                                fontFamily: '"Source Sans 3", system-ui, sans-serif',
                                                 fontSize: '12px'
                                             }}
                                         />
