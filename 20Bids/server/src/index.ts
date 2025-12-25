@@ -64,6 +64,7 @@ async function refreshIntradayData(recommendations: any[]) {
                     data: {
                         high: stats.mvso1020?.highPost, // Day High for main MVSO
                         refPrice1020: stats.mvso1020?.refPrice,
+                        lowBeforePeak: stats.mvso1020?.lowBeforePeak, // NEW: Max Adverse Excursion
                         refPrice1120: stats.mvso1120?.refPrice,
                         highPost1120: stats.mvso1120?.highPost,
                         refPrice1220: stats.mvso1220?.refPrice,
@@ -976,6 +977,7 @@ app.post('/api/admin/backfill-1020', async (req, res) => {
                     if (intraday.mvso1020) {
                         updateData.refPrice1020 = intraday.mvso1020.refPrice;
                         updateData.high = intraday.mvso1020.highPost; // 10:20 Max Excursion
+                        updateData.lowBeforePeak = intraday.mvso1020.lowBeforePeak;
                     }
                     if (intraday.mvso1120) {
                         updateData.refPrice1120 = intraday.mvso1120.refPrice;

@@ -28,6 +28,7 @@ model Recommendation {
   open          Float     @default(0) // Opening price
   high          Float     @default(0) // High price
   refPrice1020  Float?    // Reference price at 10:20 AM
+  lowBeforePeak Float?    // Lowest price between 10:20 and the daily High
   refPrice1120  Float?    // Reference price at 11:20 AM
   highPost1120  Float?    // Max Excursion after 11:20 AM
   refPrice1220  Float?    // Reference price at 12:20 PM

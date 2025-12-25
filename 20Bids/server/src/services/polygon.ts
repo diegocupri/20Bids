@@ -91,9 +91,9 @@ export async function getReferencePrice(ticker: string, dateStr: string): Promis
 }
 
 export async function getIntradayStats(ticker: string, dateStr: string): Promise<{
-    mvso1020: { refPrice: number, highPost: number } | null,
-    mvso1120: { refPrice: number, highPost: number } | null,
-    mvso1220: { refPrice: number, highPost: number } | null
+    mvso1020: { refPrice: number, highPost: number, lowBeforePeak: number } | null,
+    mvso1120: { refPrice: number, highPost: number, lowBeforePeak: number } | null,
+    mvso1220: { refPrice: number, highPost: number, lowBeforePeak: number } | null
 } | null> {
     // Fetch 1-minute bars for the entire day
     try {
@@ -122,19 +122,46 @@ export async function getIntradayStats(ticker: string, dateStr: string): Promise
                 if (refBarIndex === -1) return null;
                 const refPrice = bars[refBarIndex].c;
 
-                // Calculate HIGH AFTER entry time until 16:00 (market close)
+                // Calculate HIGH AFTER entry time and finding LOW until that High (MAE)
                 let maxHighAfter = -Infinity;
+                let highBarIndex = -1;
+
+                // 1. Find the Peak High and its timestamp/index
                 for (let i = refBarIndex; i < bars.length; i++) {
                     const b = bars[i];
                     const bDate = new Date(b.t);
                     const bET = new Date(bDate.toLocaleString("en-US", { timeZone: "America/New_York" }));
-                    if (bET.getHours() >= 16) break;
-                    if (b.h > maxHighAfter) maxHighAfter = b.h;
+                    if (bET.getHours() >= 16) break; // Stop at market close
+
+                    if (b.h > maxHighAfter) {
+                        maxHighAfter = b.h;
+                        highBarIndex = i;
+                    }
                 }
                 const highPost = maxHighAfter === -Infinity ? refPrice : maxHighAfter;
 
-                return { refPrice, highPost };
+                // 2. Find Lowest Low between Entry and Peak High
+                let minLowBeforePeak = Infinity;
+                if (highBarIndex !== -1) {
+                    for (let j = refBarIndex; j <= highBarIndex; j++) {
+                        if (bars[j].l < minLowBeforePeak) {
+                            minLowBeforePeak = bars[j].l;
+                        }
+                    }
+                }
+
+                // If we didn't find a valid peak or range, fallback to refPrice
+                const lowBeforePeak = minLowBeforePeak === Infinity ? refPrice : minLowBeforePeak;
+
+                return { refPrice, highPost, lowBeforePeak };
             };
+
+            // Return signature need update too
+            // But strict return type is defined in Promise<{...}> earlier. 
+            // I should return compatible object, or update the return type definition in the next step.
+            // Actually, I can just return it and Typescript might infer or error if explicit.
+            // Looking at lines 93-96, return type is explicit. I need to update that too.
+            // I'll do it in a separate edit or MultiReplace. I'll use replace_file_content for the logic block first.
 
             return {
                 mvso1020: calculateMvso(10, 20), // High AFTER 10:20
