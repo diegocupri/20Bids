@@ -635,7 +635,7 @@ export function AnalysisPage() {
                                                 {equityCurve.map((entry, index) => (
                                                     <Cell
                                                         key={`cell-${index}`}
-                                                        fill={entry.return >= 0 ? '#22c55e' : '#fca5a5'}
+                                                        fill={entry.return >= 0 ? '#059669' : '#f59e0b'}
                                                     />
                                                 ))}
                                                 <LabelList dataKey="return" position="top" formatter={(val: any) => `${Number(val).toFixed(1)}%`} style={{ fontSize: '10px', fill: '#64748b' }} />
