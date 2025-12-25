@@ -2,14 +2,14 @@ import { useState, useEffect, useMemo } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    AreaChart, Area, ComposedChart, Line, Legend
+    AreaChart, Area, ComposedChart, Line, Legend, ScatterChart, Scatter, ZAxis
 } from 'recharts';
 import { cn } from '../lib/utils';
 import { fetchAnalysis } from '../api/client';
 import { startOfYear, subWeeks, subMonths, isAfter, startOfWeek, startOfMonth, format } from 'date-fns';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { Calendar, Info } from 'lucide-react';
+import { Calendar, Info, TrendingUp } from 'lucide-react';
 
 interface AnalysisData {
     equityCurve: { date: string, return: number, equity: number, drawdown: number }[];
@@ -40,9 +40,19 @@ export function AnalysisPage() {
         return 'midnight';
     });
     const [timeRange, setTimeRange] = useState<TimeRange>('ALL');
-    const [chartMetric, setChartMetric] = useState<'equity' | 'mvso' | 'winRate' | 'avgReturn'>('equity');
     const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
     const [customStartDate, customEndDate] = dateRange;
+
+    // New UX Controls
+    const [takeProfit, setTakeProfit] = useState<number>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('takeProfit');
+            return saved ? parseFloat(saved) : 2.0;
+        }
+        return 2.0;
+    });
+    const [isCumulative, setIsCumulative] = useState(true);
+    const [periodGranularity, setPeriodGranularity] = useState<'days' | 'weeks' | 'months'>('days');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -74,7 +84,7 @@ export function AnalysisPage() {
         return () => observer.disconnect();
     }, []);
 
-    // Filter Logic & Metric Recalculation
+    // Filter Logic & Metric Recalculation (with Take Profit)
     const filteredMetrics = useMemo(() => {
         if (!data) return null;
 
@@ -103,7 +113,7 @@ export function AnalysisPage() {
 
         if (filteredEquity.length === 0) return data; // Fallback
 
-        // Recalculate Metrics for this Period
+        // Recalculate Metrics for this Period (with Take Profit clamping)
         let grossWin = 0;
         let grossLoss = 0;
         let currentEquity = 0;
@@ -114,29 +124,39 @@ export function AnalysisPage() {
         let maxWinStreak = 0;
         let maxLossStreak = 0;
 
-        // Re-simulate equity curve for this period starting from 0
+        // Re-simulate equity curve with Take Profit applied
         const rebasedEquityCurve = filteredEquity.map(d => {
-            const val = d.return;
+            // Apply Take Profit: clamp positive returns at TP value
+            const originalReturn = d.return;
+            const clampedReturn = originalReturn > 0
+                ? Math.min(originalReturn, takeProfit)
+                : originalReturn;
 
-            // Stats
-            if (val > 0) {
-                grossWin += val;
+            // Stats using clamped value
+            if (clampedReturn > 0) {
+                grossWin += clampedReturn;
                 winStreak++;
                 lossStreak = 0;
                 if (winStreak > maxWinStreak) maxWinStreak = winStreak;
             } else {
-                grossLoss += Math.abs(val);
+                grossLoss += Math.abs(clampedReturn);
                 lossStreak++;
                 winStreak = 0;
                 if (lossStreak > maxLossStreak) maxLossStreak = lossStreak;
             }
 
-            currentEquity += val;
+            currentEquity += clampedReturn;
             if (currentEquity > peakEquity) peakEquity = currentEquity;
             const dd = peakEquity - currentEquity;
             if (dd > maxDD) maxDD = dd;
 
-            return { ...d, equity: currentEquity, drawdown: dd * -1 };
+            return {
+                ...d,
+                return: clampedReturn, // Store clamped return
+                originalReturn, // Keep original for reference
+                equity: currentEquity,
+                drawdown: dd * -1
+            };
         });
 
         const pf = grossLoss === 0 ? grossWin : grossWin / grossLoss;
@@ -153,7 +173,7 @@ export function AnalysisPage() {
             }
         };
 
-    }, [data, timeRange]);
+    }, [data, timeRange, takeProfit, customStartDate, customEndDate]);
 
     // Top Periods Calculation (Moved before conditional return)
     const topPeriods = useMemo(() => {
@@ -271,7 +291,7 @@ export function AnalysisPage() {
                                         }
                                     }}
                                     placeholderText="Custom Range"
-                                    className="bg-bg-tertiary/30 border border-border-primary rounded-md px-3 py-1.5 text-xs text-text-primary w-44 cursor-pointer placeholder:text-text-secondary focus:outline-none focus:ring-1 focus:ring-accent-primary"
+                                    className="bg-bg-tertiary/30 border border-border-primary rounded-md px-3 py-1.5 text-xs text-text-primary w-44 cursor-pointer placeholder:text-text-secondary focus:outline-none focus:ring-1 focus:ring-accent-primary font-sans"
                                     dateFormat="MMM dd, yyyy"
                                     isClearable={true}
                                     maxDate={new Date()}
@@ -279,9 +299,42 @@ export function AnalysisPage() {
                                 <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-secondary pointer-events-none" />
                             </div>
 
+                            {/* Take Profit Input */}
+                            <div className="flex items-center gap-2 bg-bg-tertiary/30 rounded-md px-3 py-1.5 border border-border-primary">
+                                <TrendingUp className="w-3.5 h-3.5 text-text-secondary" />
+                                <span className="text-[10px] text-text-secondary uppercase font-medium">TP</span>
+                                <input
+                                    type="number"
+                                    min="0.1"
+                                    max="100"
+                                    step="0.1"
+                                    value={takeProfit}
+                                    onChange={(e) => {
+                                        const val = parseFloat(e.target.value) || 2.0;
+                                        setTakeProfit(val);
+                                        localStorage.setItem('takeProfit', val.toString());
+                                    }}
+                                    className="w-14 bg-transparent border-0 text-text-primary text-sm font-sans font-medium text-right focus:outline-none focus:ring-0"
+                                />
+                                <span className="text-xs text-text-secondary">%</span>
+                            </div>
+
+                            {/* Cumulative Toggle */}
+                            <button
+                                onClick={() => setIsCumulative(!isCumulative)}
+                                className={cn(
+                                    "px-3 py-1.5 text-[10px] font-medium rounded-md border transition-all uppercase tracking-wide",
+                                    isCumulative
+                                        ? "bg-accent-primary/10 text-accent-primary border-accent-primary/30"
+                                        : "bg-bg-tertiary/30 text-text-secondary border-border-primary hover:text-text-primary"
+                                )}
+                            >
+                                {isCumulative ? 'Cumulative' : 'Daily'}
+                            </button>
+
                             <div className="flex gap-4 text-xs text-text-secondary border-l border-border-primary pl-4">
-                                <div><span className={cn("font-bold text-lg", riskMetrics.totalReturn > 0 ? "text-emerald-500" : "text-rose-500")}>{riskMetrics.totalReturn.toFixed(2)}%</span> NET R</div>
-                                <div><span className="font-bold text-lg text-text-primary">{equityCurve.length}</span> SESSIONS</div>
+                                <div><span className={cn("font-bold text-lg font-sans", riskMetrics.totalReturn > 0 ? "text-emerald-500" : "text-rose-500")}>{riskMetrics.totalReturn.toFixed(2)}%</span> NET R</div>
+                                <div><span className="font-bold text-lg text-text-primary font-sans">{equityCurve.length}</span> SESSIONS</div>
                             </div>
                         </div>
                     </div>
@@ -302,75 +355,72 @@ export function AnalysisPage() {
                         {/* Main Equity Curve & Trend Analysis */}
                         <div className="lg:col-span-2 space-y-6">
                             <ChartCard title="" height={350}>
-                                {/* Metric Selector */}
+                                {/* Chart Header */}
                                 <div className="flex items-center justify-between mb-4 -mt-2">
-                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2">
+                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 font-sans">
                                         PERFORMANCE EVOLUTION
+                                        <span className="text-[10px] font-normal text-text-secondary/70">
+                                            (TP: {takeProfit}%)
+                                        </span>
                                     </h3>
-                                    <div className="flex flex-wrap gap-1 justify-end bg-bg-tertiary/30 rounded-md p-0.5 border border-border-primary min-w-0">
-                                        {[
-                                            { key: 'equity', label: 'Equity' },
-                                            { key: 'mvso', label: 'MVSO' },
-                                            { key: 'avgReturn', label: 'Avg %' },
-                                            { key: 'winRate', label: 'Win Rate' }
-                                        ].map(({ key, label }) => (
-                                            <button
-                                                key={key}
-                                                onClick={() => setChartMetric(key as any)}
-                                                className={cn(
-                                                    "px-2 py-1 text-[10px] font-medium rounded transition-all whitespace-nowrap",
-                                                    chartMetric === key
-                                                        ? "bg-accent-primary text-white shadow-sm"
-                                                        : "text-text-secondary hover:text-text-primary"
-                                                )}
-                                            >
-                                                {label}
-                                            </button>
-                                        ))}
-                                    </div>
                                 </div>
                                 <ResponsiveContainer width="100%" height="85%">
-                                    <AreaChart data={
-                                        chartMetric === 'equity' ? equityCurve :
-                                            chartMetric === 'mvso' ? dailyAverages.map(d => ({ ...d, value: d.avgReturn })) :
-                                                chartMetric === 'avgReturn' ? dailyAverages.map(d => ({ ...d, value: d.avgReturn })) :
-                                                    equityCurve.map((d, i, arr) => {
-                                                        // Calculate running win rate
-                                                        const slice = arr.slice(0, i + 1);
-                                                        const wins = slice.filter(x => x.return > 0).length;
-                                                        return { ...d, value: slice.length > 0 ? (wins / slice.length) * 100 : 0 };
-                                                    })
-                                    }>
-                                        <defs>
-                                            <linearGradient id="colorMetric" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor={chartColor} stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
-                                        <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(5)} minTickGap={50} axisLine={false} tickLine={false} />
-                                        <YAxis stroke="#94a3b8" fontSize={11} domain={['auto', 'auto']} axisLine={false} tickLine={false} unit={chartMetric === 'winRate' ? '%' : ''} />
-                                        <Tooltip
-                                            contentStyle={{
-                                                backgroundColor: 'rgba(255,255,255,0.95)',
-                                                border: '1px solid #e5e7eb',
-                                                borderRadius: '6px',
-                                                boxShadow: 'none',
-                                                color: '#1f2937',
-                                                fontFamily: '\"Source Sans 3\", system-ui, sans-serif',
-                                                fontSize: '12px'
-                                            }}
-                                            formatter={(value: number) => [`${value.toFixed(2)}${chartMetric === 'winRate' ? '%' : chartMetric === 'equity' ? '%' : ''}`, chartMetric === 'equity' ? 'Equity' : chartMetric === 'mvso' ? 'MVSO' : chartMetric === 'winRate' ? 'Win Rate' : 'Avg Return']}
-                                        />
-                                        <Area
-                                            type="linear"
-                                            dataKey={chartMetric === 'equity' ? 'equity' : 'value'}
-                                            stroke={chartColor}
-                                            fillOpacity={1}
-                                            fill="url(#colorMetric)"
-                                            strokeWidth={2}
-                                        />
-                                    </AreaChart>
+                                    {isCumulative ? (
+                                        <AreaChart data={equityCurve}>
+                                            <defs>
+                                                <linearGradient id="colorEquity" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor={chartColor} stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
+                                            <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(5)} minTickGap={50} axisLine={false} tickLine={false} />
+                                            <YAxis stroke="#94a3b8" fontSize={11} domain={['auto', 'auto']} axisLine={false} tickLine={false} unit="%" />
+                                            <Tooltip
+                                                contentStyle={{
+                                                    backgroundColor: 'rgba(255,255,255,0.95)',
+                                                    border: '1px solid #e5e7eb',
+                                                    borderRadius: '6px',
+                                                    boxShadow: 'none',
+                                                    color: '#1f2937',
+                                                    fontFamily: '"Source Sans 3", system-ui, sans-serif',
+                                                    fontSize: '12px'
+                                                }}
+                                                formatter={(value: number) => [`${value.toFixed(2)}%`, 'Equity']}
+                                            />
+                                            <Area
+                                                type="linear"
+                                                dataKey="equity"
+                                                stroke={chartColor}
+                                                fillOpacity={1}
+                                                fill="url(#colorEquity)"
+                                                strokeWidth={2}
+                                            />
+                                        </AreaChart>
+                                    ) : (
+                                        <BarChart data={equityCurve}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
+                                            <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(5)} minTickGap={50} axisLine={false} tickLine={false} />
+                                            <YAxis stroke="#94a3b8" fontSize={11} domain={['auto', 'auto']} axisLine={false} tickLine={false} unit="%" />
+                                            <Tooltip
+                                                contentStyle={{
+                                                    backgroundColor: 'rgba(255,255,255,0.95)',
+                                                    border: '1px solid #e5e7eb',
+                                                    borderRadius: '6px',
+                                                    boxShadow: 'none',
+                                                    color: '#1f2937',
+                                                    fontFamily: '"Source Sans 3", system-ui, sans-serif',
+                                                    fontSize: '12px'
+                                                }}
+                                                formatter={(value: number) => [`${value.toFixed(2)}%`, 'Daily Return']}
+                                            />
+                                            <Bar
+                                                dataKey="return"
+                                                fill={chartColor}
+                                                radius={[2, 2, 0, 0]}
+                                            />
+                                        </BarChart>
+                                    )}
                                 </ResponsiveContainer>
                             </ChartCard>
 
@@ -428,15 +478,47 @@ export function AnalysisPage() {
                                 </ResponsiveContainer>
                             </ChartCard>
 
-                            {/* Comparative Chart */}
-                            <ChartCard title="VOLUME & PRICE vs PROFITABILITY" height={300}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart data={dailyAverages}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
-                                        <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(5)} minTickGap={50} axisLine={false} tickLine={false} />
-                                        <YAxis yAxisId="left" stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} />
-                                        <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" fontSize={11} unit="%" axisLine={false} tickLine={false} />
+                            {/* Scatter Plot: Price vs Return (Size = Volume) */}
+                            <ChartCard title="" height={350}>
+                                <div className="flex items-center justify-between mb-3 -mt-2">
+                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
+                                        PRICE vs PROFITABILITY
+                                    </h3>
+                                    <span className="text-[10px] text-text-secondary/70 font-sans">Dot size = Signal Volume</span>
+                                </div>
+                                <ResponsiveContainer width="100%" height="90%">
+                                    <ScatterChart margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} />
+                                        <XAxis
+                                            type="number"
+                                            dataKey="avgPrice"
+                                            name="Avg Price"
+                                            unit="$"
+                                            stroke="#94a3b8"
+                                            fontSize={11}
+                                            axisLine={false}
+                                            tickLine={false}
+                                            domain={['auto', 'auto']}
+                                        />
+                                        <YAxis
+                                            type="number"
+                                            dataKey="avgReturn"
+                                            name="Avg Return"
+                                            unit="%"
+                                            stroke="#94a3b8"
+                                            fontSize={11}
+                                            axisLine={false}
+                                            tickLine={false}
+                                            domain={['auto', 'auto']}
+                                        />
+                                        <ZAxis
+                                            type="number"
+                                            dataKey="count"
+                                            range={[50, 400]}
+                                            name="Volume"
+                                        />
                                         <Tooltip
+                                            cursor={{ strokeDasharray: '3 3' }}
                                             contentStyle={{
                                                 backgroundColor: 'rgba(255,255,255,0.95)',
                                                 border: '1px solid #e5e7eb',
@@ -446,99 +528,66 @@ export function AnalysisPage() {
                                                 fontFamily: '"Source Sans 3", system-ui, sans-serif',
                                                 fontSize: '12px'
                                             }}
-                                            labelStyle={{ color: '#666' }}
+                                            formatter={(value: number, name: string) => [
+                                                name === 'Avg Price' ? `$${value.toFixed(2)}` :
+                                                    name === 'Avg Return' ? `${value.toFixed(2)}%` :
+                                                        value,
+                                                name
+                                            ]}
                                         />
-                                        <Legend />
-                                        <Bar yAxisId="left" dataKey="count" name="Signal Vol" fill={secondaryColor} barSize={20} radius={[2, 2, 0, 0]} opacity={0.4} />
-                                        <Line yAxisId="right" type="linear" dataKey="avgReturn" name="Avg Return %" stroke={chartColor} strokeWidth={2} dot={false} />
-                                        <Line yAxisId="right" type="linear" dataKey="avgPrice" name="Avg Price ($)" stroke="#f59e0b" strokeWidth={2} strokeDasharray="3 3" dot={false} hide={!dailyAverages[0]?.avgPrice} />
-                                    </ComposedChart>
+                                        <Scatter
+                                            name="Price/Return"
+                                            data={dailyAverages.filter(d => d.avgPrice > 0)}
+                                            fill={chartColor}
+                                            fillOpacity={0.7}
+                                        />
+                                    </ScatterChart>
                                 </ResponsiveContainer>
                             </ChartCard>
 
-                            {/* Top Periods Table */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <ChartCard title="TOP DAYS" height={200}>
-                                    <div className="overflow-y-auto h-full pr-1">
-                                        <table className="w-full text-xs text-left text-text-secondary">
-                                            <thead>
-                                                <tr className="border-b border-border-primary/50 text-[10px] uppercase">
-                                                    <th className="py-2 font-medium">Date</th>
-                                                    <th className="py-2 font-medium text-right">Return</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {topPeriods.days.map((d, i) => (
-                                                    <tr key={i} className="border-b border-border-primary/20 last:border-0 hover:bg-bg-tertiary/10">
-                                                        <td className="py-2">{d.date}</td>
-                                                        <td className="py-2 text-right text-emerald-500 font-bold">+{d.return.toFixed(2)}%</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                            {/* Top Periods Table - Unified */}
+                            <ChartCard title="" height={250}>
+                                <div className="flex items-center justify-between mb-3 -mt-2">
+                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
+                                        TOP PERIODS
+                                    </h3>
+                                    <div className="flex bg-bg-tertiary/30 rounded-md p-0.5 border border-border-primary">
+                                        {(['days', 'weeks', 'months'] as const).map((period) => (
+                                            <button
+                                                key={period}
+                                                onClick={() => setPeriodGranularity(period)}
+                                                className={cn(
+                                                    "px-2 py-1 text-[10px] font-medium rounded transition-all capitalize font-sans",
+                                                    periodGranularity === period
+                                                        ? "bg-accent-primary text-white shadow-sm"
+                                                        : "text-text-secondary hover:text-text-primary"
+                                                )}
+                                            >
+                                                {period}
+                                            </button>
+                                        ))}
                                     </div>
-                                </ChartCard>
-                                <ChartCard title="TOP WEEKS" height={200}>
-                                    <div className="overflow-y-auto h-full pr-1">
-                                        <table className="w-full text-xs text-left text-text-secondary">
-                                            <thead>
-                                                <tr className="border-b border-border-primary/50 text-[10px] uppercase">
-                                                    <th className="py-2 font-medium">Week Of</th>
-                                                    <th className="py-2 font-medium text-right">Total R</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {topPeriods.weeks.map((d, i) => (
-                                                    <tr key={i} className="border-b border-border-primary/20 last:border-0 hover:bg-bg-tertiary/10">
-                                                        <td className="py-2">{d.date}</td>
-                                                        <td className="py-2 text-right text-emerald-500 font-bold">+{d.return.toFixed(2)}%</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </ChartCard>
-                                <ChartCard title="TOP MONTHS" height={200}>
-                                    <div className="overflow-y-auto h-full pr-1">
-                                        <table className="w-full text-xs text-left text-text-secondary">
-                                            <thead>
-                                                <tr className="border-b border-border-primary/50 text-[10px] uppercase">
-                                                    <th className="py-2 font-medium">Month</th>
-                                                    <th className="py-2 font-medium text-right">Total R</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {topPeriods.months.map((d, i) => (
-                                                    <tr key={i} className="border-b border-border-primary/20 last:border-0 hover:bg-bg-tertiary/10">
-                                                        <td className="py-2">{d.date}</td>
-                                                        <td className="py-2 text-right text-emerald-500 font-bold">+{d.return.toFixed(2)}%</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </ChartCard>
-                            </div>
-
-                            {/* Top Sectors Leaderboard */}
-                            <ChartCard title="OUTPERFORMING SECTORS" height={250}>
+                                </div>
                                 <div className="overflow-y-auto h-full pr-1">
-                                    <table className="w-full text-xs text-left text-text-secondary">
+                                    <table className="w-full text-xs text-left text-text-secondary font-sans">
                                         <thead>
-                                            <tr className="border-b border-border-primary">
-                                                <th className="pb-2 font-normal uppercase">Sector</th>
-                                                <th className="pb-2 font-normal text-right">Avg %</th>
-                                                <th className="pb-2 font-normal text-right">WR %</th>
+                                            <tr className="border-b border-border-primary/50 text-[10px] uppercase">
+                                                <th className="py-2 font-medium">
+                                                    {periodGranularity === 'days' ? 'Date' : periodGranularity === 'weeks' ? 'Week Of' : 'Month'}
+                                                </th>
+                                                <th className="py-2 font-medium text-right">Return</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {topSectors.map((sector, idx) => (
-                                                <tr key={idx} className="border-b border-border-primary/50 hover:bg-white/5 transition-colors">
-                                                    <td className="py-2 text-text-primary truncate max-w-[100px]">{sector.name}</td>
-                                                    <td className={cn("py-2 text-right font-mono", sector.avgMvso > 0 ? "text-emerald-500" : "text-rose-500")}>
-                                                        {sector.avgMvso}%
+                                            {topPeriods[periodGranularity].map((d, i) => (
+                                                <tr key={i} className="border-b border-border-primary/20 last:border-0 hover:bg-bg-tertiary/10">
+                                                    <td className="py-2 font-sans">{d.date}</td>
+                                                    <td className={cn(
+                                                        "py-2 text-right font-bold font-sans",
+                                                        d.return >= 0 ? "text-emerald-500" : "text-rose-500"
+                                                    )}>
+                                                        {d.return >= 0 ? '+' : ''}{d.return.toFixed(2)}%
                                                     </td>
-                                                    <td className="py-2 text-right font-mono">{sector.winRate}%</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -546,26 +595,133 @@ export function AnalysisPage() {
                                 </div>
                             </ChartCard>
 
-                            <ChartCard title="EXPECTANCY DISTRIBUTION" height={200}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={distribution}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
-                                        <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickFormatter={(v) => v.replace('%', '')} />
-                                        <Tooltip
-                                            cursor={{ fill: '#f3f4f6', opacity: 0.5 }}
-                                            contentStyle={{
-                                                backgroundColor: 'rgba(255,255,255,0.95)',
-                                                border: '1px solid #e5e7eb',
-                                                borderRadius: '6px',
-                                                boxShadow: 'none',
-                                                color: '#1f2937',
-                                                fontFamily: '"Source Sans 3", system-ui, sans-serif',
-                                                fontSize: '12px'
-                                            }}
-                                        />
-                                        <Bar dataKey="count" fill={chartColor} radius={[4, 4, 0, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
+                            {/* Top Sectors Leaderboard */}
+                            <ChartCard title="" height={280}>
+                                <div className="flex items-center justify-between mb-3 -mt-2">
+                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
+                                        OUTPERFORMING SECTORS
+                                    </h3>
+                                </div>
+                                <div className="overflow-y-auto h-full pr-1">
+                                    <table className="w-full text-xs text-left text-text-secondary font-sans">
+                                        <thead>
+                                            <tr className="border-b border-border-primary text-[10px] uppercase">
+                                                <th className="pb-2 font-medium">Sector</th>
+                                                <th className="pb-2 font-medium text-right">Avg %</th>
+                                                <th className="pb-2 font-medium text-right">Freq %</th>
+                                                <th className="pb-2 font-medium text-right">WR %</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {(() => {
+                                                const totalCount = topSectors.reduce((sum, s) => sum + s.count, 0);
+                                                return topSectors.map((sector, idx) => (
+                                                    <tr key={idx} className="border-b border-border-primary/50 hover:bg-bg-tertiary/10 transition-colors">
+                                                        <td className="py-2 text-text-primary truncate max-w-[100px] font-sans">{sector.name}</td>
+                                                        <td className={cn("py-2 text-right font-sans", sector.avgMvso > 0 ? "text-emerald-500" : "text-rose-500")}>
+                                                            {sector.avgMvso.toFixed(1)}%
+                                                        </td>
+                                                        <td className="py-2 text-right font-sans text-text-secondary">
+                                                            {totalCount > 0 ? ((sector.count / totalCount) * 100).toFixed(1) : 0}%
+                                                        </td>
+                                                        <td className="py-2 text-right font-sans">{sector.winRate}%</td>
+                                                    </tr>
+                                                ));
+                                            })()}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </ChartCard>
+
+                            {/* Violin Plot: Expectancy Distribution */}
+                            <ChartCard title="" height={300}>
+                                <div className="flex items-center justify-between mb-3 -mt-2">
+                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
+                                        EXPECTANCY DISTRIBUTION
+                                    </h3>
+                                </div>
+                                <div className="h-full flex items-center justify-center">
+                                    <svg viewBox="0 0 400 200" className="w-full h-full max-h-52">
+                                        {/* Grid lines */}
+                                        <line x1="50" y1="100" x2="350" y2="100" stroke="#e5e5e5" strokeWidth="1" />
+                                        <line x1="50" y1="50" x2="350" y2="50" stroke="#e5e5e5" strokeWidth="0.5" strokeDasharray="3" />
+                                        <line x1="50" y1="150" x2="350" y2="150" stroke="#e5e5e5" strokeWidth="0.5" strokeDasharray="3" />
+
+                                        {/* Violin body - mirrored area */}
+                                        {(() => {
+                                            if (!distribution.length) return null;
+                                            const maxCount = Math.max(...distribution.map(d => d.count));
+                                            const width = 300 / distribution.length;
+                                            const centerY = 100;
+                                            const maxHeight = 70;
+
+                                            // Build path for top half
+                                            let topPath = `M 50 ${centerY}`;
+                                            let bottomPath = `L 50 ${centerY}`;
+
+                                            distribution.forEach((d, i) => {
+                                                const x = 50 + (i * width) + (width / 2);
+                                                const scaledHeight = maxCount > 0 ? (d.count / maxCount) * maxHeight : 0;
+                                                topPath += ` L ${x} ${centerY - scaledHeight}`;
+                                            });
+
+                                            // Close top and build bottom path
+                                            topPath += ` L ${350} ${centerY}`;
+
+                                            distribution.slice().reverse().forEach((d, i) => {
+                                                const x = 350 - (i * width) - (width / 2);
+                                                const scaledHeight = maxCount > 0 ? (d.count / maxCount) * maxHeight : 0;
+                                                bottomPath = ` L ${x} ${centerY + scaledHeight}` + bottomPath;
+                                            });
+
+                                            const fullPath = topPath + bottomPath + ' Z';
+
+                                            return (
+                                                <>
+                                                    <defs>
+                                                        <linearGradient id="violinGradient" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="0%" stopColor={chartColor} stopOpacity="0.4" />
+                                                            <stop offset="50%" stopColor={chartColor} stopOpacity="0.8" />
+                                                            <stop offset="100%" stopColor={chartColor} stopOpacity="0.4" />
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <path
+                                                        d={fullPath}
+                                                        fill="url(#violinGradient)"
+                                                        stroke={chartColor}
+                                                        strokeWidth="2"
+                                                    />
+                                                    {/* Median line */}
+                                                    <line x1="200" y1="30" x2="200" y2="170" stroke={chartColor} strokeWidth="2" strokeDasharray="4" opacity="0.5" />
+                                                </>
+                                            );
+                                        })()}
+
+                                        {/* X-axis labels */}
+                                        {distribution.map((d, i) => {
+                                            const width = 300 / distribution.length;
+                                            const x = 50 + (i * width) + (width / 2);
+                                            return (
+                                                <text
+                                                    key={i}
+                                                    x={x}
+                                                    y="190"
+                                                    textAnchor="middle"
+                                                    fontSize="10"
+                                                    fill="#94a3b8"
+                                                    fontFamily="Source Sans 3, system-ui, sans-serif"
+                                                >
+                                                    {d.name.replace('%', '')}
+                                                </text>
+                                            );
+                                        })}
+
+                                        {/* Y-axis labels */}
+                                        <text x="45" y="105" textAnchor="end" fontSize="10" fill="#94a3b8" fontFamily="Source Sans 3, system-ui, sans-serif">0</text>
+                                        <text x="45" y="55" textAnchor="end" fontSize="10" fill="#94a3b8" fontFamily="Source Sans 3, system-ui, sans-serif">+</text>
+                                        <text x="45" y="155" textAnchor="end" fontSize="10" fill="#94a3b8" fontFamily="Source Sans 3, system-ui, sans-serif">-</text>
+                                    </svg>
+                                </div>
                             </ChartCard>
                         </div>
                     </div>
