@@ -188,12 +188,11 @@ export function AnalysisPage() {
     const bestDay = [...seasonality].sort((a, b) => b.winRate - a.winRate)[0];
 
     return (
-        <div className="flex h-screen bg-bg-primary overflow-hidden font-mono">
+        <div className="flex h-screen bg-bg-primary overflow-hidden font-sans">
             <Sidebar />
 
             <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-                <div className={cn("p-6 space-y-6 transition-colors duration-300",
-                    isTerminal ? "bg-black" : isTradingView ? "bg-[#131722]" : isPolar ? "bg-white" : "")}>
+                <div className="p-6 space-y-6 bg-bg-primary">
 
                     {/* Header with Filters */}
                     <div className="flex flex-col md:flex-row justify-between items-end border-b border-border-primary pb-4 gap-4">
@@ -329,7 +328,7 @@ export function AnalysisPage() {
                                             formatter={(value: number) => [`${value.toFixed(2)}${chartMetric === 'winRate' ? '%' : chartMetric === 'equity' ? '%' : ''}`, chartMetric === 'equity' ? 'Equity' : chartMetric === 'mvso' ? 'MVSO' : chartMetric === 'winRate' ? 'Win Rate' : 'Avg Return']}
                                         />
                                         <Area
-                                            type="monotone"
+                                            type="linear"
                                             dataKey={chartMetric === 'equity' ? 'equity' : 'value'}
                                             stroke={chartColor}
                                             fillOpacity={1}
@@ -355,7 +354,7 @@ export function AnalysisPage() {
                                             }}
                                             itemStyle={{ color: '#fff' }}
                                         />
-                                        <Line type="monotone" dataKey="avgReturn" stroke={safeColor} strokeWidth={2} dot={false} />
+                                        <Line type="linear" dataKey="avgReturn" stroke={safeColor} strokeWidth={2} dot={false} />
                                     </ComposedChart>
                                 </ResponsiveContainer>
                             </ChartCard>
@@ -382,7 +381,7 @@ export function AnalysisPage() {
                                         />
                                         <Legend />
                                         <Bar yAxisId="left" dataKey="count" name="Vol" fill={secondaryColor} barSize={20} radius={[2, 2, 0, 0]} opacity={0.6} />
-                                        <Line yAxisId="right" type="monotone" dataKey="avgMvso" name="Avg %" stroke={chartColor} strokeWidth={2} dot={{ r: 3 }} />
+                                        <Line yAxisId="right" type="linear" dataKey="avgMvso" name="Avg %" stroke={chartColor} strokeWidth={2} dot={{ r: 3 }} />
                                     </ComposedChart>
                                 </ResponsiveContainer>
                             </ChartCard>
