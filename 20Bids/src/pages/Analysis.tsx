@@ -396,7 +396,7 @@ export function AnalysisPage() {
                         <TerminalMetric label="Reliability" value="High" color={safeColor} tooltip="Overall consistency based on win rate and drawdown." />
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="space-y-6">
                         {/* ROW 1: Charts (Performance Evolution + Seasonality) */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {/* Performance Evolution Chart */}
