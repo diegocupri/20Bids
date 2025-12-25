@@ -288,14 +288,13 @@ export function AnalysisPage() {
     let chartColor = '#8b5cf6';
     let safeColor = '#34d399';
     let dangerColor = '#f43f5e';
-    let secondaryColor = '#4f46e5';
 
     if (isTerminal) {
-        chartColor = '#fbbf24'; safeColor = '#22c55e'; dangerColor = '#ef4444'; secondaryColor = '#6b7280';
+        chartColor = '#fbbf24'; safeColor = '#22c55e'; dangerColor = '#ef4444';
     } else if (isTradingView) {
-        chartColor = '#2962ff'; safeColor = '#089981'; dangerColor = '#f23645'; secondaryColor = '#787b86';
+        chartColor = '#2962ff'; safeColor = '#089981'; dangerColor = '#f23645';
     } else if (isPolar) {
-        chartColor = '#2563eb'; safeColor = '#059669'; dangerColor = '#dc2626'; secondaryColor = '#4b5563';
+        chartColor = '#2563eb'; safeColor = '#059669'; dangerColor = '#dc2626';
     }
 
     const bestDay = [...seasonality].sort((a, b) => b.winRate - a.winRate)[0];
@@ -564,31 +563,63 @@ export function AnalysisPage() {
                                 </ResponsiveContainer>
                             </ChartCard>
 
-                            {/* Seasonality Chart */}
-                            <ChartCard title="SEASONALITY (PROFITABILITY VS VOL)" height={350}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart data={seasonality}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
-                                        <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(0, 3).toUpperCase()} axisLine={false} tickLine={false} />
-                                        <YAxis yAxisId="left" stroke="#94a3b8" fontSize={11} hide />
-                                        <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" fontSize={11} domain={[0, 5]} unit="%" />
-                                        <Tooltip
-                                            cursor={{ fill: '#f3f4f6', opacity: 0.5 }}
-                                            contentStyle={{
-                                                backgroundColor: 'rgba(255,255,255,0.95)',
-                                                border: '1px solid #e5e7eb',
-                                                borderRadius: '6px',
-                                                boxShadow: 'none',
-                                                color: '#1f2937',
-                                                fontFamily: '"Source Sans 3", system-ui, sans-serif',
-                                                fontSize: '12px'
-                                            }}
-                                        />
-                                        <Legend />
-                                        <Bar yAxisId="left" dataKey="count" name="Vol" fill={secondaryColor} barSize={20} radius={[2, 2, 0, 0]} opacity={0.6} />
-                                        <Line yAxisId="right" type="linear" dataKey="avgMvso" name="Avg %" stroke={chartColor} strokeWidth={2} dot={{ r: 3 }} />
-                                    </ComposedChart>
-                                </ResponsiveContainer>
+                            {/* Summary Panel - Trade Breakdown for Selected Range */}
+                            <ChartCard title="" height={350}>
+                                <div className="flex flex-col h-full justify-center px-4">
+                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest mb-6 font-sans">
+                                        PERIOD SUMMARY
+                                    </h3>
+
+                                    {/* Totals calculated from equityCurve */}
+                                    {(() => {
+                                        const totals = equityCurve.reduce((acc, d) => ({
+                                            return: acc.return + (d.return || 0),
+                                            count: acc.count + (d.count || 0),
+                                            hitTP: acc.hitTP + (d.hitTP || 0),
+                                            hitSL: acc.hitSL + (d.hitSL || 0),
+                                            other: acc.other + (d.other || 0)
+                                        }), { return: 0, count: 0, hitTP: 0, hitSL: 0, other: 0 });
+
+                                        const avgReturn = totals.count > 0 ? totals.return / totals.count : 0;
+
+                                        return (
+                                            <div className="space-y-4">
+                                                <div className="flex justify-between items-center py-2 border-b border-border-primary/30">
+                                                    <span className="text-sm text-text-secondary font-sans">Total Return</span>
+                                                    <span className={cn("text-xl font-bold font-sans", totals.return >= 0 ? "text-accent-primary" : "text-red-500")}>
+                                                        {totals.return.toFixed(2)}%
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center py-2 border-b border-border-primary/30">
+                                                    <span className="text-sm text-text-secondary font-sans">Avg Return</span>
+                                                    <span className="text-lg font-semibold text-text-primary font-sans">
+                                                        {avgReturn.toFixed(2)}%
+                                                    </span>
+                                                </div>
+
+                                                <div className="pt-4">
+                                                    <div className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-3 font-sans">
+                                                        Breakdown ({totals.count} trades)
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-green-500 font-sans">✓ Hit TP ({takeProfit}%)</span>
+                                                            <span className="text-lg font-bold text-text-primary font-sans">{totals.hitTP}</span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-red-500 font-sans">✗ Hit SL ({stopLoss === 100 ? 'Off' : `-${stopLoss}%`})</span>
+                                                            <span className="text-lg font-bold text-text-primary font-sans">{totals.hitSL}</span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-text-secondary font-sans">○ Other</span>
+                                                            <span className="text-lg font-bold text-text-primary font-sans">{totals.other}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
                             </ChartCard>
                         </div>
 
