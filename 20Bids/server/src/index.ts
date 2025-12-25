@@ -515,7 +515,7 @@ app.get('/api/stats/analysis', async (req, res) => {
             dailyMap[dateStr].total += clampedMvso;
             dailyMap[dateStr].count++;
             // Use refPrice1020 as entry price proxy, consistent with MVSO calc
-            dailyMap[dateStr].totalPrice += (rec.refPrice1020 || rec.openPrice || 0);
+            dailyMap[dateStr].totalPrice += (rec.refPrice1020 || rec.open || 0);
 
             // 2. Move Distribution (use original mvso for distribution buckets)
             if (mvso < 0) analysis.distribution.negative++;
