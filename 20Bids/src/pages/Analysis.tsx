@@ -397,10 +397,10 @@ export function AnalysisPage() {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Main Equity Curve & Trend Analysis */}
-                        <div className="lg:col-span-2 space-y-6">
+                        {/* ROW 1: Charts (Performance Evolution + Seasonality) */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Performance Evolution Chart */}
                             <ChartCard title="" height={350}>
-                                {/* Chart Header */}
                                 <div className="flex items-center justify-between mb-4">
                                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 font-sans">
                                         PERFORMANCE EVOLUTION
@@ -495,12 +495,38 @@ export function AnalysisPage() {
                                     )}
                                 </ResponsiveContainer>
                             </ChartCard>
+
+                            {/* Seasonality Chart */}
+                            <ChartCard title="SEASONALITY (PROFITABILITY VS VOL)" height={350}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <ComposedChart data={seasonality}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
+                                        <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(0, 3).toUpperCase()} axisLine={false} tickLine={false} />
+                                        <YAxis yAxisId="left" stroke="#94a3b8" fontSize={11} hide />
+                                        <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" fontSize={11} unit="%" />
+                                        <Tooltip
+                                            cursor={{ fill: '#f3f4f6', opacity: 0.5 }}
+                                            contentStyle={{
+                                                backgroundColor: 'rgba(255,255,255,0.95)',
+                                                border: '1px solid #e5e7eb',
+                                                borderRadius: '6px',
+                                                boxShadow: 'none',
+                                                color: '#1f2937',
+                                                fontFamily: '"Source Sans 3", system-ui, sans-serif',
+                                                fontSize: '12px'
+                                            }}
+                                        />
+                                        <Legend />
+                                        <Bar yAxisId="left" dataKey="count" name="Vol" fill={secondaryColor} barSize={20} radius={[2, 2, 0, 0]} opacity={0.6} />
+                                        <Line yAxisId="right" type="linear" dataKey="avgMvso" name="Avg %" stroke={chartColor} strokeWidth={2} dot={{ r: 3 }} />
+                                    </ComposedChart>
+                                </ResponsiveContainer>
+                            </ChartCard>
                         </div>
 
-                        {/* 3-Column Grid for Leaderboards */}
+                        {/* ROW 2: Tables (Top Tickers + Top Periods + Sectors) */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                            {/* Top Tickers Leaderboard (Converted from Chart) */}
+                            {/* Top Tickers Leaderboard */}
                             <ChartCard title="" height={280}>
                                 <div className="flex items-center justify-between mb-3 -mt-2">
                                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
@@ -621,79 +647,48 @@ export function AnalysisPage() {
                                     </table>
                                 </div>
                             </ChartCard>
-
                         </div>
 
-                        {/* Bottom Charts Row (Seasonality & Distribution) */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-                            <ChartCard title="SEASONALITY (PROFITABILITY VS VOL)" height={280}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart data={seasonality}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
-                                        <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(0, 3).toUpperCase()} axisLine={false} tickLine={false} />
-                                        <YAxis yAxisId="left" stroke="#94a3b8" fontSize={11} hide />
-                                        <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" fontSize={11} unit="%" />
-
-                                        <Tooltip
-                                            cursor={{ fill: '#f3f4f6', opacity: 0.5 }}
-                                            contentStyle={{
-                                                backgroundColor: 'rgba(255,255,255,0.95)',
-                                                border: '1px solid #e5e7eb',
-                                                borderRadius: '6px',
-                                                boxShadow: 'none',
-                                                color: '#1f2937',
-                                                fontFamily: '"Source Sans 3", system-ui, sans-serif',
-                                                fontSize: '12px'
-                                            }}
-                                        />
-                                        <Legend />
-                                        <Bar yAxisId="left" dataKey="count" name="Vol" fill={secondaryColor} barSize={20} radius={[2, 2, 0, 0]} opacity={0.6} />
-                                        <Line yAxisId="right" type="linear" dataKey="avgMvso" name="Avg %" stroke={chartColor} strokeWidth={2} dot={{ r: 3 }} />
-                                    </ComposedChart>
-                                </ResponsiveContainer>
-                            </ChartCard>
-
-                            <ChartCard title="" height={280}>
-                                <div className="flex items-center justify-between mb-3 -mt-2">
-                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
-                                        EXPECTANCY DISTRIBUTION
-                                    </h3>
-                                </div>
-                                <ResponsiveContainer width="100%" height="90%">
-                                    <BarChart data={distribution} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
-                                        <XAxis
-                                            dataKey="name"
-                                            stroke="#94a3b8"
-                                            fontSize={10}
-                                            tickFormatter={(v) => v.replace('%', '')}
-                                            axisLine={false}
-                                            tickLine={false}
-                                        />
-                                        <YAxis stroke="#94a3b8" fontSize={10} axisLine={false} tickLine={false} />
-                                        <Tooltip
-                                            cursor={{ fill: '#f3f4f6', opacity: 0.5 }}
-                                            contentStyle={{
-                                                backgroundColor: 'rgba(255,255,255,0.95)',
-                                                border: '1px solid #e5e7eb',
-                                                borderRadius: '6px',
-                                                boxShadow: 'none',
-                                                color: '#1f2937',
-                                                fontFamily: '"Source Sans 3", system-ui, sans-serif',
-                                                fontSize: '12px'
-                                            }}
-                                        />
-                                        <Bar
-                                            dataKey="count"
-                                            fill={chartColor}
-                                            radius={[4, 4, 0, 0]}
-                                            fillOpacity={0.8}
-                                        />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </ChartCard>
-                        </div>
+                        {/* ROW 3: Expectancy Distribution (Full Width) */}
+                        <ChartCard title="" height={280}>
+                            <div className="flex items-center justify-between mb-3 -mt-2">
+                                <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
+                                    EXPECTANCY DISTRIBUTION
+                                </h3>
+                            </div>
+                            <ResponsiveContainer width="100%" height="90%">
+                                <BarChart data={distribution} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
+                                    <XAxis
+                                        dataKey="name"
+                                        stroke="#94a3b8"
+                                        fontSize={10}
+                                        tickFormatter={(v) => v.replace('%', '')}
+                                        axisLine={false}
+                                        tickLine={false}
+                                    />
+                                    <YAxis stroke="#94a3b8" fontSize={10} axisLine={false} tickLine={false} />
+                                    <Tooltip
+                                        cursor={{ fill: '#f3f4f6', opacity: 0.5 }}
+                                        contentStyle={{
+                                            backgroundColor: 'rgba(255,255,255,0.95)',
+                                            border: '1px solid #e5e7eb',
+                                            borderRadius: '6px',
+                                            boxShadow: 'none',
+                                            color: '#1f2937',
+                                            fontFamily: '"Source Sans 3", system-ui, sans-serif',
+                                            fontSize: '12px'
+                                        }}
+                                    />
+                                    <Bar
+                                        dataKey="count"
+                                        fill={chartColor}
+                                        radius={[4, 4, 0, 0]}
+                                        fillOpacity={0.8}
+                                    />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </ChartCard>
                     </div>
                 </div>
             </div>
