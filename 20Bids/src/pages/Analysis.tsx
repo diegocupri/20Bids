@@ -28,6 +28,19 @@ interface AnalysisData {
     };
 }
 
+const CustomizedLabel = (props: any) => {
+    const { x, y, value } = props;
+    if (!value && value !== 0) return null;
+    return (
+        <g>
+            <rect x={x - 18} y={y - 20} width={36} height={16} fill="white" rx={4} stroke="#e5e5e5" strokeWidth={1} />
+            <text x={x} y={y - 9} fill="#059669" textAnchor="middle" dominantBaseline="middle" fontSize={10} fontWeight="bold">
+                {Number(value).toFixed(2)}%
+            </text>
+        </g>
+    );
+};
+
 type TimeRange = '1W' | '1M' | '3M' | 'YTD' | '1Y' | 'ALL';
 
 export function AnalysisPage() {
@@ -450,7 +463,14 @@ export function AnalysisPage() {
                                                     name === 'return' ? 'Total Return' : 'Avg Return'
                                                 ]}
                                             />
-                                            <Legend verticalAlign="top" height={36} iconType="circle" />
+                                            <Legend
+                                                verticalAlign="top"
+                                                align="left"
+                                                height={36}
+                                                iconType="circle"
+                                                iconSize={8}
+                                                wrapperStyle={{ fontSize: '11px', paddingLeft: '0px' }}
+                                            />
                                             <Bar
                                                 yAxisId="left"
                                                 dataKey="return"
@@ -469,7 +489,7 @@ export function AnalysisPage() {
                                                 dot={{ r: 4, fill: safeColor }}
                                                 name="Avg Return"
                                             >
-                                                <LabelList dataKey="avgReturn" position="top" formatter={(val: any) => `${Number(val).toFixed(2)}%`} style={{ fontSize: '10px', fill: safeColor, fontWeight: 'bold' }} />
+                                                <LabelList dataKey="avgReturn" content={<CustomizedLabel />} />
                                             </Line>
                                         </ComposedChart>
                                     )}
@@ -529,7 +549,7 @@ export function AnalysisPage() {
                         {/* Side Stats & Leaderboards */}
                         <div className="space-y-6">
 
-                            <ChartCard title="SEASONALITY (PROFITABILITY VS VOL)" height={250}>
+                            <ChartCard title="SEASONALITY (PROFITABILITY VS VOL)" height={350}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <ComposedChart data={seasonality}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
