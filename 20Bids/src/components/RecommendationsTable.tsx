@@ -71,10 +71,23 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
         const loadData = async () => {
             try {
                 const data = await fetchRecommendations(selectedDate);
-                setRecommendations(data);
-                onDataLoaded?.(data);
-            } catch (error) {
-                console.error('Failed to load recommendations:', error);
+                // Safeguard: Ensure data is an array before setting state
+                if (Array.isArray(data)) {
+                    setRecommendations(data);
+                } else {
+                    console.error('[RecommendationsTable] Received invalid data format:', data);
+                    setRecommendations([]);
+                }
+
+                // Fetch extra data for dashboard
+                const indicesData = await fetchIndices();
+                setIndices(indicesData);
+
+                if (onDataLoaded) onDataLoaded(data);
+            } catch (err) {
+                console.error('[RecommendationsTable] Error loading data:', err);
+                // Safeguard on error
+                setRecommendations([]);
             }
         };
         loadData();
