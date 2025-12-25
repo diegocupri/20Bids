@@ -450,6 +450,7 @@ export function AnalysisPage() {
                                                     name === 'return' ? 'Total Return' : 'Avg Return'
                                                 ]}
                                             />
+                                            <Legend verticalAlign="top" height={36} iconType="circle" />
                                             <Bar
                                                 yAxisId="left"
                                                 dataKey="return"
