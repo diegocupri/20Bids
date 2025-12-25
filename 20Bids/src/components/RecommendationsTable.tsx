@@ -23,7 +23,7 @@ interface RecommendationsTableProps {
 
 // ... (TAG_COLORS)
 
-type SortKey = 'symbol' | 'price' | 'refPrice1020' | 'change' | 'volume' | 'rsi' | 'relativeVol' | 'type' | 'probabilityValue' | 'sector' | 'open' | 'mvso';
+type SortKey = 'symbol' | 'price' | 'refPrice1020' | 'change' | 'volume' | 'rsi' | 'relativeVol' | 'type' | 'probabilityValue' | 'sector' | 'open' | 'mvso' | 'lowBeforePeak';
 
 export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, mvsoThreshold, onMvsoThresholdChange }: RecommendationsTableProps) {
     const [recommendations, setRecommendations] = useState<any[]>([]);
@@ -375,6 +375,10 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                 <div className="flex items-center justify-center gap-1">MVSO <SortIcon column="mvso" /></div>
                             </th>
 
+                            <th className="pt-6 pb-3 font-medium text-center cursor-pointer hover:text-text-primary transition-colors w-[8%]" onClick={() => handleSort('lowBeforePeak')}>
+                                <div className="flex items-center justify-center gap-1">Max DD <SortIcon column="lowBeforePeak" /></div>
+                            </th>
+
                             {showExtraHours && (
                                 <>
                                     <th className="pt-6 pb-3 font-medium text-right w-[8%] text-text-secondary/70">
@@ -526,12 +530,12 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
 
                                     {/* % Chg 10:20 */}
                                     <td className="py-3 text-right">
-                                        <span className={cn(
-                                            "inline-block font-mono text-xs font-bold",
+                                        <div className={cn(
+                                            "font-mono font-bold text-xs",
                                             liveChange >= 0 ? "text-emerald-600" : "text-rose-600"
                                         )}>
                                             {liveChange >= 0 ? '+' : ''}{liveChange.toFixed(2)}%
-                                        </span>
+                                        </div>
                                     </td>
 
                                     {/* MVSO - Colored Background Box based on Threshold */}
@@ -542,6 +546,18 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                             mvso >= mvsoThreshold ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
                                         )}>
                                             {mvso > 0 ? '+' : ''}{mvso.toFixed(2)}%
+                                        </div>
+                                    </td>
+
+                                    {/* Max DD */}
+                                    <td className="py-3 text-center">
+                                        <div className={cn(
+                                            "font-mono font-bold text-sm",
+                                            ((rec.lowBeforePeak && refPrice) ? ((rec.lowBeforePeak - refPrice) / refPrice) * 100 : 0) < 0 ? "text-rose-500" : "text-text-secondary"
+                                        )}>
+                                            {rec.lowBeforePeak && refPrice
+                                                ? `${(((rec.lowBeforePeak - refPrice) / refPrice) * 100).toFixed(2)}%`
+                                                : '-'}
                                         </div>
                                     </td>
 
