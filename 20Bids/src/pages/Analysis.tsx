@@ -315,15 +315,18 @@ export function AnalysisPage() {
                                                 <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke={isTradingView ? "#2a2e39" : "#333"} opacity={isTradingView ? 1 : 0.3} vertical={false} />
-                                        <XAxis dataKey="date" stroke="#666" fontSize={10} tickFormatter={(val) => val.slice(5)} minTickGap={50} axisLine={false} tickLine={false} />
-                                        <YAxis stroke="#666" fontSize={10} domain={['auto', 'auto']} axisLine={false} tickLine={false} unit={chartMetric === 'winRate' ? '%' : ''} />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
+                                        <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(5)} minTickGap={50} axisLine={false} tickLine={false} />
+                                        <YAxis stroke="#94a3b8" fontSize={11} domain={['auto', 'auto']} axisLine={false} tickLine={false} unit={chartMetric === 'winRate' ? '%' : ''} />
                                         <Tooltip
                                             contentStyle={{
-                                                backgroundColor: isTerminal ? '#000' : isTradingView ? '#1e222d' : '#1e293b',
-                                                borderColor: isTradingView ? '#2a2e39' : '#333',
-                                                color: chartColor,
-                                                fontFamily: isTradingView ? 'sans-serif' : 'monospace'
+                                                backgroundColor: 'rgba(255,255,255,0.95)',
+                                                border: '1px solid #e5e7eb',
+                                                borderRadius: '6px',
+                                                boxShadow: 'none',
+                                                color: '#1f2937',
+                                                fontFamily: 'Inter, system-ui, sans-serif',
+                                                fontSize: '12px'
                                             }}
                                             formatter={(value: number) => [`${value.toFixed(2)}${chartMetric === 'winRate' ? '%' : chartMetric === 'equity' ? '%' : ''}`, chartMetric === 'equity' ? 'Equity' : chartMetric === 'mvso' ? 'MVSO' : chartMetric === 'winRate' ? 'Win Rate' : 'Avg Return']}
                                         />
@@ -343,16 +346,19 @@ export function AnalysisPage() {
                             <ChartCard title="DAILY PROFITABILITY TREND (AVG %)" height={200} theme={theme}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <ComposedChart data={dailyAverages}> {/* Note: dailyAverages currently isn't filtered, usually it should be. For simplicity keeping as is or need to filter too. Filtering it is better */}
-                                        <CartesianGrid strokeDasharray="3 3" stroke={isTradingView ? "#2a2e39" : "#333"} opacity={isTradingView ? 1 : 0.3} vertical={false} />
-                                        <XAxis dataKey="date" stroke="#666" fontSize={10} tickFormatter={(val) => val.slice(5)} minTickGap={50} axisLine={false} tickLine={false} />
-                                        <YAxis stroke="#666" fontSize={10} domain={['auto', 'auto']} axisLine={false} tickLine={false} />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
+                                        <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(5)} minTickGap={50} axisLine={false} tickLine={false} />
+                                        <YAxis stroke="#94a3b8" fontSize={11} domain={['auto', 'auto']} axisLine={false} tickLine={false} />
                                         <Tooltip
                                             contentStyle={{
-                                                backgroundColor: isTerminal ? '#000' : isTradingView ? '#1e222d' : '#1e293b',
-                                                borderColor: isTradingView ? '#2a2e39' : '#333',
-                                                color: '#fff'
+                                                backgroundColor: 'rgba(255,255,255,0.95)',
+                                                border: '1px solid #e5e7eb',
+                                                borderRadius: '6px',
+                                                boxShadow: 'none',
+                                                color: '#1f2937',
+                                                fontFamily: 'Inter, system-ui, sans-serif',
+                                                fontSize: '12px'
                                             }}
-                                            itemStyle={{ color: '#fff' }}
                                         />
                                         <Line type="linear" dataKey="avgReturn" stroke={safeColor} strokeWidth={2} dot={false} />
                                     </ComposedChart>
@@ -366,17 +372,21 @@ export function AnalysisPage() {
                             <ChartCard title="SEASONALITY (PROFITABILITY VS VOL)" height={250} theme={theme}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <ComposedChart data={seasonality}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke={isTradingView ? "#2a2e39" : "#333"} opacity={isTradingView ? 1 : 0.3} vertical={false} />
-                                        <XAxis dataKey="name" stroke="#666" fontSize={10} tickFormatter={(val) => val.slice(0, 3).toUpperCase()} axisLine={false} tickLine={false} />
-                                        <YAxis yAxisId="left" stroke="#666" fontSize={10} hide />
-                                        <YAxis yAxisId="right" orientation="right" stroke={chartColor} fontSize={10} unit="%" />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
+                                        <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(0, 3).toUpperCase()} axisLine={false} tickLine={false} />
+                                        <YAxis yAxisId="left" stroke="#94a3b8" fontSize={11} hide />
+                                        <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" fontSize={11} unit="%" />
 
                                         <Tooltip
-                                            cursor={{ fill: '#333', opacity: 0.2 }}
+                                            cursor={{ fill: '#f3f4f6', opacity: 0.5 }}
                                             contentStyle={{
-                                                backgroundColor: isTerminal ? '#000' : isTradingView ? '#1e222d' : '#1e293b',
-                                                borderColor: isTradingView ? '#2a2e39' : '#333',
-                                                color: '#fff'
+                                                backgroundColor: 'rgba(255,255,255,0.95)',
+                                                border: '1px solid #e5e7eb',
+                                                borderRadius: '6px',
+                                                boxShadow: 'none',
+                                                color: '#1f2937',
+                                                fontFamily: 'Inter, system-ui, sans-serif',
+                                                fontSize: '12px'
                                             }}
                                         />
                                         <Legend />
@@ -415,14 +425,18 @@ export function AnalysisPage() {
                             <ChartCard title="EXPECTANCY DISTRIBUTION" height={200} theme={theme}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={distribution}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke={isTradingView ? "#2a2e39" : "#333"} opacity={isTradingView ? 1 : 0.3} vertical={false} />
-                                        <XAxis dataKey="name" stroke="#666" fontSize={10} tickFormatter={(v) => v.replace('%', '')} />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
+                                        <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickFormatter={(v) => v.replace('%', '')} />
                                         <Tooltip
-                                            cursor={{ fill: '#333', opacity: 0.2 }}
+                                            cursor={{ fill: '#f3f4f6', opacity: 0.5 }}
                                             contentStyle={{
-                                                backgroundColor: isTerminal ? '#000' : isTradingView ? '#1e222d' : '#1e293b',
-                                                borderColor: isTradingView ? '#2a2e39' : '#333',
-                                                color: '#fff'
+                                                backgroundColor: 'rgba(255,255,255,0.95)',
+                                                border: '1px solid #e5e7eb',
+                                                borderRadius: '6px',
+                                                boxShadow: 'none',
+                                                color: '#1f2937',
+                                                fontFamily: 'Inter, system-ui, sans-serif',
+                                                fontSize: '12px'
                                             }}
                                         />
                                         <Bar dataKey="count" fill={chartColor} radius={[4, 4, 0, 0]} />
@@ -468,22 +482,19 @@ function TerminalMetric({ label, value, subValue, trend, color, theme }: { label
     );
 }
 
-function ChartCard({ title, children, height = 300, theme }: { title: string, children: React.ReactNode, height?: number, theme: string }) {
-    const isTradingView = theme === 'tradingview';
-    const isPolar = theme === 'polar';
+function ChartCard({ title, children, height = 300 }: { title: string, children: React.ReactNode, height?: number, theme?: string }) {
     return (
-        <div className={cn(
-            "border rounded-sm p-4 flex flex-col",
-            theme === 'terminal' ? "bg-black border-zinc-800" :
-                isTradingView ? "bg-[#1e222d] border-[#2a2e39]" :
-                    isPolar ? "bg-white border-gray-200 shadow-sm" :
-                        "bg-bg-secondary border-border-primary"
-        )} style={{ height }}>
-            <h3 className="text-xs font-bold text-text-secondary uppercase mb-4 tracking-widest flex items-center gap-2">
-                {title}
-                <div className="flex-1 h-px bg-border-primary/50"></div>
-            </h3>
-            <div className="flex-1 min-h-0 bg-bg-tertiary/10 rounded-sm overflow-hidden">
+        <div
+            className="border border-border-primary/30 rounded-lg p-4 flex flex-col bg-bg-primary"
+            style={{ height }}
+        >
+            {title && (
+                <h3 className="text-xs font-semibold text-text-secondary mb-4 flex items-center gap-2">
+                    {title}
+                    <div className="flex-1 h-px bg-border-primary/20"></div>
+                </h3>
+            )}
+            <div className="flex-1 min-h-0 overflow-hidden">
                 {children}
             </div>
         </div>
