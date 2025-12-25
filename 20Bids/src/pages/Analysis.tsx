@@ -113,10 +113,12 @@ export function AnalysisPage() {
 
         if (filteredEquity.length === 0) return data; // Fallback
 
+
         // Recalculate Metrics for this Period (with Take Profit clamping)
         let grossWin = 0;
         let grossLoss = 0;
-        let currentEquity = 0;
+        let clampedEquity = 0; // For metrics calculation
+        let originalEquity = 0; // For chart display
         let peakEquity = 0;
         let maxDD = 0;
         let winStreak = 0;
@@ -124,15 +126,15 @@ export function AnalysisPage() {
         let maxWinStreak = 0;
         let maxLossStreak = 0;
 
-        // Re-simulate equity curve with Take Profit applied
+        // Re-simulate equity curve - track both original and clamped
         const rebasedEquityCurve = filteredEquity.map(d => {
-            // Apply Take Profit: clamp positive returns at TP value
             const originalReturn = d.return;
+            // Apply Take Profit: clamp positive returns at TP value (for METRICS only)
             const clampedReturn = originalReturn > 0
                 ? Math.min(originalReturn, takeProfit)
                 : originalReturn;
 
-            // Stats using clamped value
+            // Stats using clamped value (for metrics)
             if (clampedReturn > 0) {
                 grossWin += clampedReturn;
                 winStreak++;
@@ -145,16 +147,21 @@ export function AnalysisPage() {
                 if (lossStreak > maxLossStreak) maxLossStreak = lossStreak;
             }
 
-            currentEquity += clampedReturn;
-            if (currentEquity > peakEquity) peakEquity = currentEquity;
-            const dd = peakEquity - currentEquity;
+            // Clamped equity for metrics
+            clampedEquity += clampedReturn;
+
+            // ORIGINAL equity for chart display (shows real variations)
+            originalEquity += originalReturn;
+            if (originalEquity > peakEquity) peakEquity = originalEquity;
+            const dd = peakEquity - originalEquity;
             if (dd > maxDD) maxDD = dd;
 
             return {
                 ...d,
-                return: clampedReturn, // Store clamped return
-                originalReturn, // Keep original for reference
-                equity: currentEquity,
+                return: originalReturn, // Keep original return for display
+                clampedReturn, // Store clamped for reference
+                equity: originalEquity, // Use ORIGINAL equity for chart
+                clampedEquity, // Store clamped equity for reference
                 drawdown: dd * -1
             };
         });
@@ -169,7 +176,7 @@ export function AnalysisPage() {
                 maxDrawdown: maxDD,
                 maxWinStreak: maxWinStreak,
                 maxLossStreak: maxLossStreak,
-                totalReturn: currentEquity
+                totalReturn: clampedEquity // Use CLAMPED equity for total return metric
             }
         };
 
