@@ -397,7 +397,7 @@ export function AnalysisPage() {
                                             />
                                             <Area
                                                 type="linear"
-                                                dataKey="equity"
+                                                dataKey="clampedEquity"
                                                 stroke={chartColor}
                                                 fillOpacity={1}
                                                 fill="url(#colorEquity)"
@@ -422,7 +422,7 @@ export function AnalysisPage() {
                                                 formatter={(value: number) => [`${value.toFixed(2)}%`, 'Daily Return']}
                                             />
                                             <Bar
-                                                dataKey="return"
+                                                dataKey="clampedReturn"
                                                 fill={chartColor}
                                                 radius={[2, 2, 0, 0]}
                                             />
