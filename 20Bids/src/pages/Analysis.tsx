@@ -503,7 +503,7 @@ export function AnalysisPage() {
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
                                         <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(0, 3).toUpperCase()} axisLine={false} tickLine={false} />
                                         <YAxis yAxisId="left" stroke="#94a3b8" fontSize={11} hide />
-                                        <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" fontSize={11} unit="%" />
+                                        <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" fontSize={11} domain={[0, 5]} unit="%" />
                                         <Tooltip
                                             cursor={{ fill: '#f3f4f6', opacity: 0.5 }}
                                             contentStyle={{
@@ -737,7 +737,7 @@ function TerminalMetric({ label, value, subValue, trend, color, tooltip }: { lab
 function ChartCard({ title, height, children }: { title: string, height: number, children: React.ReactNode }) {
     return (
         <div className={cn(
-            "border border-border-primary/30 rounded-lg p-4 bg-bg-primary overflow-hidden flex flex-col",
+            "border border-border-primary/30 rounded-lg p-2 bg-bg-primary overflow-hidden flex flex-col",
         )} style={{ height }}>
             {title && (
                 <h3 className="text-xs font-semibold text-text-secondary mb-4 flex items-center gap-2">
