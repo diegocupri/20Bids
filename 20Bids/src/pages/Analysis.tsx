@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    AreaChart, Area, ComposedChart, Line, Legend, LabelList
+    AreaChart, Area, ComposedChart, Line, Legend, LabelList, Cell
 } from 'recharts';
 import { cn } from '../lib/utils';
 import { fetchAnalysis } from '../api/client';
@@ -71,39 +71,80 @@ export function AnalysisPage() {
         }
         return 100;
     });
+    // Filter states
+    const [minVolume, setMinVolume] = useState<number>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('analysisMinVolume');
+            return saved ? parseFloat(saved) : 0;
+        }
+        return 0;
+    });
+    const [minPrice, setMinPrice] = useState<number>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('analysisMinPrice');
+            return saved ? parseFloat(saved) : 0;
+        }
+        return 0;
+    });
+    const [minProb, setMinProb] = useState<number>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('analysisMinProb');
+            return saved ? parseInt(saved) : 0;
+        }
+        return 0;
+    });
     const [isCumulative, setIsCumulative] = useState(false);
     const [periodGranularity, setPeriodGranularity] = useState<'days' | 'weeks' | 'months'>('days');
 
     const [debouncedTakeProfit, setDebouncedTakeProfit] = useState<number>(takeProfit);
     const [debouncedStopLoss, setDebouncedStopLoss] = useState<number>(stopLoss);
+    const [debouncedMinVolume, setDebouncedMinVolume] = useState<number>(minVolume);
+    const [debouncedMinPrice, setDebouncedMinPrice] = useState<number>(minPrice);
+    const [debouncedMinProb, setDebouncedMinProb] = useState<number>(minProb);
 
     // Debounce Take Profit
     useEffect(() => {
-        const handler = setTimeout(() => {
-            setDebouncedTakeProfit(takeProfit);
-        }, 800);
+        const handler = setTimeout(() => setDebouncedTakeProfit(takeProfit), 800);
         return () => clearTimeout(handler);
     }, [takeProfit]);
 
     // Debounce Stop Loss
     useEffect(() => {
-        const handler = setTimeout(() => {
-            setDebouncedStopLoss(stopLoss);
-        }, 800);
+        const handler = setTimeout(() => setDebouncedStopLoss(stopLoss), 800);
         return () => clearTimeout(handler);
     }, [stopLoss]);
 
-    // Save to localStorage
+    // Debounce Filters
     useEffect(() => {
-        localStorage.setItem('stopLoss', stopLoss.toString());
-    }, [stopLoss]);
+        const handler = setTimeout(() => setDebouncedMinVolume(minVolume), 800);
+        return () => clearTimeout(handler);
+    }, [minVolume]);
+    useEffect(() => {
+        const handler = setTimeout(() => setDebouncedMinPrice(minPrice), 800);
+        return () => clearTimeout(handler);
+    }, [minPrice]);
+    useEffect(() => {
+        const handler = setTimeout(() => setDebouncedMinProb(minProb), 800);
+        return () => clearTimeout(handler);
+    }, [minProb]);
+
+    // Save filters to localStorage
+    useEffect(() => { localStorage.setItem('stopLoss', stopLoss.toString()); }, [stopLoss]);
+    useEffect(() => { localStorage.setItem('analysisMinVolume', minVolume.toString()); }, [minVolume]);
+    useEffect(() => { localStorage.setItem('analysisMinPrice', minPrice.toString()); }, [minPrice]);
+    useEffect(() => { localStorage.setItem('analysisMinProb', minProb.toString()); }, [minProb]);
 
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                // Pass debounced takeProfit and stopLoss to backend
-                const result = await fetchAnalysis(debouncedTakeProfit, debouncedStopLoss);
+                const result = await fetchAnalysis(
+                    debouncedTakeProfit,
+                    debouncedStopLoss,
+                    debouncedMinVolume,
+                    debouncedMinPrice,
+                    debouncedMinProb
+                );
                 setData(result);
             } catch (error) {
                 console.error('Failed to fetch analysis data', error);
@@ -112,7 +153,7 @@ export function AnalysisPage() {
             }
         };
         fetchData();
-    }, [debouncedTakeProfit, debouncedStopLoss]); // Refetch when either changes
+    }, [debouncedTakeProfit, debouncedStopLoss, debouncedMinVolume, debouncedMinPrice, debouncedMinProb]);
 
     // Theme observer hook
     useEffect(() => {
@@ -401,6 +442,53 @@ export function AnalysisPage() {
                                 <span className="text-xs text-text-secondary">%</span>
                             </div>
 
+                            {/* Separator */}
+                            <div className="h-6 w-px bg-border-primary/40"></div>
+
+                            {/* Min Volume Filter */}
+                            <div className="flex items-center gap-2 bg-bg-tertiary/30 rounded-md px-2 py-1.5 border border-border-primary">
+                                <span className="text-[9px] text-text-secondary uppercase font-medium">Vol≥</span>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="100000"
+                                    value={minVolume === 0 ? '' : minVolume}
+                                    placeholder="0"
+                                    onChange={(e) => setMinVolume(parseFloat(e.target.value) || 0)}
+                                    className="w-16 bg-transparent border-0 text-text-primary text-xs font-sans font-medium text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50"
+                                />
+                            </div>
+
+                            {/* Min Price Filter */}
+                            <div className="flex items-center gap-2 bg-bg-tertiary/30 rounded-md px-2 py-1.5 border border-border-primary">
+                                <span className="text-[9px] text-text-secondary uppercase font-medium">$≥</span>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    value={minPrice === 0 ? '' : minPrice}
+                                    placeholder="0"
+                                    onChange={(e) => setMinPrice(parseFloat(e.target.value) || 0)}
+                                    className="w-12 bg-transparent border-0 text-text-primary text-xs font-sans font-medium text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50"
+                                />
+                            </div>
+
+                            {/* Min Probability Filter */}
+                            <div className="flex items-center gap-2 bg-bg-tertiary/30 rounded-md px-2 py-1.5 border border-border-primary">
+                                <span className="text-[9px] text-text-secondary uppercase font-medium">Prob≥</span>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    step="5"
+                                    value={minProb === 0 ? '' : minProb}
+                                    placeholder="0"
+                                    onChange={(e) => setMinProb(parseInt(e.target.value) || 0)}
+                                    className="w-10 bg-transparent border-0 text-text-primary text-xs font-sans font-medium text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50"
+                                />
+                                <span className="text-[9px] text-text-secondary">%</span>
+                            </div>
+
                             {/* Cumulative Toggle */}
                             <button
                                 onClick={() => setIsCumulative(!isCumulative)}
@@ -541,19 +629,33 @@ export function AnalysisPage() {
                                             <Bar
                                                 yAxisId="left"
                                                 dataKey="return"
-                                                fill={chartColor}
                                                 radius={[2, 2, 0, 0]}
                                                 name="Total Return"
                                             >
+                                                {equityCurve.map((entry, index) => (
+                                                    <Cell
+                                                        key={`cell-${index}`}
+                                                        fill={entry.return >= 0 ? '#22c55e' : '#fca5a5'}
+                                                    />
+                                                ))}
                                                 <LabelList dataKey="return" position="top" formatter={(val: any) => `${Number(val).toFixed(1)}%`} style={{ fontSize: '10px', fill: '#64748b' }} />
                                             </Bar>
                                             <Line
                                                 yAxisId="right"
                                                 type="monotone"
                                                 dataKey="avgReturn"
-                                                stroke={safeColor}
+                                                stroke="#6366f1"
                                                 strokeWidth={2}
-                                                dot={{ r: 4, fill: safeColor }}
+                                                dot={({ cx, cy, payload }: any) => (
+                                                    <circle
+                                                        cx={cx}
+                                                        cy={cy}
+                                                        r={4}
+                                                        fill={payload.avgReturn >= 0 ? '#22c55e' : '#ef4444'}
+                                                        stroke="white"
+                                                        strokeWidth={1}
+                                                    />
+                                                )}
                                                 name="Avg Return"
                                             >
                                                 <LabelList dataKey="avgReturn" content={<CustomizedLabel />} />
@@ -837,7 +939,7 @@ export function AnalysisPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
 

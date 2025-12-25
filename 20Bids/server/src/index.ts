@@ -421,10 +421,21 @@ app.get('/api/stats/analysis', async (req, res) => {
         const takeProfit = parseFloat(req.query.tp as string) || 100;
         // Parse Stop Loss parameter (defaults to 100% = no limit)
         const stopLoss = parseFloat(req.query.sl as string) || 100;
+        // Parse filter parameters
+        const minVol = parseFloat(req.query.minVol as string) || 0;
+        const minPrice = parseFloat(req.query.minPrice as string) || 0;
+        const minProb = parseInt(req.query.minProb as string) || 0;
 
         const allRecs = await prisma.recommendation.findMany({
             orderBy: { date: 'asc' } // Ensure chronological order for cumulative calculation
         });
+
+        // Apply filters
+        const filteredRecs = allRecs.filter(rec =>
+            (rec.volume >= minVol) &&
+            (rec.price >= minPrice) &&
+            (rec.probabilityValue >= minProb)
+        );
 
         const analysis = {
             cumulativePerformance: [] as { date: string, return: number, equity: number, drawdown: number }[],
@@ -458,7 +469,7 @@ app.get('/api/stats/analysis', async (req, res) => {
         // DEBUG: Sample MVSO Calculations
         let debugSamples = 0;
 
-        for (const rec of allRecs) {
+        for (const rec of filteredRecs) {
             // Validate data
             if (!rec.high || !rec.refPrice1020) continue;
 

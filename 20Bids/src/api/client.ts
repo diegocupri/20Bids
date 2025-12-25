@@ -46,8 +46,21 @@ export const fetchMvsoHistory = async (): Promise<Record<string, number[]>> => {
     return response.json();
 };
 
-export const fetchAnalysis = async (tp: number = 100, sl: number = 100) => {
-    const response = await fetch(`${API_URL}/stats/analysis?tp=${tp}&sl=${sl}`);
+export const fetchAnalysis = async (
+    tp: number = 100,
+    sl: number = 100,
+    minVol: number = 0,
+    minPrice: number = 0,
+    minProb: number = 0
+) => {
+    const params = new URLSearchParams({
+        tp: tp.toString(),
+        sl: sl.toString(),
+        minVol: minVol.toString(),
+        minPrice: minPrice.toString(),
+        minProb: minProb.toString()
+    });
+    const response = await fetch(`${API_URL}/stats/analysis?${params}`);
     if (!response.ok) throw new Error('Failed to fetch analysis data');
     return response.json();
 };
