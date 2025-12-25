@@ -6,14 +6,14 @@ import {
 } from 'recharts';
 import { cn } from '../lib/utils';
 import { fetchAnalysis } from '../api/client';
-import { startOfYear, subWeeks, subMonths, isAfter } from 'date-fns';
+import { startOfYear, subWeeks, subMonths, isAfter, startOfWeek, startOfMonth, format } from 'date-fns';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { Calendar } from 'lucide-react';
+import { Calendar, Info } from 'lucide-react';
 
 interface AnalysisData {
     equityCurve: { date: string, return: number, equity: number, drawdown: number }[];
-    dailyAverages: { date: string, avgReturn: number, count: number }[];
+    dailyAverages: { date: string, avgReturn: number, avgPrice: number, count: number }[];
     distribution: { name: string, count: number }[];
     seasonality: { name: string, count: number, avgMvso: number, winRate: number }[];
     topTickers: { name: string, count: number, avgMvso: number, winRate: number }[];
@@ -187,6 +187,35 @@ export function AnalysisPage() {
 
     const bestDay = [...seasonality].sort((a, b) => b.winRate - a.winRate)[0];
 
+    // Top Periods Calculation
+    const topPeriods = useMemo(() => {
+        if (!equityCurve) return { days: [], weeks: [], months: [] };
+
+        // Top Days
+        const days = [...equityCurve].map(d => ({ date: d.date, return: d.return })).sort((a, b) => b.return - a.return).slice(0, 5);
+
+        // Aggregate Weeks & Months
+        const weekMap: Record<string, number> = {};
+        const monthMap: Record<string, number> = {};
+
+        equityCurve.forEach(d => {
+            const date = new Date(d.date);
+            const weekKey = format(startOfWeek(date), 'yyyy-MM-dd'); // Week of...
+            const monthKey = format(startOfMonth(date), 'yyyy-MM');
+
+            weekMap[weekKey] = (weekMap[weekKey] || 0) + d.return;
+            monthMap[monthKey] = (monthMap[monthKey] || 0) + d.return;
+        });
+
+        const weeks = Object.entries(weekMap).map(([date, ret]) => ({ date, return: ret }))
+            .sort((a, b) => b.return - a.return).slice(0, 5);
+
+        const months = Object.entries(monthMap).map(([date, ret]) => ({ date, return: ret }))
+            .sort((a, b) => b.return - a.return).slice(0, 5);
+
+        return { days, weeks, months };
+    }, [equityCurve]);
+
     return (
         <div className="flex h-screen bg-bg-primary overflow-hidden font-sans">
             <Sidebar />
@@ -256,14 +285,14 @@ export function AnalysisPage() {
 
                     {/* Risk & Efficiency Grid */}
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-                        <TerminalMetric label="Profit Factor" value={riskMetrics.profitFactor.toFixed(2)} trend={riskMetrics.profitFactor > 1.5 ? 'up' : 'neutral'} theme={theme} />
-                        <TerminalMetric label="Max Drawdown" value={`-${riskMetrics.maxDrawdown.toFixed(2)}%`} trend="down" color={dangerColor} theme={theme} />
-                        <TerminalMetric label="Win Streak" value={riskMetrics.maxWinStreak.toString()} theme={theme} />
-                        <TerminalMetric label="Loss Streak" value={riskMetrics.maxLossStreak.toString()} color={dangerColor} theme={theme} />
-                        <TerminalMetric label="Best Day" value={bestDay?.name?.slice(0, 3).toUpperCase() || '-'} subValue={`${bestDay?.winRate}% WR`} theme={theme} />
-                        <TerminalMetric label="Avg R (Est)" value="1.2" subValue="Risk/Reward" theme={theme} />
-                        <TerminalMetric label="Expectancy" value={`${(topTickers.slice(0, 10).reduce((acc, curr) => acc + curr.avgMvso, 0) / 10).toFixed(2)}%`} trend="up" theme={theme} />
-                        <TerminalMetric label="Reliability" value="High" color={safeColor} theme={theme} />
+                        <TerminalMetric label="Profit Factor" value={riskMetrics.profitFactor.toFixed(2)} trend={riskMetrics.profitFactor > 1.5 ? 'up' : 'neutral'} theme={theme} tooltip="Ratio of Gross Win / Gross Loss. > 1.5 is good." />
+                        <TerminalMetric label="Max Drawdown" value={`-${riskMetrics.maxDrawdown.toFixed(2)}%`} trend="down" color={dangerColor} theme={theme} tooltip="Largest peak-to-valley decline in equity." />
+                        <TerminalMetric label="Win Streak" value={riskMetrics.maxWinStreak.toString()} theme={theme} tooltip="Max consecutive winning trades." />
+                        <TerminalMetric label="Loss Streak" value={riskMetrics.maxLossStreak.toString()} color={dangerColor} theme={theme} tooltip="Max consecutive losing trades." />
+                        <TerminalMetric label="Best Day" value={bestDay?.name?.slice(0, 3).toUpperCase() || '-'} subValue={`${bestDay?.winRate}% WR`} theme={theme} tooltip="Day of week with highest win rate." />
+                        <TerminalMetric label="Avg R (Est)" value="1.2" subValue="Risk/Reward" theme={theme} tooltip="Estimated Average Profit / Average Loss." />
+                        <TerminalMetric label="Expectancy" value={`${(topTickers.slice(0, 10).reduce((acc, curr) => acc + curr.avgMvso, 0) / 10).toFixed(2)}%`} trend="up" theme={theme} tooltip="Avg return of top 10 tickers." />
+                        <TerminalMetric label="Reliability" value="High" color={safeColor} theme={theme} tooltip="Overall consistency based on win rate and drawdown." />
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -275,7 +304,7 @@ export function AnalysisPage() {
                                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2">
                                         PERFORMANCE EVOLUTION
                                     </h3>
-                                    <div className="flex bg-bg-tertiary/30 rounded-md p-0.5 border border-border-primary">
+                                    <div className="flex flex-wrap gap-1 justify-end bg-bg-tertiary/30 rounded-md p-0.5 border border-border-primary min-w-0">
                                         {[
                                             { key: 'equity', label: 'Equity' },
                                             { key: 'mvso', label: 'MVSO' },
@@ -286,7 +315,7 @@ export function AnalysisPage() {
                                                 key={key}
                                                 onClick={() => setChartMetric(key as any)}
                                                 className={cn(
-                                                    "px-2 py-1 text-[10px] font-medium rounded transition-all",
+                                                    "px-2 py-1 text-[10px] font-medium rounded transition-all whitespace-nowrap",
                                                     chartMetric === key
                                                         ? "bg-accent-primary text-white shadow-sm"
                                                         : "text-text-secondary hover:text-text-primary"
@@ -396,8 +425,100 @@ export function AnalysisPage() {
                                 </ResponsiveContainer>
                             </ChartCard>
 
+                            {/* Comparative Chart */}
+                            <ChartCard title="VOLUME & PRICE vs PROFITABILITY" height={300} theme={theme}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <ComposedChart data={dailyAverages}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
+                                        <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(5)} minTickGap={50} axisLine={false} tickLine={false} />
+                                        <YAxis yAxisId="left" stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} />
+                                        <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" fontSize={11} unit="%" axisLine={false} tickLine={false} />
+                                        <Tooltip
+                                            contentStyle={{
+                                                backgroundColor: 'rgba(255,255,255,0.95)',
+                                                border: '1px solid #e5e7eb',
+                                                borderRadius: '6px',
+                                                boxShadow: 'none',
+                                                color: '#1f2937',
+                                                fontFamily: '"Source Sans 3", system-ui, sans-serif',
+                                                fontSize: '12px'
+                                            }}
+                                            labelStyle={{ color: '#666' }}
+                                        />
+                                        <Legend />
+                                        <Bar yAxisId="left" dataKey="count" name="Signal Vol" fill={secondaryColor} barSize={20} radius={[2, 2, 0, 0]} opacity={0.4} />
+                                        <Line yAxisId="right" type="linear" dataKey="avgReturn" name="Avg Return %" stroke={chartColor} strokeWidth={2} dot={false} />
+                                        <Line yAxisId="right" type="linear" dataKey="avgPrice" name="Avg Price ($)" stroke="#f59e0b" strokeWidth={2} strokeDasharray="3 3" dot={false} hide={!dailyAverages[0]?.avgPrice} />
+                                    </ComposedChart>
+                                </ResponsiveContainer>
+                            </ChartCard>
+
+                            {/* Top Periods Table */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <ChartCard title="TOP DAYS" height={200} theme={theme}>
+                                    <div className="overflow-y-auto h-full pr-1">
+                                        <table className="w-full text-xs text-left text-text-secondary">
+                                            <thead>
+                                                <tr className="border-b border-border-primary/50 text-[10px] uppercase">
+                                                    <th className="py-2 font-medium">Date</th>
+                                                    <th className="py-2 font-medium text-right">Return</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {topPeriods.days.map((d, i) => (
+                                                    <tr key={i} className="border-b border-border-primary/20 last:border-0 hover:bg-bg-tertiary/10">
+                                                        <td className="py-2">{d.date}</td>
+                                                        <td className="py-2 text-right text-emerald-500 font-bold">+{d.return.toFixed(2)}%</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </ChartCard>
+                                <ChartCard title="TOP WEEKS" height={200} theme={theme}>
+                                    <div className="overflow-y-auto h-full pr-1">
+                                        <table className="w-full text-xs text-left text-text-secondary">
+                                            <thead>
+                                                <tr className="border-b border-border-primary/50 text-[10px] uppercase">
+                                                    <th className="py-2 font-medium">Week Of</th>
+                                                    <th className="py-2 font-medium text-right">Total R</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {topPeriods.weeks.map((d, i) => (
+                                                    <tr key={i} className="border-b border-border-primary/20 last:border-0 hover:bg-bg-tertiary/10">
+                                                        <td className="py-2">{d.date}</td>
+                                                        <td className="py-2 text-right text-emerald-500 font-bold">+{d.return.toFixed(2)}%</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </ChartCard>
+                                <ChartCard title="TOP MONTHS" height={200} theme={theme}>
+                                    <div className="overflow-y-auto h-full pr-1">
+                                        <table className="w-full text-xs text-left text-text-secondary">
+                                            <thead>
+                                                <tr className="border-b border-border-primary/50 text-[10px] uppercase">
+                                                    <th className="py-2 font-medium">Month</th>
+                                                    <th className="py-2 font-medium text-right">Total R</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {topPeriods.months.map((d, i) => (
+                                                    <tr key={i} className="border-b border-border-primary/20 last:border-0 hover:bg-bg-tertiary/10">
+                                                        <td className="py-2">{d.date}</td>
+                                                        <td className="py-2 text-right text-emerald-500 font-bold">+{d.return.toFixed(2)}%</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </ChartCard>
+                            </div>
+
                             {/* Top Sectors Leaderboard */}
-                            <ChartCard title="TOP SECTORS" height={300} theme={theme}>
+                            <ChartCard title="OUTPERFORMING SECTORS" height={250} theme={theme}>
                                 <div className="overflow-y-auto h-full pr-1">
                                     <table className="w-full text-xs text-left text-text-secondary">
                                         <thead>
@@ -451,33 +572,40 @@ export function AnalysisPage() {
     );
 }
 
-function TerminalMetric({ label, value, subValue, trend, color, theme }: { label: string, value: string, subValue?: string, trend?: 'up' | 'down' | 'neutral', color?: string, theme: string }) {
-    const isTradingView = theme === 'tradingview';
-    const isPolar = theme === 'polar';
+function InfoTooltip({ text }: { text: string }) {
+    if (!text) return null;
+    return (
+        <div className="group relative ml-1.5 cursor-help inline-flex items-center">
+            <Info className="w-3 h-3 text-text-secondary opacity-50 hover:opacity-100 transition-opacity" />
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1.5 bg-bg-secondary border border-border-primary rounded text-[10px] text-text-primary whitespace-nowrap shadow-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                {text}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px w-2 h-2 bg-bg-secondary border-b border-r border-border-primary rotate-45"></div>
+            </div>
+        </div>
+    );
+}
+
+function TerminalMetric({ label, value, subValue, trend, color, theme, tooltip }: { label: string, value: string, subValue?: string, trend?: 'up' | 'down' | 'neutral', color?: string, theme: string, tooltip?: string }) {
     return (
         <div className={cn(
-            "border p-3 rounded-sm flex flex-col justify-between h-24 relative overflow-hidden group transition-colors",
-            isTradingView ? "bg-[#1e222d] border-[#2a2e39] hover:border-[#2962ff]/50" :
-                isPolar ? "bg-white border-gray-200 hover:border-blue-500/30" :
-                    "bg-bg-secondary border-border-primary hover:border-accent-primary/50"
+            "border border-border-primary/30 rounded-lg p-3 flex flex-col justify-between bg-bg-primary hover:border-border-primary/50 transition-colors",
         )}>
-            <p className="text-[10px] uppercase text-text-secondary font-semibold tracking-wider">{label}</p>
+            <div className="text-[10px] font-medium text-text-secondary uppercase tracking-wider mb-2 flex items-center">
+                {label}
+                {tooltip && <InfoTooltip text={tooltip} />}
+                {trend && <div className={cn("ml-auto w-1.5 h-1.5 rounded-full", trend === 'up' ? "bg-emerald-500" : trend === 'down' ? "bg-rose-500" : "bg-gray-500")}></div>}
+            </div>
             <div>
                 <div className={cn(
-                    "text-xl font-bold font-mono tracking-tight",
-                    !color && trend === 'up' ? "text-emerald-500" :
-                        !color && trend === 'down' ? "text-rose-500" : "text-text-primary"
+                    "text-xl font-bold font-sans tracking-tight",
+                    color ? "" :
+                        !color && trend === 'up' ? "text-emerald-500" :
+                            !color && trend === 'down' ? "text-rose-500" : "text-text-primary"
                 )} style={{ color }}>
                     {value}
                 </div>
                 {subValue && <div className="text-[10px] text-text-secondary mt-1">{subValue}</div>}
             </div>
-            {trend && (
-                <div className={cn(
-                    "absolute top-2 right-2 w-1.5 h-1.5 rounded-full",
-                    trend === 'up' ? "bg-emerald-500" : trend === 'down' ? "bg-rose-500" : "bg-gray-500"
-                )}></div>
-            )}
         </div>
     );
 }

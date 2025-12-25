@@ -433,7 +433,7 @@ app.get('/api/stats/analysis', async (req, res) => {
             tickers: {} as Record<string, { count: number, totalMvso: number, wins: number }>,
             volume: [] as { x: number, y: number, rvol: number }[],
             sectors: {} as Record<string, { count: number, totalMvso: number, wins: number }>,
-            dailyAverages: [] as { date: string, avgReturn: number, count: number }[]
+            dailyAverages: [] as { date: string, avgReturn: number, avgPrice: number, count: number }[]
         };
 
         let cumulativeReturn = 0;
@@ -447,7 +447,7 @@ app.get('/api/stats/analysis', async (req, res) => {
         let currentLossStreak = 0;
         let maxLossStreak = 0;
 
-        const dailyMap: Record<string, { total: number, count: number }> = {};
+        const dailyMap: Record<string, { total: number, count: number, totalPrice: number }> = {};
 
         // DEBUG: Sample MVSO Calculations
         let debugSamples = 0;
@@ -505,14 +505,11 @@ app.get('/api/stats/analysis', async (req, res) => {
             }
 
             // Daily Average Aggregation
-            if (!dailyMap[dateStr]) dailyMap[dateStr] = { total: 0, count: 0 };
+            if (!dailyMap[dateStr]) dailyMap[dateStr] = { total: 0, count: 0, totalPrice: 0 };
             dailyMap[dateStr].total += mvso;
             dailyMap[dateStr].count++;
-
-            // Daily Average Aggregation
-            if (!dailyMap[dateStr]) dailyMap[dateStr] = { total: 0, count: 0 };
-            dailyMap[dateStr].total += mvso;
-            dailyMap[dateStr].count++;
+            // Use refPrice1020 as entry price proxy, consistent with MVSO calc
+            dailyMap[dateStr].totalPrice += (rec.refPrice1020 || rec.openPrice || 0);
 
             // 2. Move Distribution
             if (mvso < 0) analysis.distribution.negative++;
@@ -578,9 +575,11 @@ app.get('/api/stats/analysis', async (req, res) => {
         })).sort((a, b) => b.count - a.count);
 
         // Process Daily Averages
+        // Process Daily Averages
         analysis.dailyAverages = Object.entries(dailyMap).map(([date, data]) => ({
             date,
             avgReturn: parseFloat((data.total / data.count).toFixed(2)),
+            avgPrice: parseFloat((data.totalPrice / data.count).toFixed(2)),
             count: data.count
         })).sort((a, b) => a.date.localeCompare(b.date));
 
