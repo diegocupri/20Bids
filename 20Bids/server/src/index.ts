@@ -419,6 +419,8 @@ app.get('/api/stats/analysis', async (req, res) => {
     try {
         // Parse Take Profit parameter (defaults to 100% = no limit)
         const takeProfit = parseFloat(req.query.tp as string) || 100;
+        // Parse Stop Loss parameter (defaults to 100% = no limit)
+        const stopLoss = parseFloat(req.query.sl as string) || 100;
 
         const allRecs = await prisma.recommendation.findMany({
             orderBy: { date: 'asc' } // Ensure chronological order for cumulative calculation
@@ -462,8 +464,19 @@ app.get('/api/stats/analysis', async (req, res) => {
 
             const mvso = ((rec.high - rec.refPrice1020) / rec.refPrice1020) * 100;
 
+            // Calculate Max DD from lowBeforePeak (if available)
+            const maxDD = rec.lowBeforePeak && rec.refPrice1020
+                ? ((rec.lowBeforePeak - rec.refPrice1020) / rec.refPrice1020) * 100
+                : 0;
+
+            // Apply Stop Loss: if Max DD exceeds -SL, trade was stopped out at -SL
+            let effectiveMvso = mvso;
+            if (maxDD < -stopLoss) {
+                effectiveMvso = -stopLoss;
+            }
+
             // Apply Take Profit: clamp positive returns at TP value
-            const clampedMvso = mvso > 0 ? Math.min(mvso, takeProfit) : mvso;
+            const clampedMvso = effectiveMvso > 0 ? Math.min(effectiveMvso, takeProfit) : effectiveMvso;
 
             if (debugSamples < 5) {
                 console.log(`[Analysis Debug] ${rec.symbol} on ${format(rec.date, 'yyyy-MM-dd')}: High=${rec.high}, Ref=${rec.refPrice1020} => MVSO=${mvso.toFixed(2)}% (Clamped: ${clampedMvso.toFixed(2)}%)`);

@@ -46,8 +46,8 @@ export const fetchMvsoHistory = async (): Promise<Record<string, number[]>> => {
     return response.json();
 };
 
-export const fetchAnalysis = async (tp: number = 100) => {
-    const response = await fetch(`${API_URL}/stats/analysis?tp=${tp}`);
+export const fetchAnalysis = async (tp: number = 100, sl: number = 100) => {
+    const response = await fetch(`${API_URL}/stats/analysis?tp=${tp}&sl=${sl}`);
     if (!response.ok) throw new Error('Failed to fetch analysis data');
     return response.json();
 };

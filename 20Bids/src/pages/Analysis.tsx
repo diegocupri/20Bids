@@ -9,7 +9,7 @@ import { fetchAnalysis } from '../api/client';
 import { startOfYear, subWeeks, subMonths, isAfter, startOfWeek, startOfMonth, format } from 'date-fns';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { Calendar, Info, TrendingUp } from 'lucide-react';
+import { Calendar, Info, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface AnalysisData {
     equityCurve: { date: string, return: number, equity: number, drawdown: number }[];
@@ -64,28 +64,46 @@ export function AnalysisPage() {
         }
         return 2.0;
     });
+    const [stopLoss, setStopLoss] = useState<number>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('stopLoss');
+            return saved ? parseFloat(saved) : 100; // 100 = no SL by default
+        }
+        return 100;
+    });
     const [isCumulative, setIsCumulative] = useState(false);
     const [periodGranularity, setPeriodGranularity] = useState<'days' | 'weeks' | 'months'>('days');
 
     const [debouncedTakeProfit, setDebouncedTakeProfit] = useState<number>(takeProfit);
+    const [debouncedStopLoss, setDebouncedStopLoss] = useState<number>(stopLoss);
 
     // Debounce Take Profit
     useEffect(() => {
         const handler = setTimeout(() => {
             setDebouncedTakeProfit(takeProfit);
-        }, 800); // Wait 800ms after last keystroke
-
-        return () => {
-            clearTimeout(handler);
-        };
+        }, 800);
+        return () => clearTimeout(handler);
     }, [takeProfit]);
+
+    // Debounce Stop Loss
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedStopLoss(stopLoss);
+        }, 800);
+        return () => clearTimeout(handler);
+    }, [stopLoss]);
+
+    // Save to localStorage
+    useEffect(() => {
+        localStorage.setItem('stopLoss', stopLoss.toString());
+    }, [stopLoss]);
 
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                // Pass debounced takeProfit to backend
-                const result = await fetchAnalysis(debouncedTakeProfit);
+                // Pass debounced takeProfit and stopLoss to backend
+                const result = await fetchAnalysis(debouncedTakeProfit, debouncedStopLoss);
                 setData(result);
             } catch (error) {
                 console.error('Failed to fetch analysis data', error);
@@ -94,7 +112,7 @@ export function AnalysisPage() {
             }
         };
         fetchData();
-    }, [debouncedTakeProfit]); // Refetch only when debounced value changes
+    }, [debouncedTakeProfit, debouncedStopLoss]); // Refetch when either changes
 
     // Theme observer hook
     useEffect(() => {
@@ -360,6 +378,26 @@ export function AnalysisPage() {
                                         localStorage.setItem('takeProfit', val.toString());
                                     }}
                                     className="w-14 bg-transparent border-0 text-text-primary text-sm font-sans font-medium text-right focus:outline-none focus:ring-0"
+                                />
+                                <span className="text-xs text-text-secondary">%</span>
+                            </div>
+
+                            {/* Stop Loss Input */}
+                            <div className="flex items-center gap-2 bg-bg-tertiary/30 rounded-md px-3 py-1.5 border border-border-primary">
+                                <TrendingDown className="w-3.5 h-3.5 text-rose-500" />
+                                <span className="text-[10px] text-text-secondary uppercase font-medium">SL</span>
+                                <input
+                                    type="number"
+                                    min="0.1"
+                                    max="100"
+                                    step="0.1"
+                                    value={stopLoss === 100 ? '' : stopLoss}
+                                    placeholder="Off"
+                                    onChange={(e) => {
+                                        const val = e.target.value === '' ? 100 : (parseFloat(e.target.value) || 100);
+                                        setStopLoss(val);
+                                    }}
+                                    className="w-14 bg-transparent border-0 text-text-primary text-sm font-sans font-medium text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50"
                                 />
                                 <span className="text-xs text-text-secondary">%</span>
                             </div>
