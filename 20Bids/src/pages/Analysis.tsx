@@ -565,11 +565,7 @@ export function AnalysisPage() {
 
                             {/* Summary Panel - Trade Breakdown for Selected Range */}
                             <ChartCard title="" height={350}>
-                                <div className="flex flex-col h-full justify-center px-4">
-                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest mb-6 font-sans">
-                                        PERIOD SUMMARY
-                                    </h3>
-
+                                <div className="flex flex-col h-full px-2">
                                     {/* Totals calculated from equityCurve */}
                                     {(() => {
                                         const totals = equityCurve.reduce((acc, d) => ({
@@ -581,38 +577,88 @@ export function AnalysisPage() {
                                         }), { return: 0, count: 0, hitTP: 0, hitSL: 0, other: 0 });
 
                                         const avgReturn = totals.count > 0 ? totals.return / totals.count : 0;
+                                        const total = totals.hitTP + totals.hitSL + totals.other;
+                                        const tpPct = total > 0 ? (totals.hitTP / total) * 100 : 0;
+                                        const slPct = total > 0 ? (totals.hitSL / total) * 100 : 0;
+                                        const otherPct = total > 0 ? (totals.other / total) * 100 : 0;
 
                                         return (
-                                            <div className="space-y-4">
-                                                <div className="flex justify-between items-center py-2 border-b border-border-primary/30">
-                                                    <span className="text-sm text-text-secondary font-sans">Total Return</span>
-                                                    <span className={cn("text-xl font-bold font-sans", totals.return >= 0 ? "text-accent-primary" : "text-red-500")}>
-                                                        {totals.return.toFixed(2)}%
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between items-center py-2 border-b border-border-primary/30">
-                                                    <span className="text-sm text-text-secondary font-sans">Avg Return</span>
-                                                    <span className="text-lg font-semibold text-text-primary font-sans">
-                                                        {avgReturn.toFixed(2)}%
-                                                    </span>
+                                            <div className="flex flex-col h-full">
+                                                {/* Header */}
+                                                <div className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-4 font-sans flex items-center gap-2">
+                                                    <div className="w-2 h-2 rounded-full bg-accent-primary"></div>
+                                                    PERIOD SUMMARY
                                                 </div>
 
-                                                <div className="pt-4">
-                                                    <div className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-3 font-sans">
-                                                        Breakdown ({totals.count} trades)
+                                                {/* Main Stats */}
+                                                <div className="flex-1 flex flex-col justify-center space-y-5">
+                                                    {/* Total Return - Hero Stat */}
+                                                    <div className="text-center py-3 bg-gradient-to-r from-transparent via-bg-tertiary/20 to-transparent rounded-lg">
+                                                        <div className="text-[10px] font-medium text-text-secondary uppercase tracking-wider mb-1">Total Return</div>
+                                                        <div className={cn(
+                                                            "text-3xl font-bold font-sans tracking-tight",
+                                                            totals.return >= 0 ? "text-accent-primary" : "text-red-500"
+                                                        )}>
+                                                            {totals.return >= 0 ? '+' : ''}{totals.return.toFixed(2)}%
+                                                        </div>
                                                     </div>
-                                                    <div className="space-y-2">
-                                                        <div className="flex justify-between items-center">
-                                                            <span className="text-sm text-green-500 font-sans">✓ Hit TP ({takeProfit}%)</span>
-                                                            <span className="text-lg font-bold text-text-primary font-sans">{totals.hitTP}</span>
+
+                                                    {/* Avg Return */}
+                                                    <div className="flex justify-between items-center px-2">
+                                                        <span className="text-xs text-text-secondary font-sans">Avg Return / Trade</span>
+                                                        <span className={cn(
+                                                            "text-sm font-bold font-sans",
+                                                            avgReturn >= 0 ? "text-text-primary" : "text-red-400"
+                                                        )}>
+                                                            {avgReturn >= 0 ? '+' : ''}{avgReturn.toFixed(2)}%
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Breakdown Section */}
+                                                    <div className="pt-3 border-t border-border-primary/20">
+                                                        <div className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-3 font-sans px-2">
+                                                            Trade Outcomes ({totals.count})
                                                         </div>
-                                                        <div className="flex justify-between items-center">
-                                                            <span className="text-sm text-red-500 font-sans">✗ Hit SL ({stopLoss === 100 ? 'Off' : `-${stopLoss}%`})</span>
-                                                            <span className="text-lg font-bold text-text-primary font-sans">{totals.hitSL}</span>
+
+                                                        {/* Stacked Progress Bar */}
+                                                        <div className="h-3 rounded-full overflow-hidden bg-bg-tertiary/30 mb-4 mx-2 flex">
+                                                            {tpPct > 0 && <div className="bg-green-500 h-full transition-all" style={{ width: `${tpPct}%` }}></div>}
+                                                            {slPct > 0 && <div className="bg-red-500 h-full transition-all" style={{ width: `${slPct}%` }}></div>}
+                                                            {otherPct > 0 && <div className="bg-slate-400 h-full transition-all" style={{ width: `${otherPct}%` }}></div>}
                                                         </div>
-                                                        <div className="flex justify-between items-center">
-                                                            <span className="text-sm text-text-secondary font-sans">○ Other</span>
-                                                            <span className="text-lg font-bold text-text-primary font-sans">{totals.other}</span>
+
+                                                        {/* Legend with counts */}
+                                                        <div className="space-y-2 px-2">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-3 h-3 rounded-sm bg-green-500"></div>
+                                                                    <span className="text-xs text-text-secondary font-sans">Hit TP ({takeProfit}%)</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-xs text-text-secondary">{tpPct.toFixed(0)}%</span>
+                                                                    <span className="text-sm font-bold text-text-primary font-sans w-8 text-right">{totals.hitTP}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-3 h-3 rounded-sm bg-red-500"></div>
+                                                                    <span className="text-xs text-text-secondary font-sans">Hit SL ({stopLoss === 100 ? 'Off' : `-${stopLoss}%`})</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-xs text-text-secondary">{slPct.toFixed(0)}%</span>
+                                                                    <span className="text-sm font-bold text-text-primary font-sans w-8 text-right">{totals.hitSL}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-3 h-3 rounded-sm bg-slate-400"></div>
+                                                                    <span className="text-xs text-text-secondary font-sans">Other</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-xs text-text-secondary">{otherPct.toFixed(0)}%</span>
+                                                                    <span className="text-sm font-bold text-text-primary font-sans w-8 text-right">{totals.other}</span>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
