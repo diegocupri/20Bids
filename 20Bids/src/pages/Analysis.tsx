@@ -56,8 +56,9 @@ export function AnalysisPage() {
 
     useEffect(() => {
         const fetchData = async () => {
+            setIsLoading(true);
             try {
-                const result = await fetchAnalysis();
+                const result = await fetchAnalysis(takeProfit);
                 setData(result);
             } catch (error) {
                 console.error('Failed to fetch analysis data', error);
@@ -66,7 +67,10 @@ export function AnalysisPage() {
             }
         };
         fetchData();
+    }, [takeProfit]);
 
+    // Theme observer hook
+    useEffect(() => {
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 if (mutation.attributeName === 'data-theme') {
@@ -77,7 +81,7 @@ export function AnalysisPage() {
         });
         observer.observe(document.documentElement, { attributes: true });
 
-        // Ensure manual sync on mount in case usage of context is missing
+        // Sync theme on mount
         const currentTheme = document.documentElement.getAttribute('data-theme') || localStorage.getItem('theme') || 'midnight';
         setTheme(currentTheme);
 

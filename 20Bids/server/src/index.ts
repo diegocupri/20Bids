@@ -416,6 +416,9 @@ app.post('/api/external/ingest', async (req, res) => {
 // Detailed Analysis Endpoint (Intraday Focus)
 app.get('/api/stats/analysis', async (req, res) => {
     try {
+        // Parse Take Profit parameter (defaults to 100% = no limit)
+        const takeProfit = parseFloat(req.query.tp as string) || 100;
+
         const allRecs = await prisma.recommendation.findMany({
             orderBy: { date: 'asc' } // Ensure chronological order for cumulative calculation
         });
@@ -458,28 +461,31 @@ app.get('/api/stats/analysis', async (req, res) => {
 
             const mvso = ((rec.high - rec.refPrice1020) / rec.refPrice1020) * 100;
 
+            // Apply Take Profit: clamp positive returns at TP value
+            const clampedMvso = mvso > 0 ? Math.min(mvso, takeProfit) : mvso;
+
             if (debugSamples < 5) {
-                console.log(`[Analysis Debug] ${rec.symbol} on ${format(rec.date, 'yyyy-MM-dd')}: High=${rec.high}, Ref=${rec.refPrice1020} => MVSO=${mvso.toFixed(2)}%`);
+                console.log(`[Analysis Debug] ${rec.symbol} on ${format(rec.date, 'yyyy-MM-dd')}: High=${rec.high}, Ref=${rec.refPrice1020} => MVSO=${mvso.toFixed(2)}% (Clamped: ${clampedMvso.toFixed(2)}%)`);
                 debugSamples++;
             }
 
-            const isWin = mvso >= 0.5;
+            const isWin = clampedMvso >= 0.5;
 
             // --- Risk Metrics Calculation ---
-            if (mvso > 0) {
-                grossWin += mvso;
+            if (clampedMvso > 0) {
+                grossWin += clampedMvso;
                 currentWinStreak++;
                 currentLossStreak = 0;
                 if (currentWinStreak > maxWinStreak) maxWinStreak = currentWinStreak;
             } else {
-                grossLoss += Math.abs(mvso); // Treat as positive magnitude
+                grossLoss += Math.abs(clampedMvso); // Treat as positive magnitude
                 currentLossStreak++;
                 currentWinStreak = 0;
                 if (currentLossStreak > maxLossStreak) maxLossStreak = currentLossStreak;
             }
 
             // Equity & Drawdown
-            cumulativeReturn += mvso;
+            cumulativeReturn += clampedMvso;
             if (cumulativeReturn > peakEquity) peakEquity = cumulativeReturn;
 
             const currentDrawdown = peakEquity - cumulativeReturn;
@@ -492,13 +498,13 @@ app.get('/api/stats/analysis', async (req, res) => {
 
             const existingDay = analysis.cumulativePerformance.find(d => d.date === dateStr);
             if (existingDay) {
-                existingDay.return += mvso;
+                existingDay.return += clampedMvso;
                 existingDay.equity = cumulativeReturn;
                 existingDay.drawdown = currentDrawdown * -1; // Store as negative for underwater chart
             } else {
                 analysis.cumulativePerformance.push({
                     date: dateStr,
-                    return: mvso,
+                    return: clampedMvso,
                     equity: cumulativeReturn,
                     drawdown: currentDrawdown * -1
                 });
@@ -506,12 +512,12 @@ app.get('/api/stats/analysis', async (req, res) => {
 
             // Daily Average Aggregation
             if (!dailyMap[dateStr]) dailyMap[dateStr] = { total: 0, count: 0, totalPrice: 0 };
-            dailyMap[dateStr].total += mvso;
+            dailyMap[dateStr].total += clampedMvso;
             dailyMap[dateStr].count++;
             // Use refPrice1020 as entry price proxy, consistent with MVSO calc
             dailyMap[dateStr].totalPrice += (rec.refPrice1020 || rec.openPrice || 0);
 
-            // 2. Move Distribution
+            // 2. Move Distribution (use original mvso for distribution buckets)
             if (mvso < 0) analysis.distribution.negative++;
             else if (mvso < 2) analysis.distribution.flat++;
             else if (mvso < 5) analysis.distribution.small++;
@@ -523,28 +529,28 @@ app.get('/api/stats/analysis', async (req, res) => {
             const dayName = days[rec.date.getDay()];
             if (!analysis.dayOfWeek[dayName]) analysis.dayOfWeek[dayName] = { count: 0, totalMvso: 0, wins: 0 };
             analysis.dayOfWeek[dayName].count++;
-            analysis.dayOfWeek[dayName].totalMvso += mvso;
+            analysis.dayOfWeek[dayName].totalMvso += clampedMvso;
             if (isWin) analysis.dayOfWeek[dayName].wins++;
 
             // Ticker Analysis (Keep for leaderboard)
             const ticker = rec.symbol;
             if (!analysis.tickers[ticker]) analysis.tickers[ticker] = { count: 0, totalMvso: 0, wins: 0 };
             analysis.tickers[ticker].count++;
-            analysis.tickers[ticker].totalMvso += mvso;
+            analysis.tickers[ticker].totalMvso += clampedMvso;
             if (isWin) analysis.tickers[ticker].wins++;
 
             // --- Sectors (Restored) ---
             const sector = rec.sector || 'Unknown';
             if (!analysis.sectors[sector]) analysis.sectors[sector] = { count: 0, totalMvso: 0, wins: 0 };
             analysis.sectors[sector].count++;
-            analysis.sectors[sector].totalMvso += mvso;
+            analysis.sectors[sector].totalMvso += clampedMvso;
             if (isWin) analysis.sectors[sector].wins++;
 
 
 
-            // Volume Scatter (Keep)
+            // Volume Scatter (Keep - use original mvso for scatter display)
             if (rec.relativeVol) {
-                analysis.volume.push({ x: rec.relativeVol, y: mvso, rvol: rec.relativeVol });
+                analysis.volume.push({ x: rec.relativeVol, y: clampedMvso, rvol: rec.relativeVol });
             }
         }
 
