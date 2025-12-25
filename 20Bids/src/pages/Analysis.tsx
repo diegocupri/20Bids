@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    AreaChart, Area, ComposedChart, Line, Legend
+    AreaChart, Area, ComposedChart, Line, Legend, LabelList
 } from 'recharts';
 import { cn } from '../lib/utils';
 import { fetchAnalysis } from '../api/client';
@@ -144,6 +144,9 @@ export function AnalysisPage() {
         let maxWinStreak = 0;
         let maxLossStreak = 0;
 
+        // Create lookup for daily averages
+        const dailyAvgMap = new Map(data.dailyAverages.map(d => [d.date, d]));
+
         // Re-simulate equity curve - track both original and clamped
         const rebasedEquityCurve = filteredEquity.map(d => {
             const originalReturn = d.return;
@@ -170,17 +173,21 @@ export function AnalysisPage() {
 
             // ORIGINAL equity for chart display (shows real variations)
             originalEquity += originalReturn;
+            // Store original equity for chart
             if (originalEquity > peakEquity) peakEquity = originalEquity;
             const dd = peakEquity - originalEquity;
             if (dd > maxDD) maxDD = dd;
 
+            const dailyStats = dailyAvgMap.get(d.date);
+
             return {
                 ...d,
-                return: originalReturn, // Keep original return for display
-                clampedReturn, // Store clamped for reference
-                equity: originalEquity, // Use ORIGINAL equity for chart
-                clampedEquity, // Store clamped equity for reference
-                drawdown: dd * -1
+                return: originalReturn,
+                clampedReturn,
+                equity: originalEquity,
+                clampedEquity,
+                drawdown: dd * -1,
+                avgReturn: dailyStats ? dailyStats.avgReturn : 0
             };
         });
 
@@ -241,7 +248,7 @@ export function AnalysisPage() {
         );
     }
 
-    const { riskMetrics, equityCurve, seasonality, distribution, topTickers, topSectors, dailyAverages } = filteredMetrics;
+    const { riskMetrics, equityCurve, seasonality, distribution, topTickers, topSectors } = filteredMetrics;
     const isTerminal = theme === 'terminal';
     const isTradingView = theme === 'tradingview';
     const isPolar = theme === 'polar';
@@ -423,10 +430,11 @@ export function AnalysisPage() {
                                             />
                                         </AreaChart>
                                     ) : (
-                                        <BarChart data={equityCurve}>
+                                        <ComposedChart data={equityCurve}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
                                             <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(5)} minTickGap={50} axisLine={false} tickLine={false} />
-                                            <YAxis stroke="#94a3b8" fontSize={11} domain={['auto', 'auto']} axisLine={false} tickLine={false} unit="%" />
+                                            <YAxis yAxisId="left" stroke={chartColor} fontSize={11} domain={['auto', 'auto']} axisLine={false} tickLine={false} unit="%" />
+                                            <YAxis yAxisId="right" orientation="right" stroke={safeColor} fontSize={11} domain={['auto', 'auto']} axisLine={false} tickLine={false} unit="%" />
                                             <Tooltip
                                                 contentStyle={{
                                                     backgroundColor: 'rgba(255,255,255,0.95)',
@@ -437,40 +445,37 @@ export function AnalysisPage() {
                                                     fontFamily: '"Source Sans 3", system-ui, sans-serif',
                                                     fontSize: '12px'
                                                 }}
-                                                formatter={(value: number) => [`${value.toFixed(2)}%`, 'Daily Return']}
+                                                formatter={(value: number, name: string) => [
+                                                    `${value.toFixed(2)}%`,
+                                                    name === 'return' ? 'Total Return' : 'Avg Return'
+                                                ]}
                                             />
                                             <Bar
+                                                yAxisId="left"
                                                 dataKey="return"
                                                 fill={chartColor}
                                                 radius={[2, 2, 0, 0]}
-                                            />
-                                        </BarChart>
+                                                name="Total Return"
+                                            >
+                                                <LabelList dataKey="return" position="top" formatter={(val: any) => `${Number(val).toFixed(1)}%`} style={{ fontSize: '10px', fill: '#64748b' }} />
+                                            </Bar>
+                                            <Line
+                                                yAxisId="right"
+                                                type="monotone"
+                                                dataKey="avgReturn"
+                                                stroke={safeColor}
+                                                strokeWidth={2}
+                                                dot={{ r: 4, fill: safeColor }}
+                                                name="Avg Return"
+                                            >
+                                                <LabelList dataKey="avgReturn" position="top" formatter={(val: any) => `${Number(val).toFixed(2)}%`} style={{ fontSize: '10px', fill: safeColor, fontWeight: 'bold' }} />
+                                            </Line>
+                                        </ComposedChart>
                                     )}
                                 </ResponsiveContainer>
                             </ChartCard>
 
-                            {/* Daily Avg Returns Line Chart */}
-                            <ChartCard title="DAILY PROFITABILITY TREND (AVG %)" height={200}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart data={dailyAverages}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
-                                        <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(5)} minTickGap={50} axisLine={false} tickLine={false} />
-                                        <YAxis stroke="#94a3b8" fontSize={11} domain={['auto', 'auto']} axisLine={false} tickLine={false} />
-                                        <Tooltip
-                                            contentStyle={{
-                                                backgroundColor: 'rgba(255,255,255,0.95)',
-                                                border: '1px solid #e5e7eb',
-                                                borderRadius: '6px',
-                                                boxShadow: 'none',
-                                                color: '#1f2937',
-                                                fontFamily: '"Source Sans 3", system-ui, sans-serif',
-                                                fontSize: '12px'
-                                            }}
-                                        />
-                                        <Line type="linear" dataKey="avgReturn" stroke={safeColor} strokeWidth={2} dot={false} />
-                                    </ComposedChart>
-                                </ResponsiveContainer>
-                            </ChartCard>
+
 
                             {/* Top Tickers Performance */}
                             <ChartCard title="" height={300}>
