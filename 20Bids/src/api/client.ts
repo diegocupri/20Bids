@@ -51,16 +51,23 @@ export const fetchAnalysis = async (
     sl: number = 100,
     minVol: number = 0,
     minPrice: number = 0,
-    minProb: number = 0
+    minProb: number = 0,
+    startDate?: Date | null,
+    endDate?: Date | null
 ) => {
-    const params = new URLSearchParams({
+    const params: Record<string, string> = {
         tp: tp.toString(),
         sl: sl.toString(),
         minVol: minVol.toString(),
         minPrice: minPrice.toString(),
         minProb: minProb.toString()
-    });
-    const response = await fetch(`${API_URL}/stats/analysis?${params}`);
+    };
+
+    if (startDate) params.startDate = startDate.toISOString();
+    if (endDate) params.endDate = endDate.toISOString();
+
+    const queryParams = new URLSearchParams(params);
+    const response = await fetch(`${API_URL}/stats/analysis?${queryParams}`);
     if (!response.ok) throw new Error('Failed to fetch analysis data');
     return response.json();
 };

@@ -52,13 +52,8 @@ export function AnalysisPage() {
         }
         return 'midnight';
     });
-    const [timeRange, setTimeRange] = useState<TimeRange>('ALL'); // Default to ALL but wil be overridden by dateRange
-    const [dateRange, setDateRange] = useState<[Date | null, Date | null]>(() => {
-        const end = new Date();
-        const start = new Date();
-        start.setDate(end.getDate() - 30);
-        return [start, end];
-    });
+    const [timeRange, setTimeRange] = useState<TimeRange>('ALL');
+    const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
     const [customStartDate, customEndDate] = dateRange;
 
     // New UX Controls
@@ -148,7 +143,9 @@ export function AnalysisPage() {
                     debouncedStopLoss,
                     debouncedMinVolume,
                     debouncedMinPrice,
-                    debouncedMinProb
+                    debouncedMinProb,
+                    customStartDate,
+                    customEndDate
                 );
                 setData(result);
             } catch (error) {
@@ -158,7 +155,7 @@ export function AnalysisPage() {
             }
         };
         fetchData();
-    }, [debouncedTakeProfit, debouncedStopLoss, debouncedMinVolume, debouncedMinPrice, debouncedMinProb]);
+    }, [debouncedTakeProfit, debouncedStopLoss, debouncedMinVolume, debouncedMinPrice, debouncedMinProb, customStartDate, customEndDate]);
 
     // Theme observer hook
     useEffect(() => {
