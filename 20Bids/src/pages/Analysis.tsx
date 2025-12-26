@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    AreaChart, Area, ComposedChart, Line, Legend, LabelList, Cell, ReferenceLine, ErrorBar
+    AreaChart, Area, ComposedChart, Line, Legend, LabelList, Cell, ReferenceLine
 } from 'recharts';
 import { cn } from '../lib/utils';
 import { fetchAnalysis } from '../api/client';
@@ -190,7 +190,7 @@ export function AnalysisPage() {
             topSectors: [],
             volume: [],
             tradeReturns: [],
-            boxPlotData: [],
+            boxPlotData: [] as { name: string, winRate: number, avgReturn: number, count: number, wins: number }[],
             riskMetrics: {
                 profitFactor: 0,
                 maxDrawdown: 0,
@@ -358,33 +358,27 @@ export function AnalysisPage() {
             }
         });
 
-        // Compute stats for each bucket
-        console.log('BoxPlot Buckets:', probBuckets.map(b => ({ label: b.label, count: b.values.length, sample: b.values.slice(0, 3) })));
+        // Compute Win Rate and Avg Return for each bucket
         const boxPlotData = probBuckets.map(bucket => {
-            const sorted = bucket.values.sort((a, b) => a - b);
-            const count = sorted.length;
+            const values = bucket.values;
+            const count = values.length;
 
-            if (count === 0) return { name: bucket.label, min: 0, q1: 0, median: 0, q3: 0, max: 0, count: 0 };
+            if (count === 0) return { name: bucket.label, winRate: 0, avgReturn: 0, count: 0, wins: 0 };
 
-            const min = sorted[0];
-            const max = sorted[count - 1];
-            const median = count % 2 === 0 ? (sorted[count / 2 - 1] + sorted[count / 2]) / 2 : sorted[Math.floor(count / 2)];
-            const q1 = sorted[Math.floor(count * 0.25)];
-            const q3 = sorted[Math.floor(count * 0.75)];
+            const wins = values.filter(v => v > 0).length;
+            const winRate = (wins / count) * 100;
+            const avgReturn = values.reduce((sum, v) => sum + v, 0) / count;
 
             return {
                 name: bucket.label,
-                min,
-                q1,
-                median,
-                q3,
-                max,
+                winRate: parseFloat(winRate.toFixed(1)),
+                avgReturn: parseFloat(avgReturn.toFixed(2)),
                 count,
-                errorY: [median - min, max - median] // For ErrorBar whiskers
+                wins
             };
         });
 
-        console.log('BoxPlot Final Data:', boxPlotData);
+        console.log('Probability Efficiency Data:', boxPlotData);
 
         return {
             ...data,
@@ -990,10 +984,7 @@ export function AnalysisPage() {
                                             axisLine={false}
                                             tickLine={false}
                                             unit="%"
-                                            domain={[
-                                                (dataMin: number) => Math.floor(Math.min(dataMin, ...(boxPlotData || []).map(d => d.min)) - 2),
-                                                (dataMax: number) => Math.ceil(Math.max(dataMax, ...(boxPlotData || []).map(d => d.max)) + 2)
-                                            ]}
+                                            domain={[0, 100]}
                                         />
                                         <Tooltip
                                             cursor={{ fill: '#f8fafc' }}
@@ -1001,39 +992,31 @@ export function AnalysisPage() {
                                                 if (!active || !payload || !payload.length) return null;
                                                 const data = payload[0].payload;
                                                 return (
-                                                    <div className="bg-white/95 border border-gray-200 rounded-lg p-3 shadow-sm min-w-[140px]">
-                                                        <div className="font-bold text-gray-800 mb-2 border-b border-gray-100 pb-1">{label} ({data.count} trades)</div>
+                                                    <div className="bg-white/95 border border-gray-200 rounded-lg p-3 shadow-sm min-w-[150px]">
+                                                        <div className="font-bold text-gray-800 mb-2 border-b border-gray-100 pb-1">{label}% ({data.count} trades)</div>
                                                         <div className="space-y-1 text-xs">
-                                                            <div className="flex justify-between"><span className="text-gray-500">Max:</span> <span className="font-mono text-emerald-600">{data.max.toFixed(2)}%</span></div>
-                                                            <div className="flex justify-between"><span className="text-gray-500">Q3:</span> <span className="font-mono text-gray-700">{data.q3.toFixed(2)}%</span></div>
-                                                            <div className="flex justify-between"><span className="text-gray-500">Median:</span> <span className="font-mono font-bold text-blue-600">{data.median.toFixed(2)}%</span></div>
-                                                            <div className="flex justify-between"><span className="text-gray-500">Q1:</span> <span className="font-mono text-gray-700">{data.q1.toFixed(2)}%</span></div>
-                                                            <div className="flex justify-between"><span className="text-gray-500">Min:</span> <span className="font-mono text-rose-500">{data.min.toFixed(2)}%</span></div>
+                                                            <div className="flex justify-between"><span className="text-gray-500">Win Rate:</span> <span className="font-mono font-bold text-emerald-600">{data.winRate}%</span></div>
+                                                            <div className="flex justify-between"><span className="text-gray-500">Avg Return:</span> <span className={`font-mono font-bold ${data.avgReturn >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{data.avgReturn}%</span></div>
+                                                            <div className="flex justify-between"><span className="text-gray-500">Wins:</span> <span className="font-mono text-gray-700">{data.wins} / {data.count}</span></div>
                                                         </div>
                                                     </div>
                                                 );
                                             }}
                                         />
                                         <Bar
-                                            dataKey="median"
+                                            dataKey="winRate"
                                             fill="#3b82f6"
                                             radius={[4, 4, 0, 0]}
-                                            barSize={40}
+                                            barSize={50}
                                         >
                                             {(boxPlotData || []).map((entry, index) => (
                                                 <Cell
                                                     key={`cell-${index}`}
-                                                    fill={entry.median >= 0 ? '#10b981' : '#ef4444'}
+                                                    fill={(entry as any).winRate >= 75 ? '#10b981' : (entry as any).winRate >= 50 ? '#f59e0b' : '#ef4444'}
                                                 />
                                             ))}
-                                            <ErrorBar
-                                                dataKey="errorY"
-                                                width={8}
-                                                strokeWidth={2}
-                                                stroke="#64748b"
-                                            />
                                         </Bar>
-                                        <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
+                                        <ReferenceLine y={75} stroke="#10b981" strokeDasharray="3 3" label={{ value: '75%', position: 'right', fill: '#10b981', fontSize: 10 }} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
