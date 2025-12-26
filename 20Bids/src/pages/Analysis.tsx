@@ -341,7 +341,7 @@ export function AnalysisPage() {
             { label: '75-80', min: 75, max: 80, values: [] as number[] },
             { label: '80-85', min: 80, max: 85, values: [] as number[] },
             { label: '85-90', min: 85, max: 90, values: [] as number[] },
-            { label: '90+', min: 90, max: 101, values: [] as number[] }, // 101 to include 100
+            { label: '90+', min: 90, max: 200, values: [] as number[] }, // 200 to capture all
         ];
 
         // Populate buckets using granular tradeReturns if available, otherwise fallback (less accurate)
@@ -998,9 +998,9 @@ export function AnalysisPage() {
                                                     y: vals,
                                                     type: 'box' as const,
                                                     name: `${bucket.name}\n(n=${count})`,
-                                                    marker: { color: '#10b981' },
-                                                    boxpoints: 'outliers' as const,
-                                                    jitter: 0,
+                                                    marker: { color: '#86efac', line: { color: '#22c55e', width: 1 } },
+                                                    boxpoints: 'all' as const,
+                                                    jitter: 0.3,
                                                     pointpos: 0,
                                                     width: width,
                                                     hoverlabel: { bgcolor: 'white', bordercolor: '#e5e5e5', font: { color: '#374151' } },
