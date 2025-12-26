@@ -352,20 +352,20 @@ export function AnalysisPage() {
                 <div className="p-6 space-y-6 bg-bg-primary">
 
                     {/* Unified Header & Filter Toolbar */}
-                    <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center border-b border-border-primary/50 pb-6 gap-6">
-                        {/* LEFT: Branding/Title */}
-                        <div className="shrink-0">
-                            <h1 className="text-xl font-black text-text-primary uppercase tracking-widest flex items-center gap-3">
-                                <span className={cn("inline-block w-2.5 h-2.5 rounded-sm", isTerminal ? "bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]" : "bg-accent-primary shadow-[0_0_10px_rgba(37,99,235,0.5)]")}></span>
+                    <div className="flex flex-col gap-5 pb-6 border-b border-border-primary/50">
+                        {/* ROW 1: Title & Date (Simpler, Smaller) */}
+                        <div className="flex items-center justify-between">
+                            <h1 className="text-lg font-bold text-text-primary uppercase tracking-wider flex items-center gap-2">
+                                <span className={cn("inline-block w-2 h-2 rounded-full", isTerminal ? "bg-amber-400 animate-pulse" : "bg-accent-primary")}></span>
                                 SYSTEM PERFORMANCE
                             </h1>
-                            <p className="text-[10px] text-text-secondary mt-1.5 tracking-[0.2em] font-medium ml-5.5 uppercase opacity-70">
-                                Intraday Algorithmic Analysis // {new Date().toLocaleDateString()}
-                            </p>
+                            <div className="text-[10px] font-medium text-text-secondary uppercase tracking-widest bg-bg-secondary/50 px-3 py-1 rounded-full border border-border-primary/30">
+                                {new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                            </div>
                         </div>
 
                         {/* RIGHT: Unified Control Bar */}
-                        <div className="flex flex-wrap xl:flex-nowrap items-center gap-4 w-full xl:w-auto justify-start xl:justify-end">
+                        <div className="flex flex-wrap xl:flex-nowrap items-center gap-4 w-full">
 
                             {/* Group 1: Time Range */}
                             <div className="flex items-center gap-2 bg-bg-secondary/30 p-1 rounded-lg border border-border-primary/30">
@@ -511,17 +511,19 @@ export function AnalysisPage() {
                             </div>
 
                             {/* Group 4: Toggle */}
-                            <button
-                                onClick={() => setIsCumulative(!isCumulative)}
-                                className={cn(
-                                    "ml-2 px-4 py-1.5 text-[10px] font-bold rounded-lg border transition-all uppercase tracking-widest hover:scale-105 active:scale-95",
-                                    isCumulative
-                                        ? "bg-accent-primary text-white border-accent-primary shadow-lg shadow-accent-primary/20"
-                                        : "bg-bg-tertiary text-text-secondary border-border-primary hover:text-text-primary hover:border-text-primary"
-                                )}
-                            >
-                                {isCumulative ? 'CUMUL' : 'DAILY'}
-                            </button>
+                            <div className="ml-auto">
+                                <button
+                                    onClick={() => setIsCumulative(!isCumulative)}
+                                    className={cn(
+                                        "px-4 py-1.5 text-[10px] font-bold rounded-lg border transition-all uppercase tracking-widest hover:scale-105 active:scale-95",
+                                        isCumulative
+                                            ? "bg-accent-primary text-white border-accent-primary shadow-lg shadow-accent-primary/20"
+                                            : "bg-bg-tertiary text-text-secondary border-border-primary hover:text-text-primary hover:border-text-primary"
+                                    )}
+                                >
+                                    {isCumulative ? 'CUMUL' : 'DAILY'}
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -969,23 +971,25 @@ function InfoTooltip({ text }: { text: string }) {
 function TerminalMetric({ label, value, subValue, trend, color, tooltip }: { label: string, value: string, subValue?: string, trend?: 'up' | 'down' | 'neutral', color?: string, tooltip?: string }) {
     return (
         <div className={cn(
-            "border border-border-primary/30 rounded-lg p-3 flex flex-col justify-between bg-bg-primary hover:border-border-primary/50 transition-colors",
+            "rounded-xl p-4 flex flex-col justify-between bg-bg-primary border border-border-primary/20 shadow-sm hover:shadow-md transition-all duration-200",
         )}>
-            <div className="text-[10px] font-medium text-text-secondary uppercase tracking-wider mb-2 flex items-center">
-                {label}
-                {tooltip && <InfoTooltip text={tooltip} />}
-                {trend && <div className={cn("ml-auto w-1.5 h-1.5 rounded-full", trend === 'up' ? "bg-emerald-500" : trend === 'down' ? "bg-rose-500" : "bg-gray-500")}></div>}
+            <div className="flex items-center justify-between mb-2">
+                <div className="text-[10px] font-bold text-text-secondary uppercase tracking-widest flex items-center gap-1.5 opacity-80">
+                    {label}
+                    {tooltip && <InfoTooltip text={tooltip} />}
+                </div>
+                {trend && <div className={cn("w-1.5 h-1.5 rounded-full", trend === 'up' ? "bg-emerald-500" : trend === 'down' ? "bg-rose-500" : "bg-gray-400")}></div>}
             </div>
             <div>
                 <div className={cn(
-                    "text-xl font-bold font-sans tracking-tight",
+                    "text-2xl font-bold font-sans tracking-tight",
                     color ? "" :
-                        !color && trend === 'up' ? "text-emerald-500" :
-                            !color && trend === 'down' ? "text-rose-500" : "text-text-primary"
+                        !color && trend === 'up' ? "text-emerald-600" :
+                            !color && trend === 'down' ? "text-rose-600" : "text-text-primary"
                 )} style={{ color }}>
                     {value}
                 </div>
-                {subValue && <div className="text-[10px] text-text-secondary mt-1">{subValue}</div>}
+                {subValue && <div className="text-[10px] text-text-secondary font-medium mt-1 opacity-70">{subValue}</div>}
             </div>
         </div>
     );
