@@ -221,26 +221,52 @@ export function AnalysisPage() {
         // Create lookup for daily averages
         const dailyAvgMap = new Map(data.dailyAverages.map(d => [d.date, d]));
 
+        // Calculate Advanced Metrics (Best Day, Avg R, Expectancy)
+        const daysOfWeekStats = [0, 1, 2, 3, 4, 5, 6].map(day => ({ day, wins: 0, total: 0, return: 0 }));
+        let totalWins = 0;
+        let totalCount = 0;
+        let sumWinReturns = 0;
+        let sumLossReturns = 0;
+        let lossCount = 0;
+
         // Re-simulate equity curve - track both original and clamped
         const rebasedEquityCurve = filteredEquity.map(d => {
             const originalReturn = d.return;
             // Apply Take Profit: clamp positive returns at TP value (for METRICS only)
-            const clampedReturn = originalReturn > 0
-                ? Math.min(originalReturn, takeProfit)
-                : originalReturn;
+            // AND Stop Loss: clamp negative returns at SL value
+            let clampedReturn = originalReturn;
 
-            // Stats using clamped value (for metrics)
-            if (clampedReturn > 0) {
+            if (originalReturn > 0) {
+                clampedReturn = Math.min(originalReturn, takeProfit);
                 grossWin += clampedReturn;
                 winStreak++;
                 lossStreak = 0;
                 if (winStreak > maxWinStreak) maxWinStreak = winStreak;
+
+                // Advanced stats
+                totalWins++;
+                sumWinReturns += clampedReturn;
             } else {
+                // Apply Stop Loss if enabled (stopLoss < 100)
+                if (stopLoss < 100) {
+                    clampedReturn = Math.min(Math.max(originalReturn, -stopLoss), 0); // Correctly clamp loss. e.g. -5% vs -2% SL -> max(-5, -2) = -2.
+                }
                 grossLoss += Math.abs(clampedReturn);
                 lossStreak++;
                 winStreak = 0;
                 if (lossStreak > maxLossStreak) maxLossStreak = lossStreak;
+
+                // Advanced stats
+                lossCount++;
+                sumLossReturns += Math.abs(clampedReturn);
             }
+
+            // Day Stats
+            const day = new Date(d.date).getDay();
+            daysOfWeekStats[day].total++;
+            daysOfWeekStats[day].return += clampedReturn;
+            if (clampedReturn > 0) daysOfWeekStats[day].wins++;
+            totalCount++;
 
             // Clamped equity for metrics
             clampedEquity += clampedReturn;
@@ -267,6 +293,21 @@ export function AnalysisPage() {
 
         const pf = grossLoss === 0 ? grossWin : grossWin / grossLoss;
 
+        // Advanced Metrics Calculations
+        const bestDayStat = daysOfWeekStats.reduce((prev, curr) => (curr.return > prev.return) ? curr : prev, daysOfWeekStats[0]);
+        const bestDayName = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][bestDayStat.day];
+        const bestDayWR = bestDayStat.total > 0 ? (bestDayStat.wins / bestDayStat.total * 100) : 0;
+
+        const avgWin = totalWins > 0 ? sumWinReturns / totalWins : 0;
+        const avgLoss = lossCount > 0 ? sumLossReturns / lossCount : 0;
+        const avgR = avgLoss > 0 ? avgWin / avgLoss : avgWin;
+
+        const winRate = totalCount > 0 ? totalWins / totalCount : 0;
+        const expectancy = (winRate * avgWin) - ((1 - winRate) * avgLoss);
+
+        const reliability = pf > 1.6 ? 'High' : pf > 1.2 ? 'Medium' : 'Low';
+        const reliabilityColor = pf > 1.6 ? 'text-emerald-500' : pf > 1.2 ? 'text-amber-500' : 'text-rose-500';
+
         return {
             ...data,
             equityCurve: rebasedEquityCurve,
@@ -275,7 +316,14 @@ export function AnalysisPage() {
                 maxDrawdown: maxDD,
                 maxWinStreak: maxWinStreak,
                 maxLossStreak: maxLossStreak,
-                totalReturn: clampedEquity // Use CLAMPED equity for total return metric
+                totalReturn: clampedEquity,
+                // Advanced
+                bestDayName,
+                bestDayWR,
+                avgR,
+                expectancy,
+                reliability,
+                reliabilityColor
             }
         };
 
@@ -322,25 +370,24 @@ export function AnalysisPage() {
         );
     }
 
-    const { riskMetrics, equityCurve, seasonality, distribution, topTickers, topSectors } = filteredMetrics;
+    const { riskMetrics, equityCurve, distribution, topTickers, topSectors } = filteredMetrics;
     const isTerminal = theme === 'terminal';
     const isTradingView = theme === 'tradingview';
     const isPolar = theme === 'polar';
 
     // Theme Colors
     let chartColor = '#8b5cf6';
-    let safeColor = '#34d399';
-    let dangerColor = '#f43f5e';
+    const safeColor = '#10b981';
 
     if (isTerminal) {
-        chartColor = '#fbbf24'; safeColor = '#22c55e'; dangerColor = '#ef4444';
+        chartColor = '#fbbf24';
     } else if (isTradingView) {
-        chartColor = '#2962ff'; safeColor = '#089981'; dangerColor = '#f23645';
+        chartColor = '#2962ff';
     } else if (isPolar) {
-        chartColor = '#2563eb'; safeColor = '#059669'; dangerColor = '#dc2626';
+        chartColor = '#2563eb';
     }
 
-    const bestDay = [...seasonality].sort((a, b) => b.winRate - a.winRate)[0];
+    // Best Day Calculation (Moved to useMemo)
 
 
 
@@ -412,11 +459,11 @@ export function AnalysisPage() {
                             <div className="hidden xl:block w-px h-8 bg-border-primary/20 mx-2"></div>
 
                             {/* Group 2: Strategy (TP/SL) */}
-                            <div className="flex items-center gap-2 bg-bg-secondary/30 p-1 rounded-lg border border-border-primary/30">
+                            <div className="flex items-center gap-1.5 bg-bg-secondary/30 p-1 rounded-lg border border-border-primary/30">
                                 {/* TP */}
-                                <div className="flex items-center gap-2 px-2 py-1">
-                                    <TrendingUp size={12} className="text-emerald-500" />
-                                    <span className="text-[10px] text-text-secondary font-bold font-sans">TP</span>
+                                <div className="flex items-center gap-1.5 px-2 py-1">
+                                    <TrendingUp size={14} className="text-emerald-500" />
+                                    <span className="text-xs font-bold font-sans text-text-primary">TP</span>
                                     <input
                                         type="number"
                                         min="0.1"
@@ -428,17 +475,17 @@ export function AnalysisPage() {
                                             setTakeProfit(val);
                                             localStorage.setItem('takeProfit', val.toString());
                                         }}
-                                        className="w-10 bg-transparent border-0 text-text-primary text-xs font-bold font-sans text-right focus:outline-none focus:ring-0 p-0"
+                                        className="w-10 bg-transparent border-0 text-text-primary text-sm font-black font-sans text-right focus:outline-none focus:ring-0 p-0"
                                     />
                                     <span className="text-[10px] text-text-secondary opacity-50">%</span>
                                 </div>
 
-                                <div className="w-px h-4 bg-border-primary/30"></div>
+                                <div className="w-px h-5 bg-border-primary/30"></div>
 
                                 {/* SL */}
-                                <div className="flex items-center gap-2 px-2 py-1">
-                                    <TrendingDown size={12} className="text-rose-500" />
-                                    <span className="text-[10px] text-text-secondary font-bold font-sans">SL</span>
+                                <div className="flex items-center gap-1.5 px-2 py-1">
+                                    <TrendingDown size={14} className="text-rose-500" />
+                                    <span className="text-xs font-bold font-sans text-text-primary">SL</span>
                                     <input
                                         type="number"
                                         min="0.1"
@@ -450,18 +497,18 @@ export function AnalysisPage() {
                                             const val = e.target.value === '' ? 100 : (parseFloat(e.target.value) || 100);
                                             setStopLoss(val);
                                         }}
-                                        className="w-10 bg-transparent border-0 text-text-primary text-xs font-bold font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
+                                        className="w-10 bg-transparent border-0 text-text-primary text-sm font-black font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
                                     />
                                     <span className="text-[10px] text-text-secondary opacity-50">%</span>
                                 </div>
                             </div>
 
                             {/* Group 3: Filters (Vol/Min$/Prob) */}
-                            <div className="flex items-center gap-2 bg-bg-secondary/30 p-1 rounded-lg border border-border-primary/30">
+                            <div className="flex items-center gap-1.5 bg-bg-secondary/30 p-1 rounded-lg border border-border-primary/30">
                                 {/* Vol */}
-                                <div className="flex items-center gap-2 px-2 py-1 hover:bg-white/5 rounded transition-colors group">
-                                    <BarChart2 size={12} className="text-text-secondary group-hover:text-accent-primary" />
-                                    <span className="text-[10px] text-text-secondary font-bold font-sans">Vol</span>
+                                <div className="flex items-center gap-1.5 px-2 py-1 hover:bg-white/5 rounded transition-colors group">
+                                    <BarChart2 size={14} className="text-text-secondary group-hover:text-accent-primary" />
+                                    <span className="text-xs font-bold font-sans text-text-secondary group-hover:text-text-primary">Vol</span>
                                     <input
                                         type="number"
                                         min="0"
@@ -469,16 +516,16 @@ export function AnalysisPage() {
                                         value={minVolume === 0 ? '' : minVolume}
                                         placeholder="Any"
                                         onChange={(e) => setMinVolume(parseFloat(e.target.value) || 0)}
-                                        className="w-12 bg-transparent border-0 text-text-primary text-xs font-bold font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
+                                        className="w-14 bg-transparent border-0 text-text-primary text-sm font-black font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
                                     />
                                 </div>
 
-                                <div className="w-px h-4 bg-border-primary/30"></div>
+                                <div className="w-px h-5 bg-border-primary/30"></div>
 
                                 {/* Price */}
-                                <div className="flex items-center gap-2 px-2 py-1 hover:bg-white/5 rounded transition-colors group">
-                                    <DollarSign size={12} className="text-text-secondary group-hover:text-accent-primary" />
-                                    <span className="text-[10px] text-text-secondary font-bold font-sans">Min $</span>
+                                <div className="flex items-center gap-1.5 px-2 py-1 hover:bg-white/5 rounded transition-colors group">
+                                    <DollarSign size={14} className="text-text-secondary group-hover:text-accent-primary" />
+                                    <span className="text-xs font-bold font-sans text-text-secondary group-hover:text-text-primary">Min $</span>
                                     <input
                                         type="number"
                                         min="0"
@@ -486,16 +533,16 @@ export function AnalysisPage() {
                                         value={minPrice === 0 ? '' : minPrice}
                                         placeholder="0"
                                         onChange={(e) => setMinPrice(parseFloat(e.target.value) || 0)}
-                                        className="w-8 bg-transparent border-0 text-text-primary text-xs font-bold font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
+                                        className="w-9 bg-transparent border-0 text-text-primary text-sm font-black font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
                                     />
                                 </div>
 
-                                <div className="w-px h-4 bg-border-primary/30"></div>
+                                <div className="w-px h-5 bg-border-primary/30"></div>
 
                                 {/* Prob */}
-                                <div className="flex items-center gap-2 px-2 py-1 hover:bg-white/5 rounded transition-colors group">
-                                    <Percent size={12} className="text-text-secondary group-hover:text-accent-primary" />
-                                    <span className="text-[10px] text-text-secondary font-bold font-sans">Prob</span>
+                                <div className="flex items-center gap-1.5 px-2 py-1 hover:bg-white/5 rounded transition-colors group">
+                                    <Percent size={14} className="text-text-secondary group-hover:text-accent-primary" />
+                                    <span className="text-xs font-bold font-sans text-text-secondary group-hover:text-text-primary">Prob</span>
                                     <input
                                         type="number"
                                         min="0"
@@ -504,7 +551,7 @@ export function AnalysisPage() {
                                         value={minProb === 0 ? '' : minProb}
                                         placeholder="0"
                                         onChange={(e) => setMinProb(parseInt(e.target.value) || 0)}
-                                        className="w-8 bg-transparent border-0 text-text-primary text-xs font-bold font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
+                                        className="w-9 bg-transparent border-0 text-text-primary text-sm font-black font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
                                     />
                                     <span className="text-[10px] text-text-secondary opacity-50">%</span>
                                 </div>
@@ -527,16 +574,72 @@ export function AnalysisPage() {
                         </div>
                     </div>
 
-                    {/* Risk & Efficiency Grid */}
+                    {/* Advanced Intraday Metrics Grid (8 Cards) */}
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-                        <TerminalMetric label="Profit Factor" value={riskMetrics.profitFactor.toFixed(2)} trend={riskMetrics.profitFactor > 1.5 ? 'up' : 'neutral'} tooltip="Ratio of Gross Win / Gross Loss. > 1.5 is good." />
-                        <TerminalMetric label="Max Drawdown" value={`-${riskMetrics.maxDrawdown.toFixed(2)}%`} trend="down" color={dangerColor} tooltip="Largest peak-to-valley decline in equity." />
-                        <TerminalMetric label="Win Streak" value={riskMetrics.maxWinStreak.toString()} tooltip="Max consecutive winning trades." />
-                        <TerminalMetric label="Loss Streak" value={riskMetrics.maxLossStreak.toString()} color={dangerColor} tooltip="Max consecutive losing trades." />
-                        <TerminalMetric label="Best Day" value={bestDay?.name?.slice(0, 3).toUpperCase() || '-'} subValue={`${bestDay?.winRate}% WR`} tooltip="Day of week with highest win rate." />
-                        <TerminalMetric label="Avg R (Est)" value="1.2" subValue="Risk/Reward" tooltip="Estimated Average Profit / Average Loss." />
-                        <TerminalMetric label="Expectancy" value={`${(topTickers.slice(0, 10).reduce((acc, curr) => acc + curr.avgMvso, 0) / 10).toFixed(2)}%`} trend="up" tooltip="Avg return of top 10 tickers." />
-                        <TerminalMetric label="Reliability" value="High" color={safeColor} tooltip="Overall consistency based on win rate and drawdown." />
+                        {/* 1. Profit Factor */}
+                        <TerminalMetric
+                            label="Profit Factor"
+                            value={(riskMetrics as any).profitFactor.toFixed(2)}
+                            trend={(riskMetrics as any).profitFactor > 1.5 ? 'up' : 'neutral'}
+                            tooltip="Ratio of Gross Win / Gross Loss (>1.5 Ideal)"
+                        />
+
+                        {/* 2. Max Drawdown */}
+                        <TerminalMetric
+                            label="Max Drawdown"
+                            value={`${(riskMetrics as any).maxDrawdown.toFixed(2)}%`}
+                            trend="down"
+                            color="#f43f5e"
+                            tooltip="Maximum peak-to-valley decline"
+                        />
+
+                        {/* 3. Win Streak */}
+                        <TerminalMetric
+                            label="Win Streak"
+                            value={(riskMetrics as any).maxWinStreak.toString()}
+                            tooltip="Consecutive profitable sessions"
+                        />
+
+                        {/* 4. Loss Streak */}
+                        <TerminalMetric
+                            label="Loss Streak"
+                            value={(riskMetrics as any).maxLossStreak.toString()}
+                            color="#f43f5e"
+                            tooltip="Consecutive losing sessions"
+                        />
+
+                        {/* 5. Best Day */}
+                        <TerminalMetric
+                            label="Best Day"
+                            value={(riskMetrics as any).bestDayName || '-'}
+                            subValue={`${(riskMetrics as any).bestDayWR?.toFixed(0)}% WR`}
+                            tooltip="Most profitable day of the week"
+                        />
+
+                        {/* 6. Avg R (Est) */}
+                        <TerminalMetric
+                            label="Avg R (Est)"
+                            value={(riskMetrics as any).avgR ? (riskMetrics as any).avgR.toFixed(1) : '0.0'}
+                            subValue="Risk/Reward"
+                            tooltip="Ratio of Avg Win / Avg Loss"
+                        />
+
+                        {/* 7. Expectancy */}
+                        <TerminalMetric
+                            label="Expectancy"
+                            value={`${(riskMetrics as any).expectancy?.toFixed(2)}%`}
+                            color={(riskMetrics as any).expectancy > 0 ? '#10b981' : '#f43f5e'}
+                            trend={(riskMetrics as any).expectancy > 0 ? 'up' : 'down'}
+                            tooltip="Avg Return per Trade/Session"
+                        />
+
+                        {/* 8. Reliability */}
+                        <TerminalMetric
+                            label="Reliability"
+                            value={(riskMetrics as any).reliability || 'Low'}
+                            color={(riskMetrics as any).reliability === 'High' ? '#10b981' : (riskMetrics as any).reliability === 'Medium' ? '#f59e0b' : '#f43f5e'}
+                            tooltip="Based on Profit Factor consistency"
+                        />
                     </div>
 
                     <div className="space-y-6">
