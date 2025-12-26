@@ -1131,8 +1131,8 @@ export function AnalysisPage() {
                                     onClick={async () => {
                                         setOptimizationLoading(true);
                                         try {
-                                            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-                                            const res = await fetch(`${apiUrl}/api/stats/optimization`);
+                                            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+                                            const res = await fetch(`${apiUrl}/stats/optimization`);
                                             const data = await res.json();
                                             setOptimizationData(data);
                                         } catch (err) {
