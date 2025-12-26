@@ -277,6 +277,11 @@ app.get('/api/sectors', async (req, res) => {
 });
 
 // Get Market Indices
+// Health Check
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', version: '1.0.3' });
+});
+
 app.get('/api/indices', async (req, res) => {
     try {
         const indices = await fetchMarketIndices();
@@ -459,7 +464,7 @@ app.get('/api/stats/analysis', async (req, res) => {
             sectors: {} as Record<string, { count: number, totalMvso: number, wins: number }>,
             dailyAverages: [] as { date: string, avgReturn: number, avgPrice: number, count: number }[],
             tradeReturns: [] as { date: string, return: number, probability: number }[], // Added date for filtering
-            debugVersion: '1.0.2' // FORCE UPDATE CHECK 2
+            debugVersion: '1.0.3' // FORCE UPDATE CHECK 3
         };
 
         let cumulativeReturn = 0;
