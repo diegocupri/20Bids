@@ -359,6 +359,7 @@ export function AnalysisPage() {
         });
 
         // Compute stats for each bucket
+        console.log('BoxPlot Buckets:', probBuckets.map(b => ({ label: b.label, count: b.values.length, sample: b.values.slice(0, 3) })));
         const boxPlotData = probBuckets.map(bucket => {
             const sorted = bucket.values.sort((a, b) => a - b);
             const count = sorted.length;
