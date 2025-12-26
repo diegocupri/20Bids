@@ -694,19 +694,20 @@ export function AnalysisPage() {
                                                 </div>
                                             </div>
 
-                                            {/* Hero Metric: Total Return */}
+                                            {/* Hero Metric: Total Return & Avg */}
                                             <div className="flex-1 flex flex-col justify-center items-center -mt-4">
-                                                <div className="text-5xl font-bold text-blue-600 font-sans tracking-tight mb-2">
-                                                    {totals.return >= 0 ? '+' : ''}{totals.return.toFixed(1)}%
-                                                </div>
-                                                <div className="flex items-center gap-2 text-text-secondary">
-                                                    <span className="text-xs font-medium font-sans uppercase tracking-wide opacity-60">Avg / Trade</span>
-                                                    <span className={cn(
-                                                        "text-sm font-bold font-sans",
-                                                        avgReturn >= 0 ? "text-text-primary" : "text-red-500"
+                                                <div className="flex items-baseline gap-3">
+                                                    <div className={cn(
+                                                        "text-3xl font-semibold tracking-tight font-sans",
+                                                        totals.return >= 0 ? "text-emerald-500" : "text-rose-500"
                                                     )}>
-                                                        {avgReturn >= 0 ? '+' : ''}{avgReturn.toFixed(2)}%
-                                                    </span>
+                                                        {totals.return >= 0 ? '+' : ''}{totals.return.toFixed(2)}%
+                                                    </div>
+                                                    <div className="text-sm font-medium text-text-secondary">
+                                                        Avg: <span className={cn(avgReturn >= 0 ? "text-text-primary" : "text-rose-500")}>
+                                                            {avgReturn >= 0 ? '+' : ''}{avgReturn.toFixed(2)}%
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
 
