@@ -976,73 +976,75 @@ export function AnalysisPage() {
                                     </span>
                                 </h3>
                             </div>
-                            <ResponsiveContainer width="100%" height="85%">
-                                <BarChart data={boxPlotData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
-                                    <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} />
-                                    <YAxis stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} unit="%" />
-                                    <Tooltip
-                                        cursor={{ fill: '#f8fafc' }}
-                                        content={({ active, payload, label }) => {
-                                            if (!active || !payload || !payload.length) return null;
-                                            const data = payload[0].payload;
-                                            return (
-                                                <div className="bg-white/95 border border-gray-200 rounded-lg p-3 shadow-sm min-w-[140px]">
-                                                    <div className="font-bold text-gray-800 mb-2 border-b border-gray-100 pb-1">{label} ({data.count} trades)</div>
-                                                    <div className="space-y-1 text-xs">
-                                                        <div className="flex justify-between"><span className="text-gray-500">Max:</span> <span className="font-mono text-emerald-600">{data.max.toFixed(2)}%</span></div>
-                                                        <div className="flex justify-between"><span className="text-gray-500">Q3:</span> <span className="font-mono text-gray-700">{data.q3.toFixed(2)}%</span></div>
-                                                        <div className="flex justify-between"><span className="text-gray-500">Median:</span> <span className="font-mono font-bold text-blue-600">{data.median.toFixed(2)}%</span></div>
-                                                        <div className="flex justify-between"><span className="text-gray-500">Q1:</span> <span className="font-mono text-gray-700">{data.q1.toFixed(2)}%</span></div>
-                                                        <div className="flex justify-between"><span className="text-gray-500">Min:</span> <span className="font-mono text-rose-500">{data.min.toFixed(2)}%</span></div>
+                            <div style={{ width: '100%', height: 280 }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={boxPlotData} margin={{ top: 10, right: 30, left: 0, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
+                                        <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} />
+                                        <YAxis stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} unit="%" />
+                                        <Tooltip
+                                            cursor={{ fill: '#f8fafc' }}
+                                            content={({ active, payload, label }) => {
+                                                if (!active || !payload || !payload.length) return null;
+                                                const data = payload[0].payload;
+                                                return (
+                                                    <div className="bg-white/95 border border-gray-200 rounded-lg p-3 shadow-sm min-w-[140px]">
+                                                        <div className="font-bold text-gray-800 mb-2 border-b border-gray-100 pb-1">{label} ({data.count} trades)</div>
+                                                        <div className="space-y-1 text-xs">
+                                                            <div className="flex justify-between"><span className="text-gray-500">Max:</span> <span className="font-mono text-emerald-600">{data.max.toFixed(2)}%</span></div>
+                                                            <div className="flex justify-between"><span className="text-gray-500">Q3:</span> <span className="font-mono text-gray-700">{data.q3.toFixed(2)}%</span></div>
+                                                            <div className="flex justify-between"><span className="text-gray-500">Median:</span> <span className="font-mono font-bold text-blue-600">{data.median.toFixed(2)}%</span></div>
+                                                            <div className="flex justify-between"><span className="text-gray-500">Q1:</span> <span className="font-mono text-gray-700">{data.q1.toFixed(2)}%</span></div>
+                                                            <div className="flex justify-between"><span className="text-gray-500">Min:</span> <span className="font-mono text-rose-500">{data.min.toFixed(2)}%</span></div>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                );
+                                            }}
+                                        />
+                                        <Bar dataKey="max" fill="transparent" shape={(props: any) => {
+                                            const { x, width, payload, yAxis } = props;
+                                            if (!payload || !yAxis) return <g />;
+                                            const { min, q1, median, q3, max: maxVal } = payload;
+
+                                            const scale = yAxis.scale;
+                                            const yMin = scale(min);
+                                            const yQ1 = scale(q1);
+                                            const yMedian = scale(median);
+                                            const yQ3 = scale(q3);
+                                            const yMax = scale(maxVal);
+                                            const cx = x + width / 2;
+                                            const boxWidth = width * 0.4;
+
+                                            return (
+                                                <g>
+                                                    {/* Whiskers */}
+                                                    <line x1={cx} y1={yMin} x2={cx} y2={yQ1} stroke="#94a3b8" strokeWidth={1} />
+                                                    <line x1={cx} y1={yQ3} x2={cx} y2={yMax} stroke="#94a3b8" strokeWidth={1} />
+                                                    <line x1={cx - boxWidth / 2} y1={yMin} x2={cx + boxWidth / 2} y2={yMin} stroke="#94a3b8" strokeWidth={1} />
+                                                    <line x1={cx - boxWidth / 2} y1={yMax} x2={cx + boxWidth / 2} y2={yMax} stroke="#94a3b8" strokeWidth={1} />
+
+                                                    {/* Box (Rect from Q3 to Q1) */}
+                                                    <rect
+                                                        x={cx - boxWidth / 2}
+                                                        y={Math.min(yQ1, yQ3)}
+                                                        width={boxWidth}
+                                                        height={Math.max(2, Math.abs(yQ1 - yQ3))}
+                                                        fill={median > 0 ? "#86efac" : "#fca5a5"}
+                                                        opacity={0.6}
+                                                        stroke={median > 0 ? "#16a34a" : "#dc2626"}
+                                                        strokeWidth={1}
+                                                        rx={2}
+                                                    />
+
+                                                    {/* Median Line */}
+                                                    <line x1={cx - boxWidth / 2} y1={yMedian} x2={cx + boxWidth / 2} y2={yMedian} stroke="#1f2937" strokeWidth={2} />
+                                                </g>
                                             );
-                                        }}
-                                    />
-                                    <Bar dataKey="max" fill="transparent" shape={(props: any) => {
-                                        const { x, width, payload, yAxis } = props;
-                                        if (!payload || !yAxis) return <g />;
-                                        const { min, q1, median, q3, max: maxVal } = payload;
-
-                                        const scale = yAxis.scale;
-                                        const yMin = scale(min);
-                                        const yQ1 = scale(q1);
-                                        const yMedian = scale(median);
-                                        const yQ3 = scale(q3);
-                                        const yMax = scale(maxVal);
-                                        const cx = x + width / 2;
-                                        const boxWidth = width * 0.4;
-
-                                        return (
-                                            <g>
-                                                {/* Whiskers */}
-                                                <line x1={cx} y1={yMin} x2={cx} y2={yQ1} stroke="#94a3b8" strokeWidth={1} />
-                                                <line x1={cx} y1={yQ3} x2={cx} y2={yMax} stroke="#94a3b8" strokeWidth={1} />
-                                                <line x1={cx - boxWidth / 2} y1={yMin} x2={cx + boxWidth / 2} y2={yMin} stroke="#94a3b8" strokeWidth={1} />
-                                                <line x1={cx - boxWidth / 2} y1={yMax} x2={cx + boxWidth / 2} y2={yMax} stroke="#94a3b8" strokeWidth={1} />
-
-                                                {/* Box (Rect from Q3 to Q1) */}
-                                                <rect
-                                                    x={cx - boxWidth / 2}
-                                                    y={Math.min(yQ1, yQ3)}
-                                                    width={boxWidth}
-                                                    height={Math.max(2, Math.abs(yQ1 - yQ3))}
-                                                    fill={median > 0 ? "#86efac" : "#fca5a5"}
-                                                    opacity={0.6}
-                                                    stroke={median > 0 ? "#16a34a" : "#dc2626"}
-                                                    strokeWidth={1}
-                                                    rx={2}
-                                                />
-
-                                                {/* Median Line */}
-                                                <line x1={cx - boxWidth / 2} y1={yMedian} x2={cx + boxWidth / 2} y2={yMedian} stroke="#1f2937" strokeWidth={2} />
-                                            </g>
-                                        );
-                                    }} />
-                                    <ReferenceLine y={0} stroke="#e5e5e5" />
-                                </BarChart>
-                            </ResponsiveContainer>
+                                        }} />
+                                        <ReferenceLine y={0} stroke="#e5e5e5" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
                         </ChartCard>
 
                         {/* ROW 2: Tables (Top Tickers + Top Periods + Sectors) */}
