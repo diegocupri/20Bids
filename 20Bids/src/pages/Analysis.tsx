@@ -998,7 +998,7 @@ export function AnalysisPage() {
                                                     y: vals,
                                                     type: 'box' as const,
                                                     name: `${bucket.name}\n(n=${count})`,
-                                                    marker: { color: '#86efac', line: { color: '#22c55e', width: 1 } },
+                                                    marker: { color: 'rgba(59, 130, 246, 0.3)', line: { color: '#3b82f6', width: 1 } },
                                                     boxpoints: 'all' as const,
                                                     jitter: 0.3,
                                                     pointpos: 0,
