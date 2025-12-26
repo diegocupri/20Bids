@@ -663,6 +663,8 @@ app.get('/api/stats/analysis', async (req, res) => {
             topTickers: formattedTickers.slice(0, 10),
             topSectors: formattedSectors.slice(0, 5),
             volume: analysis.volume,
+            tradeReturns: analysis.tradeReturns, // NEW: For Box Plot
+            debugVersion: analysis.debugVersion, // NEW: For version check
             riskMetrics: {
                 profitFactor: parseFloat(profitFactor.toFixed(2)),
                 maxDrawdown: parseFloat(maxDrawdown.toFixed(2)),
