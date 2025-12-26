@@ -27,6 +27,7 @@ interface AnalysisData {
         maxLossStreak: number;
         totalReturn: number;
     };
+    tradeReturns: { return: number, probability: number }[];
 }
 
 const CustomizedLabel = (props: any) => {
@@ -179,7 +180,24 @@ export function AnalysisPage() {
 
     // Filter Logic & Metric Recalculation (with Take Profit)
     const filteredMetrics = useMemo(() => {
-        if (!data) return null;
+        if (!data) return {
+            equityCurve: [],
+            dailyAverages: [],
+            distribution: [],
+            seasonality: [],
+            topTickers: [],
+            topSectors: [],
+            volume: [],
+            tradeReturns: [],
+            boxPlotData: [],
+            riskMetrics: {
+                profitFactor: 0,
+                maxDrawdown: 0,
+                maxWinStreak: 0,
+                maxLossStreak: 0,
+                totalReturn: 0
+            }
+        };
 
         const now = new Date();
         let filterStart: Date | null = null;
@@ -318,10 +336,14 @@ export function AnalysisPage() {
             { label: '90+', min: 90, max: 101, values: [] as number[] }, // 101 to include 100
         ];
 
-        // Populate buckets
-        rebasedEquityCurve.forEach(d => {
-            const prob = (d as any).probabilityValue || 70; // Default to 70 if missing
-            const ret = d.clampedReturn; // Use the clamped return (metrics view)
+        // Populate buckets using granular tradeReturns if available, otherwise fallback (less accurate)
+        const sourceData = (data as any).tradeReturns || [];
+
+        sourceData.forEach((d: any) => {
+            const prob = d.probability || 70;
+            // Apply TP/SL clamping to trade return if needed (logic already in backend? No, backend sends raw clampedMvso which includes SL/TP logic)
+            // Backend 'clampedMvso' already has TP/SL applied.
+            const ret = d.return;
 
             const bucket = probBuckets.find(b => prob >= b.min && prob < b.max);
             if (bucket) {
