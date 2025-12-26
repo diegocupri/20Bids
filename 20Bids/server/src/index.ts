@@ -458,7 +458,8 @@ app.get('/api/stats/analysis', async (req, res) => {
             volume: [] as { x: number, y: number, rvol: number }[],
             sectors: {} as Record<string, { count: number, totalMvso: number, wins: number }>,
             dailyAverages: [] as { date: string, avgReturn: number, avgPrice: number, count: number }[],
-            tradeReturns: [] as { return: number, probability: number }[] // New field for Box Plot
+            dailyAverages: [] as { date: string, avgReturn: number, avgPrice: number, count: number }[],
+            tradeReturns: [] as { date: string, return: number, probability: number }[] // Added date for filtering
         };
 
         let cumulativeReturn = 0;
@@ -599,6 +600,7 @@ app.get('/api/stats/analysis', async (req, res) => {
 
             // Trade Returns for Box Plot (Granular Data)
             analysis.tradeReturns.push({
+                date: dateStr,
                 return: clampedMvso,
                 probability: rec.probabilityValue || 70
             });

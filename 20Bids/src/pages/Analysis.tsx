@@ -27,7 +27,7 @@ interface AnalysisData {
         maxLossStreak: number;
         totalReturn: number;
     };
-    tradeReturns: { return: number, probability: number }[];
+    tradeReturns: { date: string, return: number, probability: number }[];
 }
 
 const CustomizedLabel = (props: any) => {
@@ -341,7 +341,13 @@ export function AnalysisPage() {
 
         sourceData.forEach((d: any) => {
             const prob = d.probability || 70;
-            // Apply TP/SL clamping to trade return if needed (logic already in backend? No, backend sends raw clampedMvso which includes SL/TP logic)
+
+            // Apply Date Filter
+            if (filterStart) {
+                const tradeDate = new Date(d.date);
+                if (tradeDate < filterStart) return;
+            }
+
             // Backend 'clampedMvso' already has TP/SL applied.
             const ret = d.return;
 
