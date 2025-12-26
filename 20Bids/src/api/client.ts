@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 
-const API_URL = 'https://bids-backend.onrender.com/api'; // Hardcoded for debugging
+export const API_URL = 'https://two0bids-api.onrender.com/api'; // Correct URL
 // const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 console.log('[Client] Using API URL:', API_URL);
 

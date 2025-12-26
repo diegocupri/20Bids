@@ -1131,8 +1131,9 @@ export function AnalysisPage() {
                                     onClick={async () => {
                                         setOptimizationLoading(true);
                                         try {
-                                            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-                                            const res = await fetch(`${apiUrl}/stats/optimization`);
+                                            // Use the centralized API_URL from client.ts
+                                            const { API_URL } = await import('../api/client');
+                                            const res = await fetch(`${API_URL}/stats/optimization`);
                                             const data = await res.json();
                                             setOptimizationData(data);
                                         } catch (err) {
