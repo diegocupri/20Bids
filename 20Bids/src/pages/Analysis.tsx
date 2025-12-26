@@ -384,6 +384,8 @@ export function AnalysisPage() {
             };
         });
 
+        console.log('BoxPlot Final Data:', boxPlotData);
+
         return {
             ...data,
             equityCurve: rebasedEquityCurve,
