@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
+import Plot from 'react-plotly.js';
 import { Sidebar } from '../components/Sidebar';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    AreaChart, Area, ComposedChart, Line, Legend, LabelList, Cell, ReferenceLine
+    AreaChart, Area, ComposedChart, Line, Legend, LabelList, Cell
 } from 'recharts';
 import { cn } from '../lib/utils';
 import { fetchAnalysis } from '../api/client';
@@ -190,7 +191,7 @@ export function AnalysisPage() {
             topSectors: [],
             volume: [],
             tradeReturns: [],
-            boxPlotData: [] as { name: string, winRate: number, avgReturn: number, count: number, wins: number }[],
+            boxPlotData: [] as { name: string, values: number[], count: number }[],
             riskMetrics: {
                 profitFactor: 0,
                 maxDrawdown: 0,
@@ -358,27 +359,21 @@ export function AnalysisPage() {
             }
         });
 
-        // Compute Win Rate and Avg Return for each bucket
+        // Compute stats for each bucket (for Plotly Box Plot)
         const boxPlotData = probBuckets.map(bucket => {
             const values = bucket.values;
             const count = values.length;
 
-            if (count === 0) return { name: bucket.label, winRate: 0, avgReturn: 0, count: 0, wins: 0 };
-
-            const wins = values.filter(v => v > 0).length;
-            const winRate = (wins / count) * 100;
-            const avgReturn = values.reduce((sum, v) => sum + v, 0) / count;
+            if (count === 0) return { name: bucket.label, values: [], count: 0 };
 
             return {
                 name: bucket.label,
-                winRate: parseFloat(winRate.toFixed(1)),
-                avgReturn: parseFloat(avgReturn.toFixed(2)),
-                count,
-                wins
+                values: values, // Raw values for Plotly
+                count
             };
         });
 
-        console.log('Probability Efficiency Data:', boxPlotData);
+        console.log('Box Plot Data for Plotly:', boxPlotData);
 
         return {
             ...data,
@@ -974,51 +969,39 @@ export function AnalysisPage() {
                                 </h3>
                             </div>
                             <div style={{ width: '100%', height: 280 }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={boxPlotData} margin={{ top: 10, right: 30, left: 0, bottom: 5 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
-                                        <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} />
-                                        <YAxis
-                                            stroke="#94a3b8"
-                                            fontSize={11}
-                                            axisLine={false}
-                                            tickLine={false}
-                                            unit="%"
-                                            domain={[0, 100]}
-                                        />
-                                        <Tooltip
-                                            cursor={{ fill: '#f8fafc' }}
-                                            content={({ active, payload, label }) => {
-                                                if (!active || !payload || !payload.length) return null;
-                                                const data = payload[0].payload;
-                                                return (
-                                                    <div className="bg-white/95 border border-gray-200 rounded-lg p-3 shadow-sm min-w-[150px]">
-                                                        <div className="font-bold text-gray-800 mb-2 border-b border-gray-100 pb-1">{label}% ({data.count} trades)</div>
-                                                        <div className="space-y-1 text-xs">
-                                                            <div className="flex justify-between"><span className="text-gray-500">Win Rate:</span> <span className="font-mono font-bold text-emerald-600">{data.winRate}%</span></div>
-                                                            <div className="flex justify-between"><span className="text-gray-500">Avg Return:</span> <span className={`font-mono font-bold ${data.avgReturn >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{data.avgReturn}%</span></div>
-                                                            <div className="flex justify-between"><span className="text-gray-500">Wins:</span> <span className="font-mono text-gray-700">{data.wins} / {data.count}</span></div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            }}
-                                        />
-                                        <Bar
-                                            dataKey="winRate"
-                                            fill="#3b82f6"
-                                            radius={[4, 4, 0, 0]}
-                                            barSize={50}
-                                        >
-                                            {(boxPlotData || []).map((entry, index) => (
-                                                <Cell
-                                                    key={`cell-${index}`}
-                                                    fill={(entry as any).winRate >= 75 ? '#10b981' : (entry as any).winRate >= 50 ? '#f59e0b' : '#ef4444'}
-                                                />
-                                            ))}
-                                        </Bar>
-                                        <ReferenceLine y={75} stroke="#10b981" strokeDasharray="3 3" label={{ value: '75%', position: 'right', fill: '#10b981', fontSize: 10 }} />
-                                    </BarChart>
-                                </ResponsiveContainer>
+                                <Plot
+                                    data={(boxPlotData || []).map((bucket) => ({
+                                        y: (bucket as any).values || [],
+                                        type: 'box' as const,
+                                        name: (bucket as any).name || bucket.name,
+                                        marker: { color: '#10b981' },
+                                        boxpoints: 'outliers' as const,
+                                        jitter: 0.3,
+                                        pointpos: -1.5,
+                                        hoverinfo: 'y+name' as const
+                                    }))}
+                                    layout={{
+                                        autosize: true,
+                                        margin: { l: 50, r: 20, t: 10, b: 40 },
+                                        yaxis: {
+                                            title: { text: 'Return %' },
+                                            zeroline: true,
+                                            zerolinecolor: '#94a3b8',
+                                            gridcolor: '#e5e5e5'
+                                        },
+                                        xaxis: {
+                                            title: { text: 'Probability Range' },
+                                            tickfont: { size: 11 }
+                                        },
+                                        showlegend: false,
+                                        paper_bgcolor: 'transparent',
+                                        plot_bgcolor: 'transparent',
+                                        font: { family: 'Inter, sans-serif', size: 11, color: '#64748b' }
+                                    }}
+                                    config={{ displayModeBar: false, responsive: true }}
+                                    style={{ width: '100%', height: '100%' }}
+                                    useResizeHandler={true}
+                                />
                             </div>
                         </ChartCard>
 
