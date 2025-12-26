@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    AreaChart, Area, ComposedChart, Line, Legend, LabelList, Cell
+    AreaChart, Area, ComposedChart, Line, Legend, LabelList, Cell, ReferenceLine
 } from 'recharts';
 import { cn } from '../lib/utils';
 import { fetchAnalysis } from '../api/client';
@@ -18,6 +18,7 @@ interface AnalysisData {
     seasonality: { name: string, count: number, avgMvso: number, winRate: number }[];
     topTickers: { name: string, count: number, avgMvso: number, winRate: number }[];
     topSectors: { name: string, count: number, avgMvso: number, winRate: number }[];
+    boxPlotData?: { name: string, min: number, q1: number, median: number, q3: number, max: number, count: number }[];
     volume: { x: number, y: number, rvol: number }[];
     riskMetrics: {
         profitFactor: number;
@@ -308,9 +309,54 @@ export function AnalysisPage() {
         const reliability = pf > 1.6 ? 'High' : pf > 1.2 ? 'Medium' : 'Low';
         const reliabilityColor = pf > 1.6 ? 'text-emerald-500' : pf > 1.2 ? 'text-amber-500' : 'text-rose-500';
 
+        // Box Plot Calculation: Distribution by Probability Range
+        const probBuckets = [
+            { label: '70-75', min: 70, max: 75, values: [] as number[] },
+            { label: '75-80', min: 75, max: 80, values: [] as number[] },
+            { label: '80-85', min: 80, max: 85, values: [] as number[] },
+            { label: '85-90', min: 85, max: 90, values: [] as number[] },
+            { label: '90+', min: 90, max: 101, values: [] as number[] }, // 101 to include 100
+        ];
+
+        // Populate buckets
+        rebasedEquityCurve.forEach(d => {
+            const prob = (d as any).probabilityValue || 70; // Default to 70 if missing
+            const ret = d.clampedReturn; // Use the clamped return (metrics view)
+
+            const bucket = probBuckets.find(b => prob >= b.min && prob < b.max);
+            if (bucket) {
+                bucket.values.push(ret);
+            }
+        });
+
+        // Compute stats for each bucket
+        const boxPlotData = probBuckets.map(bucket => {
+            const sorted = bucket.values.sort((a, b) => a - b);
+            const count = sorted.length;
+
+            if (count === 0) return { name: bucket.label, min: 0, q1: 0, median: 0, q3: 0, max: 0, count: 0 };
+
+            const min = sorted[0];
+            const max = sorted[count - 1];
+            const median = count % 2 === 0 ? (sorted[count / 2 - 1] + sorted[count / 2]) / 2 : sorted[Math.floor(count / 2)];
+            const q1 = sorted[Math.floor(count * 0.25)];
+            const q3 = sorted[Math.floor(count * 0.75)];
+
+            return {
+                name: bucket.label,
+                min,
+                q1,
+                median,
+                q3,
+                max,
+                count
+            };
+        });
+
         return {
             ...data,
             equityCurve: rebasedEquityCurve,
+            boxPlotData, // Return the calculated data
             riskMetrics: {
                 profitFactor: pf,
                 maxDrawdown: maxDD,
@@ -370,7 +416,7 @@ export function AnalysisPage() {
         );
     }
 
-    const { riskMetrics, equityCurve, distribution, topTickers, topSectors } = filteredMetrics;
+    const { riskMetrics, equityCurve, distribution, topTickers, topSectors, boxPlotData } = filteredMetrics;
     const isTerminal = theme === 'terminal';
     const isTradingView = theme === 'tradingview';
     const isPolar = theme === 'polar';
@@ -886,6 +932,85 @@ export function AnalysisPage() {
                             </ChartCard>
                         </div>
 
+                        {/* PROBABILITY EFFICIENCY (Box Plot) */}
+                        <ChartCard title="" height={350} className="w-full">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 font-sans">
+                                    PROBABILITY EFFICIENCY
+                                    <span className="text-[10px] font-normal text-text-secondary/70">
+                                        (Return Distribution by Prob %)
+                                    </span>
+                                </h3>
+                            </div>
+                            <ResponsiveContainer width="100%" height="85%">
+                                <BarChart data={boxPlotData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
+                                    <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} />
+                                    <YAxis stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} unit="%" />
+                                    <Tooltip
+                                        cursor={{ fill: '#f8fafc' }}
+                                        content={({ active, payload, label }) => {
+                                            if (!active || !payload || !payload.length) return null;
+                                            const data = payload[0].payload;
+                                            return (
+                                                <div className="bg-white/95 border border-gray-200 rounded-lg p-3 shadow-sm min-w-[140px]">
+                                                    <div className="font-bold text-gray-800 mb-2 border-b border-gray-100 pb-1">{label} ({data.count} trades)</div>
+                                                    <div className="space-y-1 text-xs">
+                                                        <div className="flex justify-between"><span className="text-gray-500">Max:</span> <span className="font-mono text-emerald-600">{data.max.toFixed(2)}%</span></div>
+                                                        <div className="flex justify-between"><span className="text-gray-500">Q3:</span> <span className="font-mono text-gray-700">{data.q3.toFixed(2)}%</span></div>
+                                                        <div className="flex justify-between"><span className="text-gray-500">Median:</span> <span className="font-mono font-bold text-blue-600">{data.median.toFixed(2)}%</span></div>
+                                                        <div className="flex justify-between"><span className="text-gray-500">Q1:</span> <span className="font-mono text-gray-700">{data.q1.toFixed(2)}%</span></div>
+                                                        <div className="flex justify-between"><span className="text-gray-500">Min:</span> <span className="font-mono text-rose-500">{data.min.toFixed(2)}%</span></div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }}
+                                    />
+                                    <Bar dataKey="max" fill="transparent" shape={(props: any) => {
+                                        const { x, width, payload, yAxis } = props;
+                                        if (!payload || !yAxis) return <g />;
+                                        const { min, q1, median, q3, max: maxVal } = payload;
+
+                                        const scale = yAxis.scale;
+                                        const yMin = scale(min);
+                                        const yQ1 = scale(q1);
+                                        const yMedian = scale(median);
+                                        const yQ3 = scale(q3);
+                                        const yMax = scale(maxVal);
+                                        const cx = x + width / 2;
+                                        const boxWidth = width * 0.4;
+
+                                        return (
+                                            <g>
+                                                {/* Whiskers */}
+                                                <line x1={cx} y1={yMin} x2={cx} y2={yQ1} stroke="#94a3b8" strokeWidth={1} />
+                                                <line x1={cx} y1={yQ3} x2={cx} y2={yMax} stroke="#94a3b8" strokeWidth={1} />
+                                                <line x1={cx - boxWidth / 2} y1={yMin} x2={cx + boxWidth / 2} y2={yMin} stroke="#94a3b8" strokeWidth={1} />
+                                                <line x1={cx - boxWidth / 2} y1={yMax} x2={cx + boxWidth / 2} y2={yMax} stroke="#94a3b8" strokeWidth={1} />
+
+                                                {/* Box (Rect from Q3 to Q1) */}
+                                                <rect
+                                                    x={cx - boxWidth / 2}
+                                                    y={Math.min(yQ1, yQ3)}
+                                                    width={boxWidth}
+                                                    height={Math.max(2, Math.abs(yQ1 - yQ3))}
+                                                    fill={median > 0 ? "#86efac" : "#fca5a5"}
+                                                    opacity={0.6}
+                                                    stroke={median > 0 ? "#16a34a" : "#dc2626"}
+                                                    strokeWidth={1}
+                                                    rx={2}
+                                                />
+
+                                                {/* Median Line */}
+                                                <line x1={cx - boxWidth / 2} y1={yMedian} x2={cx + boxWidth / 2} y2={yMedian} stroke="#1f2937" strokeWidth={2} />
+                                            </g>
+                                        );
+                                    }} />
+                                    <ReferenceLine y={0} stroke="#e5e5e5" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </ChartCard>
+
                         {/* ROW 2: Tables (Top Tickers + Top Periods + Sectors) */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             {/* Top Tickers Leaderboard */}
@@ -1098,10 +1223,11 @@ function TerminalMetric({ label, value, subValue, trend, color, tooltip }: { lab
     );
 }
 
-function ChartCard({ title, height, children }: { title: string, height: number, children: React.ReactNode }) {
+function ChartCard({ title, height, children, className }: { title: string, height: number, children: React.ReactNode, className?: string }) {
     return (
         <div className={cn(
             "border border-border-primary/30 rounded-lg p-3 bg-bg-primary overflow-hidden flex flex-col",
+            className
         )} style={{ height }}>
             {title && (
                 <h3 className="text-xs font-semibold text-text-secondary mb-4 flex items-center gap-2">
