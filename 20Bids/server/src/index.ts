@@ -459,7 +459,7 @@ app.get('/api/stats/analysis', async (req, res) => {
             sectors: {} as Record<string, { count: number, totalMvso: number, wins: number }>,
             dailyAverages: [] as { date: string, avgReturn: number, avgPrice: number, count: number }[],
             tradeReturns: [] as { date: string, return: number, probability: number }[], // Added date for filtering
-            debugVersion: '1.0.1' // FORCE UPDATE CHECK
+            debugVersion: '1.0.2' // FORCE UPDATE CHECK 2
         };
 
         let cumulativeReturn = 0;
