@@ -1118,13 +1118,13 @@ export function AnalysisPage() {
                             </div>
                         </ChartCard>
 
-                        {/* TP/SL OPTIMIZATION HEATMAP */}
+                        {/* TP/SL OPTIMIZATION VIOLIN PLOT */}
                         <ChartCard title="" height={450} className="w-full">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 font-sans">
-                                    TP/SL OPTIMIZATION
+                                    TP OPTIMIZATION
                                     <span className="text-[10px] font-normal text-text-secondary/70">
-                                        (Grid Search: Which TP/SL combo works best?)
+                                        (Return Distribution by TP % with optimal SL)
                                     </span>
                                 </h3>
                                 <button
@@ -1133,7 +1133,18 @@ export function AnalysisPage() {
                                         try {
                                             // Use the centralized API_URL from client.ts
                                             const { API_URL } = await import('../api/client');
-                                            const res = await fetch(`${API_URL}/stats/optimization`);
+                                            // Handle volume in millions
+                                            const volValue = minVolume || 0;
+                                            const volParam = volValue < 1000 ? volValue * 1000000 : volValue;
+
+                                            const params = new URLSearchParams({
+                                                tp: takeProfit.toString(),
+                                                sl: stopLoss.toString(),
+                                                minVol: volParam.toString(),
+                                                minPrice: minPrice.toString(),
+                                                minProb: minProb.toString()
+                                            });
+                                            const res = await fetch(`${API_URL}/stats/optimization?${params.toString()}`);
                                             const data = await res.json();
                                             setOptimizationData(data);
                                         } catch (err) {
@@ -1147,74 +1158,78 @@ export function AnalysisPage() {
                                     {optimizationLoading ? 'Calculating...' : 'Run Analysis'}
                                 </button>
                             </div>
-                            {optimizationData ? (
-                                <div className="flex gap-4" style={{ height: 380 }}>
-                                    <div style={{ flex: '1 1 70%', minWidth: 0 }}>
-                                        <Plot
-                                            data={[{
-                                                z: (() => {
-                                                    const matrix: number[][] = [];
-                                                    for (let sl = 1; sl <= 10; sl++) {
-                                                        const row: number[] = [];
-                                                        for (let tp = 1; tp <= 10; tp++) {
-                                                            const item = optimizationData.results.find((r: any) => r.tp === tp && r.sl === sl);
-                                                            row.push(item ? item.totalReturn : 0);
-                                                        }
-                                                        matrix.push(row);
+                            <div className="w-full h-full">
+                                {optimizationData && optimizationData.violinData ? (
+                                    <Plot
+                                        data={optimizationData.violinData.map((d: any) => ({
+                                            type: 'violin',
+                                            y: d.trades,
+                                            name: `${d.tp}% TP\n(Best SL: ${d.bestSl}%)`,
+                                            box: {
+                                                visible: true
+                                            },
+                                            line: {
+                                                color: 'black'
+                                            },
+                                            meanline: {
+                                                visible: true
+                                            },
+                                            points: 'all',
+                                            jitter: 0.3,
+                                            scalemode: 'count',
+                                            spanmode: 'hard',
+                                            marker: {
+                                                size: 2,
+                                                opacity: 0.5,
+                                                color: d.totalReturn > 0 ? '#10b981' : '#ef4444' // Green if positive return, Red if negative
+                                            },
+                                            fillcolor: d.totalReturn > 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)',
+                                            hoverinfo: 'y+name',
+                                            hovertemplate: `<b>${d.tp}% TP</b><br>Return: %{y:.2f}%<br><i>(Best SL: ${d.bestSl}%)</i><extra></extra>`
+                                        }))}
+                                        layout={{
+                                            autosize: true,
+                                            margin: { l: 50, r: 20, t: 30, b: 80 },
+                                            yaxis: {
+                                                title: { text: 'Trade Return %' },
+                                                gridcolor: '#f3f4f6',
+                                                zeroline: true,
+                                                zerolinecolor: '#9ca3af'
+                                            },
+                                            xaxis: {
+                                                title: { text: 'Take Profit (%)' },
+                                                tickmode: 'array',
+                                                tickvals: optimizationData.violinData.map((_: any, i: number) => i),
+                                                ticktext: optimizationData.violinData.map((d: any) => `${d.tp}%`),
+                                            },
+                                            showlegend: false,
+                                            hovermode: 'closest',
+                                            font: { family: 'Inter', size: 11 },
+                                            shapes: [
+                                                {
+                                                    type: 'line',
+                                                    x0: -0.5,
+                                                    x1: optimizationData.violinData.length - 0.5,
+                                                    y0: 0,
+                                                    y1: 0,
+                                                    line: {
+                                                        color: '#9ca3af',
+                                                        width: 1,
+                                                        dash: 'dash'
                                                     }
-                                                    return matrix;
-                                                })(),
-                                                x: optimizationData.tpRange.map((v: number) => `${v}%`),
-                                                y: optimizationData.slRange.map((v: number) => `${v}%`),
-                                                type: 'heatmap' as const,
-                                                colorscale: [
-                                                    [0, '#ef4444'],
-                                                    [0.5, '#fbbf24'],
-                                                    [1, '#10b981']
-                                                ],
-                                                hovertemplate: 'TP: %{x}<br>SL: %{y}<br>Return: %{z:.1f}%<extra></extra>',
-                                                hoverlabel: { bgcolor: 'white', bordercolor: '#e5e5e5', font: { color: '#374151' } },
-                                                showscale: true,
-                                                colorbar: { title: { text: 'Return %', side: 'right' } }
-                                            }]}
-                                            layout={{
-                                                autosize: true,
-                                                margin: { l: 60, r: 80, t: 10, b: 50 },
-                                                xaxis: { title: { text: 'Take Profit %' }, tickfont: { size: 11 } },
-                                                yaxis: { title: { text: 'Stop Loss %' }, tickfont: { size: 11 } },
-                                                paper_bgcolor: 'transparent',
-                                                plot_bgcolor: 'transparent',
-                                                font: { family: 'Inter, sans-serif', size: 11, color: '#64748b' }
-                                            }}
-                                            config={{ displayModeBar: false, responsive: true }}
-                                            style={{ width: '100%', height: '100%' }}
-                                            useResizeHandler={true}
-                                        />
+                                                }
+                                            ]
+                                        }}
+                                        config={{ displayModeBar: false, responsive: true }}
+                                        style={{ width: '100%', height: '100%' }}
+                                        useResizeHandler={true}
+                                    />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
+                                        <p>Click "Run Analysis" to calculate optimal TP/SL distributions</p>
                                     </div>
-                                    {/* Best Combo Info */}
-                                    <div style={{ flex: '0 0 180px' }} className="flex flex-col justify-center">
-                                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                                            <div className="text-[10px] text-emerald-600 font-bold uppercase mb-2">Best Combination</div>
-                                            <div className="text-2xl font-bold text-emerald-700 mb-1">
-                                                TP {optimizationData.best?.tp}% / SL {optimizationData.best?.sl}%
-                                            </div>
-                                            <div className="text-sm text-emerald-600">
-                                                Total Return: <span className="font-bold">{optimizationData.best?.totalReturn.toFixed(1)}%</span>
-                                            </div>
-                                            <div className="text-xs text-emerald-500 mt-1">
-                                                Win Rate: {optimizationData.best?.winRate.toFixed(1)}%
-                                            </div>
-                                            <div className="text-xs text-gray-500 mt-3">
-                                                Based on {optimizationData.tradeCount} trades
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="flex items-center justify-center h-80 text-gray-400 text-sm">
-                                    Click "Run Analysis" to calculate optimal TP/SL combinations
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </ChartCard>
 
                         {/* ROW 2: Tables (Top Tickers + Top Periods + Sectors) */}
