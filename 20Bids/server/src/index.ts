@@ -419,6 +419,106 @@ app.post('/api/external/ingest', async (req, res) => {
 });
 
 
+// TP/SL Optimization Endpoint - Grid Search for optimal parameters
+app.get('/api/stats/optimization', async (req, res) => {
+    try {
+        console.log('[Optimization] Starting TP/SL grid search...');
+
+        // Date Filtering (optional)
+        const startDateStr = req.query.startDate as string;
+        const endDateStr = req.query.endDate as string;
+
+        const dateFilter: any = {};
+        if (startDateStr) dateFilter.gte = new Date(startDateStr);
+        if (endDateStr) dateFilter.lte = new Date(endDateStr);
+
+        // Fetch all trades with intraday data
+        const allRecs = await prisma.recommendation.findMany({
+            where: {
+                ...(Object.keys(dateFilter).length > 0 ? { date: dateFilter } : {}),
+                high: { not: null },
+                maxDD: { not: null }
+            },
+            orderBy: { date: 'asc' }
+        });
+
+        console.log(`[Optimization] Found ${allRecs.length} trades with intraday data`);
+
+        // TP and SL ranges to test (1% to 10%)
+        const tpRange = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        const slRange = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+        // Result matrix: rows = SL, cols = TP
+        const results: { tp: number, sl: number, totalReturn: number, winRate: number, tradeCount: number, avgReturn: number }[] = [];
+
+        for (const sl of slRange) {
+            for (const tp of tpRange) {
+                let totalReturn = 0;
+                let wins = 0;
+                let tradeCount = 0;
+
+                for (const rec of allRecs) {
+                    if (!rec.refPrice1020 || !rec.high || rec.maxDD === null) continue;
+
+                    // Calculate base MVSO (movement vs open at 10:20)
+                    const mvso = ((rec.high - rec.refPrice1020) / rec.refPrice1020) * 100;
+                    const maxDrawdown = Math.abs(rec.maxDD);
+
+                    // Simulate TP/SL
+                    let tradeReturn: number;
+
+                    // Check if stopped out (max drawdown hit SL)
+                    if (maxDrawdown >= sl) {
+                        tradeReturn = -sl;
+                    }
+                    // Check if hit take profit
+                    else if (mvso >= tp) {
+                        tradeReturn = tp;
+                    }
+                    // Otherwise, actual return (clamped by SL)
+                    else {
+                        tradeReturn = Math.max(mvso, -sl);
+                    }
+
+                    totalReturn += tradeReturn;
+                    if (tradeReturn > 0) wins++;
+                    tradeCount++;
+                }
+
+                const winRate = tradeCount > 0 ? (wins / tradeCount) * 100 : 0;
+                const avgReturn = tradeCount > 0 ? totalReturn / tradeCount : 0;
+
+                results.push({
+                    tp,
+                    sl,
+                    totalReturn: parseFloat(totalReturn.toFixed(2)),
+                    winRate: parseFloat(winRate.toFixed(1)),
+                    tradeCount,
+                    avgReturn: parseFloat(avgReturn.toFixed(3))
+                });
+            }
+        }
+
+        // Find best combination
+        const best = results.reduce((a, b) => a.totalReturn > b.totalReturn ? a : b);
+
+        console.log(`[Optimization] Best: TP=${best.tp}%, SL=${best.sl}% => Total Return: ${best.totalReturn}%`);
+
+        res.json({
+            tpRange,
+            slRange,
+            results,
+            best,
+            tradeCount: allRecs.length
+        });
+
+    } catch (error) {
+        console.error('[Optimization] Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+
 // Detailed Analysis Endpoint (Intraday Focus)
 app.get('/api/stats/analysis', async (req, res) => {
     try {
