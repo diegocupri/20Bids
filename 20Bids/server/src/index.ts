@@ -425,7 +425,7 @@ app.get('/api/stats/analysis', async (req, res) => {
         // Parse Take Profit parameter (defaults to 100% = no limit)
         const takeProfit = parseFloat(req.query.tp as string) || 100;
         const stopLoss = parseFloat(req.query.sl as string) || 100;
-        const minVol = parseFloat(req.query.minVol as string) || 0;
+        const minVol = (parseFloat(req.query.minVol as string) || 0) * 1_000_000; // Input is in millions
         const minPrice = parseFloat(req.query.minPrice as string) || 0;
         const minProb = parseInt(req.query.minProb as string) || 0;
 
