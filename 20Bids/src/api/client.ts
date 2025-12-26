@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_URL = 'https://bids-backend.onrender.com/api'; // Hardcoded for debugging
+// const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 console.log('[Client] Using API URL:', API_URL);
 
 export async function fetchDates(): Promise<Date[]> {
