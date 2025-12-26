@@ -437,7 +437,7 @@ app.get('/api/stats/optimization', async (req, res) => {
             where: {
                 ...(Object.keys(dateFilter).length > 0 ? { date: dateFilter } : {}),
                 high: { not: null },
-                maxDD: { not: null }
+                lowBeforePeak: { not: null }
             },
             orderBy: { date: 'asc' }
         });
@@ -458,11 +458,12 @@ app.get('/api/stats/optimization', async (req, res) => {
                 let tradeCount = 0;
 
                 for (const rec of allRecs) {
-                    if (!rec.refPrice1020 || !rec.high || rec.maxDD === null) continue;
+                    if (!rec.refPrice1020 || !rec.high || !rec.lowBeforePeak) continue;
 
                     // Calculate base MVSO (movement vs open at 10:20)
                     const mvso = ((rec.high - rec.refPrice1020) / rec.refPrice1020) * 100;
-                    const maxDrawdown = Math.abs(rec.maxDD);
+                    // Calculate max drawdown from lowBeforePeak
+                    const maxDrawdown = Math.abs(((rec.lowBeforePeak - rec.refPrice1020) / rec.refPrice1020) * 100);
 
                     // Simulate TP/SL
                     let tradeReturn: number;

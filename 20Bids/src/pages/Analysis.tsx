@@ -1001,7 +1001,7 @@ export function AnalysisPage() {
                                         }))}
                                         layout={{
                                             autosize: true,
-                                            margin: { l: 50, r: 20, t: 10, b: 60 },
+                                            margin: { l: 50, r: 20, t: 10, b: 80 },
                                             yaxis: {
                                                 title: { text: 'Return %' },
                                                 autorange: true,
@@ -1011,12 +1011,25 @@ export function AnalysisPage() {
                                             },
                                             xaxis: {
                                                 tickfont: { size: 11 },
-                                                fixedrange: true
+                                                fixedrange: true,
+                                                tickangle: 0
                                             },
                                             showlegend: false,
                                             paper_bgcolor: 'transparent',
                                             plot_bgcolor: 'transparent',
-                                            font: { family: 'Inter, sans-serif', size: 11, color: '#64748b' }
+                                            font: { family: 'Inter, sans-serif', size: 11, color: '#64748b' },
+                                            annotations: (boxPlotData || []).map((bucket) => {
+                                                const vals = (bucket as any).values || [];
+                                                const avg = vals.length > 0 ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : 0;
+                                                return {
+                                                    x: bucket.name,
+                                                    y: avg,
+                                                    text: `${avg.toFixed(1)}%`,
+                                                    showarrow: false,
+                                                    font: { size: 10, color: avg >= 0 ? '#10b981' : '#ef4444', family: 'Inter' },
+                                                    yshift: 15
+                                                };
+                                            })
                                         }}
                                         config={{ displayModeBar: false, responsive: true }}
                                         style={{ width: '100%', height: '100%' }}
