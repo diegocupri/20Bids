@@ -28,6 +28,7 @@ interface AnalysisData {
         totalReturn: number;
     };
     tradeReturns: { date: string, return: number, probability: number }[];
+    debugVersion?: string;
 }
 
 const CustomizedLabel = (props: any) => {
@@ -970,7 +971,7 @@ export function AnalysisPage() {
                                     </span>
                                     {/* DEBUG INFO */}
                                     <span className="text-[9px] text-red-500 font-mono ml-4">
-                                        [DEBUG: Trades: {(data as any)?.tradeReturns?.length || 0} -&gt; Filtered: {(boxPlotData || []).reduce((acc, b) => acc + b.count, 0)}]
+                                        [DEBUG: v{(data as any)?.debugVersion || 'OLD'} | Trades: {(data as any)?.tradeReturns?.length || 0} -&gt; Filtered: {(boxPlotData || []).reduce((acc, b) => acc + b.count, 0)}]
                                     </span>
                                 </h3>
                             </div>
