@@ -9,7 +9,7 @@ import { fetchAnalysis } from '../api/client';
 import { startOfYear, subWeeks, subMonths, isAfter, startOfWeek, startOfMonth, format } from 'date-fns';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { Calendar, Info } from 'lucide-react';
+import { Calendar, Info, TrendingUp, TrendingDown, BarChart2, DollarSign, Percent } from 'lucide-react';
 
 interface AnalysisData {
     equityCurve: { date: string, return: number, equity: number, drawdown: number, hitTP?: number, hitSL?: number, other?: number, count?: number }[];
@@ -410,6 +410,7 @@ export function AnalysisPage() {
                             <div className="flex items-center gap-2 bg-bg-secondary/50 p-1 rounded-lg border border-border-primary/50">
                                 {/* TP */}
                                 <div className="flex items-center gap-1.5 bg-bg-tertiary/50 rounded px-2 py-1">
+                                    <TrendingUp size={10} className="text-emerald-500" />
                                     <span className="text-[10px] text-text-secondary font-bold font-sans">TP</span>
                                     <input
                                         type="number"
@@ -429,6 +430,7 @@ export function AnalysisPage() {
 
                                 {/* SL */}
                                 <div className="flex items-center gap-1.5 bg-bg-tertiary/50 rounded px-2 py-1">
+                                    <TrendingDown size={10} className="text-rose-500" />
                                     <span className="text-[10px] text-text-secondary font-bold font-sans">SL</span>
                                     <input
                                         type="number"
@@ -451,6 +453,7 @@ export function AnalysisPage() {
                             <div className="flex items-center gap-2 bg-bg-secondary/50 p-1 rounded-lg border border-border-primary/50">
                                 {/* Volume */}
                                 <div className="flex items-center gap-1.5 bg-bg-tertiary/50 rounded px-2 py-1">
+                                    <BarChart2 size={10} className="text-text-secondary" />
                                     <span className="text-[10px] text-text-secondary font-bold font-sans">Vol</span>
                                     <input
                                         type="number"
@@ -465,6 +468,7 @@ export function AnalysisPage() {
 
                                 {/* Price */}
                                 <div className="flex items-center gap-1.5 bg-bg-tertiary/50 rounded px-2 py-1">
+                                    <DollarSign size={10} className="text-text-secondary" />
                                     <span className="text-[10px] text-text-secondary font-bold font-sans">Min $</span>
                                     <input
                                         type="number"
@@ -479,6 +483,7 @@ export function AnalysisPage() {
 
                                 {/* Probability */}
                                 <div className="flex items-center gap-1.5 bg-bg-tertiary/50 rounded px-2 py-1">
+                                    <Percent size={10} className="text-text-secondary" />
                                     <span className="text-[10px] text-text-secondary font-bold font-sans">Prob</span>
                                     <input
                                         type="number"
@@ -506,11 +511,6 @@ export function AnalysisPage() {
                             >
                                 {isCumulative ? 'CUMUL' : 'DAILY'}
                             </button>
-
-                            <div className="flex gap-4 text-xs text-text-secondary border-l border-border-primary pl-4">
-                                <div><span className={cn("font-bold text-lg font-sans", riskMetrics.totalReturn > 0 ? "text-emerald-500" : "text-rose-500")}>{riskMetrics.totalReturn.toFixed(2)}%</span> NET R</div>
-                                <div><span className="font-bold text-lg text-text-primary font-sans">{equityCurve.length}</span> SESSIONS</div>
-                            </div>
                         </div>
                     </div>
 
