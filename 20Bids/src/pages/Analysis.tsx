@@ -981,7 +981,17 @@ export function AnalysisPage() {
                                     <BarChart data={boxPlotData} margin={{ top: 10, right: 30, left: 0, bottom: 5 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
                                         <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} />
-                                        <YAxis stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} unit="%" />
+                                        <YAxis
+                                            stroke="#94a3b8"
+                                            fontSize={11}
+                                            axisLine={false}
+                                            tickLine={false}
+                                            unit="%"
+                                            domain={[
+                                                (dataMin: number) => Math.floor(Math.min(dataMin, ...(boxPlotData || []).map(d => d.min)) - 2),
+                                                (dataMax: number) => Math.ceil(Math.max(dataMax, ...(boxPlotData || []).map(d => d.max)) + 2)
+                                            ]}
+                                        />
                                         <Tooltip
                                             cursor={{ fill: '#f8fafc' }}
                                             content={({ active, payload, label }) => {
