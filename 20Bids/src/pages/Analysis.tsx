@@ -983,22 +983,36 @@ export function AnalysisPage() {
                                 {/* Box Plot Chart */}
                                 <div style={{ flex: '1 1 70%', minWidth: 0 }}>
                                     <Plot
-                                        data={(boxPlotData || []).map((bucket) => ({
-                                            y: (bucket as any).values || [],
-                                            type: 'box' as const,
-                                            name: (bucket as any).name || bucket.name,
-                                            marker: { color: '#10b981' },
-                                            boxpoints: 'outliers' as const,
-                                            jitter: 0,
-                                            pointpos: 0,
-                                            hoverlabel: { bgcolor: 'white', bordercolor: '#e5e5e5', font: { color: '#374151' } },
-                                            hovertemplate: '<b>%{x}</b><br>' +
-                                                'Max: %{y:.2f}%<br>' +
-                                                'Q3: %{q3:.2f}%<br>' +
-                                                'Median: %{median:.2f}%<br>' +
-                                                'Q1: %{q1:.2f}%<br>' +
-                                                'Min: %{lowerfence:.2f}%<extra></extra>'
-                                        }))}
+                                        data={(() => {
+                                            // Calculate max count for normalizing widths
+                                            const counts = (boxPlotData || []).map((b: any) => (b.values?.length || 0));
+                                            const maxCount = Math.max(...counts, 1);
+
+                                            return (boxPlotData || []).map((bucket) => {
+                                                const vals = (bucket as any).values || [];
+                                                const count = vals.length;
+                                                // Width proportional to count (0.2 to 0.6 range)
+                                                const width = 0.2 + (count / maxCount) * 0.4;
+
+                                                return {
+                                                    y: vals,
+                                                    type: 'box' as const,
+                                                    name: `${bucket.name}\n(n=${count})`,
+                                                    marker: { color: '#10b981' },
+                                                    boxpoints: 'outliers' as const,
+                                                    jitter: 0,
+                                                    pointpos: 0,
+                                                    width: width,
+                                                    hoverlabel: { bgcolor: 'white', bordercolor: '#e5e5e5', font: { color: '#374151' } },
+                                                    hovertemplate: `<b>${bucket.name}</b> (n=${count})<br>` +
+                                                        'Max: %{y:.2f}%<br>' +
+                                                        'Q3: %{q3:.2f}%<br>' +
+                                                        'Median: %{median:.2f}%<br>' +
+                                                        'Q1: %{q1:.2f}%<br>' +
+                                                        'Min: %{lowerfence:.2f}%<extra></extra>'
+                                                };
+                                            });
+                                        })()}
                                         layout={{
                                             autosize: true,
                                             margin: { l: 50, r: 20, t: 10, b: 80 },
