@@ -351,66 +351,71 @@ export function AnalysisPage() {
             <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
                 <div className="p-6 space-y-6 bg-bg-primary">
 
-                    {/* Header with Filters */}
-                    <div className="flex flex-col md:flex-row justify-between items-end border-b border-border-primary pb-4 gap-4">
-                        <div>
-                            <h1 className="text-xl font-bold text-text-primary uppercase tracking-wider flex items-center gap-2">
-                                <span className={cn("inline-block w-2 h-2 rounded-full", isTerminal ? "bg-amber-400 animate-pulse" : "bg-accent-primary")}></span>
-                                System Performance
+                    {/* Unified Header & Filter Toolbar */}
+                    <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center border-b border-border-primary/50 pb-6 gap-6">
+                        {/* LEFT: Branding/Title */}
+                        <div className="shrink-0">
+                            <h1 className="text-xl font-black text-text-primary uppercase tracking-widest flex items-center gap-3">
+                                <span className={cn("inline-block w-2.5 h-2.5 rounded-sm", isTerminal ? "bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]" : "bg-accent-primary shadow-[0_0_10px_rgba(37,99,235,0.5)]")}></span>
+                                SYSTEM PERFORMANCE
                             </h1>
-                            <p className="text-xs text-text-secondary mt-1 tracking-tight">INTRADAY ALGORITHMIC ANALYSIS // {new Date().toLocaleDateString()}</p>
+                            <p className="text-[10px] text-text-secondary mt-1.5 tracking-[0.2em] font-medium ml-5.5 uppercase opacity-70">
+                                Intraday Algorithmic Analysis // {new Date().toLocaleDateString()}
+                            </p>
                         </div>
 
-                        {/* RIGHT: Time Filters & Date Picker */}
-                        <div className="flex items-center gap-4">
-                            {/* Time Filters */}
-                            <div className="flex bg-bg-tertiary/30 rounded-md p-1 border border-border-primary">
-                                {(['1W', '1M', '3M', 'YTD', '1Y', 'ALL'] as TimeRange[]).map((range) => (
-                                    <button
-                                        key={range}
-                                        onClick={() => {
-                                            setTimeRange(range);
-                                            setDateRange([null, null]); // Clear custom range
+                        {/* RIGHT: Unified Control Bar */}
+                        <div className="flex flex-wrap xl:flex-nowrap items-center gap-4 w-full xl:w-auto justify-start xl:justify-end">
+
+                            {/* Group 1: Time Range */}
+                            <div className="flex items-center gap-2 bg-bg-secondary/30 p-1 rounded-lg border border-border-primary/30">
+                                <div className="flex">
+                                    {(['1W', '1M', '3M', 'YTD', '1Y', 'ALL'] as TimeRange[]).map((range) => (
+                                        <button
+                                            key={range}
+                                            onClick={() => {
+                                                setTimeRange(range);
+                                                setDateRange([null, null]);
+                                            }}
+                                            className={cn(
+                                                "px-3 py-1.5 text-[10px] font-bold rounded-md transition-all uppercase tracking-wide",
+                                                timeRange === range && !customStartDate
+                                                    ? "bg-accent-primary text-white shadow-sm"
+                                                    : "text-text-secondary hover:text-text-primary hover:bg-white/5"
+                                            )}
+                                        >
+                                            {range}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="w-px h-4 bg-border-primary/30 mx-1"></div>
+                                <div className="relative">
+                                    <DatePicker
+                                        selectsRange={true}
+                                        startDate={customStartDate}
+                                        endDate={customEndDate}
+                                        onChange={(update) => {
+                                            setDateRange(update as [Date | null, Date | null]);
+                                            if (update[0] && update[1]) setTimeRange('ALL');
                                         }}
-                                        className={cn(
-                                            "px-3 py-1.5 text-[11px] font-medium rounded-md transition-all uppercase tracking-wide",
-                                            timeRange === range && !customStartDate
-                                                ? "bg-accent-primary text-white shadow-sm"
-                                                : "bg-bg-tertiary/30 text-text-secondary hover:text-text-primary hover:bg-bg-tertiary"
-                                        )}
-                                    >
-                                        {range}
-                                    </button>
-                                ))}
+                                        placeholderText="Custom Range"
+                                        className="bg-transparent text-xs text-text-primary w-28 cursor-pointer placeholder:text-text-secondary focus:outline-none font-sans font-medium text-right hover:text-accent-primary transition-colors"
+                                        dateFormat="MMM dd, yy"
+                                        isClearable={true}
+                                        maxDate={new Date()}
+                                    />
+                                    <Calendar className="absolute left-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-secondary pointer-events-none opacity-50" />
+                                </div>
                             </div>
 
-                            {/* Date Picker */}
-                            <div className="relative">
-                                <DatePicker
-                                    selectsRange={true}
-                                    startDate={customStartDate}
-                                    endDate={customEndDate}
-                                    onChange={(update) => {
-                                        setDateRange(update as [Date | null, Date | null]);
-                                        if (update[0] && update[1]) setTimeRange('ALL');
-                                    }}
-                                    placeholderText="Custom Range"
-                                    className="bg-bg-tertiary/30 border border-border-primary rounded-md pl-9 pr-3 py-1.5 text-xs text-text-primary w-40 cursor-pointer placeholder:text-text-secondary focus:outline-none focus:ring-1 focus:ring-accent-primary font-sans"
-                                    dateFormat="MMM dd, yy"
-                                    isClearable={true}
-                                    maxDate={new Date()}
-                                />
-                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-secondary pointer-events-none" />
-                            </div>
-                        </div>
+                            {/* Divider (Desktop Only) */}
+                            <div className="hidden xl:block w-px h-8 bg-border-primary/20 mx-2"></div>
 
-                        {/* RIGHT: Filters (TP, SL, FILTERS) */}
-                        <div className="flex flex-wrap items-center gap-3 justify-end">
-                            {/* Strategy Params Group */}
-                            <div className="flex items-center gap-2 bg-bg-secondary/50 p-1 rounded-lg border border-border-primary/50">
+                            {/* Group 2: Strategy (TP/SL) */}
+                            <div className="flex items-center gap-2 bg-bg-secondary/30 p-1 rounded-lg border border-border-primary/30">
                                 {/* TP */}
-                                <div className="flex items-center gap-1.5 bg-bg-tertiary/50 rounded px-2 py-1">
-                                    <TrendingUp size={10} className="text-emerald-500" />
+                                <div className="flex items-center gap-2 px-2 py-1">
+                                    <TrendingUp size={12} className="text-emerald-500" />
                                     <span className="text-[10px] text-text-secondary font-bold font-sans">TP</span>
                                     <input
                                         type="number"
@@ -425,12 +430,14 @@ export function AnalysisPage() {
                                         }}
                                         className="w-10 bg-transparent border-0 text-text-primary text-xs font-bold font-sans text-right focus:outline-none focus:ring-0 p-0"
                                     />
-                                    <span className="text-[10px] text-text-secondary">%</span>
+                                    <span className="text-[10px] text-text-secondary opacity-50">%</span>
                                 </div>
 
+                                <div className="w-px h-4 bg-border-primary/30"></div>
+
                                 {/* SL */}
-                                <div className="flex items-center gap-1.5 bg-bg-tertiary/50 rounded px-2 py-1">
-                                    <TrendingDown size={10} className="text-rose-500" />
+                                <div className="flex items-center gap-2 px-2 py-1">
+                                    <TrendingDown size={12} className="text-rose-500" />
                                     <span className="text-[10px] text-text-secondary font-bold font-sans">SL</span>
                                     <input
                                         type="number"
@@ -445,15 +452,15 @@ export function AnalysisPage() {
                                         }}
                                         className="w-10 bg-transparent border-0 text-text-primary text-xs font-bold font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
                                     />
-                                    <span className="text-[10px] text-text-secondary">%</span>
+                                    <span className="text-[10px] text-text-secondary opacity-50">%</span>
                                 </div>
                             </div>
 
-                            {/* Filters Group */}
-                            <div className="flex items-center gap-2 bg-bg-secondary/50 p-1 rounded-lg border border-border-primary/50">
-                                {/* Volume */}
-                                <div className="flex items-center gap-1.5 bg-bg-tertiary/50 rounded px-2 py-1">
-                                    <BarChart2 size={10} className="text-text-secondary" />
+                            {/* Group 3: Filters (Vol/Min$/Prob) */}
+                            <div className="flex items-center gap-2 bg-bg-secondary/30 p-1 rounded-lg border border-border-primary/30">
+                                {/* Vol */}
+                                <div className="flex items-center gap-2 px-2 py-1 hover:bg-white/5 rounded transition-colors group">
+                                    <BarChart2 size={12} className="text-text-secondary group-hover:text-accent-primary" />
                                     <span className="text-[10px] text-text-secondary font-bold font-sans">Vol</span>
                                     <input
                                         type="number"
@@ -466,9 +473,11 @@ export function AnalysisPage() {
                                     />
                                 </div>
 
+                                <div className="w-px h-4 bg-border-primary/30"></div>
+
                                 {/* Price */}
-                                <div className="flex items-center gap-1.5 bg-bg-tertiary/50 rounded px-2 py-1">
-                                    <DollarSign size={10} className="text-text-secondary" />
+                                <div className="flex items-center gap-2 px-2 py-1 hover:bg-white/5 rounded transition-colors group">
+                                    <DollarSign size={12} className="text-text-secondary group-hover:text-accent-primary" />
                                     <span className="text-[10px] text-text-secondary font-bold font-sans">Min $</span>
                                     <input
                                         type="number"
@@ -481,9 +490,11 @@ export function AnalysisPage() {
                                     />
                                 </div>
 
-                                {/* Probability */}
-                                <div className="flex items-center gap-1.5 bg-bg-tertiary/50 rounded px-2 py-1">
-                                    <Percent size={10} className="text-text-secondary" />
+                                <div className="w-px h-4 bg-border-primary/30"></div>
+
+                                {/* Prob */}
+                                <div className="flex items-center gap-2 px-2 py-1 hover:bg-white/5 rounded transition-colors group">
+                                    <Percent size={12} className="text-text-secondary group-hover:text-accent-primary" />
                                     <span className="text-[10px] text-text-secondary font-bold font-sans">Prob</span>
                                     <input
                                         type="number"
@@ -495,18 +506,18 @@ export function AnalysisPage() {
                                         onChange={(e) => setMinProb(parseInt(e.target.value) || 0)}
                                         className="w-8 bg-transparent border-0 text-text-primary text-xs font-bold font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
                                     />
-                                    <span className="text-[10px] text-text-secondary">%</span>
+                                    <span className="text-[10px] text-text-secondary opacity-50">%</span>
                                 </div>
                             </div>
 
-                            {/* Toggle */}
+                            {/* Group 4: Toggle */}
                             <button
                                 onClick={() => setIsCumulative(!isCumulative)}
                                 className={cn(
-                                    "px-3 py-1.5 text-[10px] font-bold rounded-lg border transition-all uppercase tracking-wide",
+                                    "ml-2 px-4 py-1.5 text-[10px] font-bold rounded-lg border transition-all uppercase tracking-widest hover:scale-105 active:scale-95",
                                     isCumulative
-                                        ? "bg-accent-primary text-white border-accent-primary shadow-sm"
-                                        : "bg-bg-tertiary text-text-secondary border-border-primary hover:text-text-primary"
+                                        ? "bg-accent-primary text-white border-accent-primary shadow-lg shadow-accent-primary/20"
+                                        : "bg-bg-tertiary text-text-secondary border-border-primary hover:text-text-primary hover:border-text-primary"
                                 )}
                             >
                                 {isCumulative ? 'CUMUL' : 'DAILY'}
