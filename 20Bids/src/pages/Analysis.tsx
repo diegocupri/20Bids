@@ -1011,47 +1011,19 @@ export function AnalysisPage() {
                                                 );
                                             }}
                                         />
-                                        <Bar dataKey="max" fill="transparent" shape={(props: any) => {
-                                            const { x, width, payload, yAxis } = props;
-                                            if (!payload || !yAxis) return <g />;
-                                            const { min, q1, median, q3, max: maxVal } = payload;
-
-                                            const scale = yAxis.scale;
-                                            const yMin = scale(min);
-                                            const yQ1 = scale(q1);
-                                            const yMedian = scale(median);
-                                            const yQ3 = scale(q3);
-                                            const yMax = scale(maxVal);
-                                            const cx = x + width / 2;
-                                            const boxWidth = width * 0.4;
-
-                                            return (
-                                                <g>
-                                                    {/* Whiskers */}
-                                                    <line x1={cx} y1={yMin} x2={cx} y2={yQ1} stroke="#94a3b8" strokeWidth={1} />
-                                                    <line x1={cx} y1={yQ3} x2={cx} y2={yMax} stroke="#94a3b8" strokeWidth={1} />
-                                                    <line x1={cx - boxWidth / 2} y1={yMin} x2={cx + boxWidth / 2} y2={yMin} stroke="#94a3b8" strokeWidth={1} />
-                                                    <line x1={cx - boxWidth / 2} y1={yMax} x2={cx + boxWidth / 2} y2={yMax} stroke="#94a3b8" strokeWidth={1} />
-
-                                                    {/* Box (Rect from Q3 to Q1) */}
-                                                    <rect
-                                                        x={cx - boxWidth / 2}
-                                                        y={Math.min(yQ1, yQ3)}
-                                                        width={boxWidth}
-                                                        height={Math.max(2, Math.abs(yQ1 - yQ3))}
-                                                        fill={median > 0 ? "#86efac" : "#fca5a5"}
-                                                        opacity={0.6}
-                                                        stroke={median > 0 ? "#16a34a" : "#dc2626"}
-                                                        strokeWidth={1}
-                                                        rx={2}
-                                                    />
-
-                                                    {/* Median Line */}
-                                                    <line x1={cx - boxWidth / 2} y1={yMedian} x2={cx + boxWidth / 2} y2={yMedian} stroke="#1f2937" strokeWidth={2} />
-                                                </g>
-                                            );
-                                        }} />
-                                        <ReferenceLine y={0} stroke="#e5e5e5" />
+                                        <Bar
+                                            dataKey="median"
+                                            fill="#3b82f6"
+                                            radius={[4, 4, 0, 0]}
+                                        >
+                                            {(boxPlotData || []).map((entry, index) => (
+                                                <Cell
+                                                    key={`cell-${index}`}
+                                                    fill={entry.median >= 0 ? '#10b981' : '#ef4444'}
+                                                />
+                                            ))}
+                                        </Bar>
+                                        <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
