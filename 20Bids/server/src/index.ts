@@ -435,9 +435,7 @@ app.get('/api/stats/optimization', async (req, res) => {
         // Fetch all trades with intraday data
         const allRecs = await prisma.recommendation.findMany({
             where: {
-                ...(Object.keys(dateFilter).length > 0 ? { date: dateFilter } : {}),
-                high: { not: null },
-                lowBeforePeak: { not: null }
+                ...(Object.keys(dateFilter).length > 0 ? { date: dateFilter } : {})
             },
             orderBy: { date: 'asc' }
         });
