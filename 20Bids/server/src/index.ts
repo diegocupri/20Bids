@@ -463,7 +463,7 @@ app.get('/api/stats/analysis', async (req, res) => {
             volume: [] as { x: number, y: number, rvol: number }[],
             sectors: {} as Record<string, { count: number, totalMvso: number, wins: number }>,
             dailyAverages: [] as { date: string, avgReturn: number, avgPrice: number, count: number }[],
-            tradeReturns: [] as { date: string, return: number, probability: number }[], // Added date for filtering
+            tradeReturns: [] as { date: string, return: number, rawReturn: number, probability: number }[], // Added rawReturn for toggle
             debugVersion: '1.0.3' // FORCE UPDATE CHECK 3
         };
 
