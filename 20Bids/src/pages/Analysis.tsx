@@ -702,7 +702,7 @@ export function AnalysisPage() {
                                                 {/* Total Return */}
                                                 <div className="flex flex-col items-center mb-6">
                                                     <div className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-1 font-sans opacity-60">TOTAL RETURN</div>
-                                                    <div className="text-4xl font-bold text-blue-600 font-sans tracking-tight">
+                                                    <div className={`text-3xl font-medium font-sans tracking-tight ${totals.return >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
                                                         {totals.return >= 0 ? '+' : ''}{totals.return.toFixed(2)}%
                                                     </div>
                                                 </div>
