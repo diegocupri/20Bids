@@ -976,8 +976,8 @@ export function AnalysisPage() {
                                         name: (bucket as any).name || bucket.name,
                                         marker: { color: '#10b981' },
                                         boxpoints: 'outliers' as const,
-                                        jitter: 0.3,
-                                        pointpos: -1.5,
+                                        jitter: 0,
+                                        pointpos: 0,
                                         hoverinfo: 'y+name' as const
                                     }))}
                                     layout={{
@@ -985,6 +985,7 @@ export function AnalysisPage() {
                                         margin: { l: 50, r: 20, t: 10, b: 40 },
                                         yaxis: {
                                             title: { text: 'Return %' },
+                                            range: [-10, 10],
                                             zeroline: true,
                                             zerolinecolor: '#94a3b8',
                                             gridcolor: '#e5e5e5'
