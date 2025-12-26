@@ -968,7 +968,7 @@ export function AnalysisPage() {
                                     </span>
                                 </h3>
                             </div>
-                            <div style={{ width: '100%', height: 280 }}>
+                            <div style={{ width: '100%', height: 350 }}>
                                 <Plot
                                     data={(boxPlotData || []).map((bucket) => ({
                                         y: (bucket as any).values || [],
