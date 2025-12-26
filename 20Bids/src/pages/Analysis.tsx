@@ -978,7 +978,12 @@ export function AnalysisPage() {
                                         boxpoints: 'outliers' as const,
                                         jitter: 0,
                                         pointpos: 0,
-                                        hoverinfo: 'y+name' as const
+                                        hovertemplate: '<b>%{x}</b><br>' +
+                                            'Max: %{y:.2f}%<br>' +
+                                            'Q3: %{q3:.2f}%<br>' +
+                                            'Median: %{median:.2f}%<br>' +
+                                            'Q1: %{q1:.2f}%<br>' +
+                                            'Min: %{lowerfence:.2f}%<extra></extra>'
                                     }))}
                                     layout={{
                                         autosize: true,
