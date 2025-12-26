@@ -1161,64 +1161,102 @@ export function AnalysisPage() {
                             <div className="w-full h-full">
                                 {optimizationData && optimizationData.violinData ? (
                                     <Plot
-                                        data={optimizationData.violinData.map((d: any) => ({
-                                            type: 'violin',
-                                            y: d.trades,
-                                            name: `${d.tp}% TP\n(Best SL: ${d.bestSl}%)`,
-                                            box: {
-                                                visible: true
-                                            },
-                                            line: {
-                                                color: 'black'
-                                            },
-                                            meanline: {
-                                                visible: true
-                                            },
-                                            points: 'all',
-                                            jitter: 0.3,
-                                            scalemode: 'count',
-                                            spanmode: 'hard',
-                                            marker: {
-                                                size: 2,
-                                                opacity: 0.5,
-                                                color: d.totalReturn > 0 ? '#10b981' : '#ef4444' // Green if positive return, Red if negative
-                                            },
-                                            fillcolor: d.totalReturn > 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)',
-                                            hoverinfo: 'y+name',
-                                            hovertemplate: `<b>${d.tp}% TP</b><br>Return: %{y:.2f}%<br><i>(Best SL: ${d.bestSl}%)</i><extra></extra>`
-                                        }))}
+                                        data={(() => {
+                                            const colors = [
+                                                '#1abc9c', '#2ecc71', '#3498db', '#9b59b6', '#34495e',
+                                                '#f1c40f', '#e67e22', '#e74c3c', '#95a5a6', '#7f8c8d'
+                                            ];
+
+                                            // 1. Violin Traces
+                                            const traces = optimizationData.violinData.map((d: any, i: number) => ({
+                                                type: 'violin',
+                                                y: d.trades,
+                                                name: `${d.tp}%`,
+                                                box: {
+                                                    visible: true,
+                                                    width: 0.1,
+                                                    line: { color: 'black', width: 1 }
+                                                },
+                                                line: {
+                                                    color: 'rgba(0,0,0,0)', // Hide the violin outline to look cleaner
+                                                },
+                                                meanline: {
+                                                    visible: true,
+                                                    color: '#b91c1c', // Red mean line
+                                                    width: 2
+                                                },
+                                                points: 'all',
+                                                jitter: 0.5,
+                                                pointpos: 0, // Points centered
+                                                marker: {
+                                                    size: 3,
+                                                    opacity: 0.4,
+                                                    color: colors[i % colors.length] // Use palette
+                                                },
+                                                fillcolor: colors[i % colors.length], // Fill with palette
+                                                opacity: 0.6, // Transparent fill
+                                                hoverinfo: 'y+name',
+                                                hovertemplate: `<b>${d.tp}% TP</b><br>Return: %{y:.2f}%<br><i>(Best SL: ${d.bestSl}%)</i><extra></extra>`
+                                            }));
+
+                                            // 2. Mean Markers (Red Dots) - Scatter Trace
+                                            const means = optimizationData.violinData.map((d: any) => d.avgReturn);
+                                            const tps = optimizationData.violinData.map((d: any) => `${d.tp}%`);
+
+                                            traces.push({
+                                                type: 'scatter',
+                                                x: tps,
+                                                y: means,
+                                                mode: 'markers',
+                                                name: 'Mean',
+                                                marker: {
+                                                    color: '#991b1b', // Dark Red
+                                                    size: 10,
+                                                    symbol: 'circle',
+                                                    line: { color: 'white', width: 1 }
+                                                },
+                                                hoverinfo: 'skip'
+                                            });
+
+                                            return traces;
+                                        })()}
                                         layout={{
                                             autosize: true,
-                                            margin: { l: 50, r: 20, t: 30, b: 80 },
+                                            margin: { l: 50, r: 20, t: 40, b: 80 },
                                             yaxis: {
-                                                title: { text: 'Trade Return %' },
+                                                title: { text: 'Trade Return %', font: { size: 12 } },
                                                 gridcolor: '#f3f4f6',
                                                 zeroline: true,
-                                                zerolinecolor: '#9ca3af'
+                                                zerolinecolor: '#9ca3af',
+                                                tickfont: { size: 10 }
                                             },
                                             xaxis: {
-                                                title: { text: 'Take Profit (%)' },
+                                                title: { text: 'Take Profit (%)', font: { size: 12 } },
                                                 tickmode: 'array',
-                                                tickvals: optimizationData.violinData.map((_: any, i: number) => i),
-                                                ticktext: optimizationData.violinData.map((d: any) => `${d.tp}%`),
+                                                tickvals: optimizationData.violinData.map((d: any) => `${d.tp}%`), // Match trace names
+                                                ticktext: optimizationData.violinData.map((d: any) => `${d.tp}%\n(n=${d.count})`),
+                                                tickfont: { size: 10 }
                                             },
                                             showlegend: false,
                                             hovermode: 'closest',
                                             font: { family: 'Inter', size: 11 },
-                                            shapes: [
-                                                {
-                                                    type: 'line',
-                                                    x0: -0.5,
-                                                    x1: optimizationData.violinData.length - 0.5,
-                                                    y0: 0,
-                                                    y1: 0,
-                                                    line: {
-                                                        color: '#9ca3af',
-                                                        width: 1,
-                                                        dash: 'dash'
-                                                    }
-                                                }
-                                            ]
+                                            // Annotations for Mean Values
+                                            annotations: optimizationData.violinData.map((d: any) => ({
+                                                x: `${d.tp}%`,
+                                                y: d.avgReturn,
+                                                xref: 'x',
+                                                yref: 'y',
+                                                text: `μ=${d.avgReturn.toFixed(2)}`,
+                                                showarrow: true,
+                                                arrowhead: 0,
+                                                ax: 40,
+                                                ay: -20,
+                                                font: { size: 10, color: '#374151', bgcolor: 'rgba(255,255,255,0.8)' },
+                                                bordercolor: '#e5e7eb',
+                                                borderwidth: 1,
+                                                borderpad: 2,
+                                                opacity: 0.9
+                                            }))
                                         }}
                                         config={{ displayModeBar: false, responsive: true }}
                                         style={{ width: '100%', height: '100%' }}
