@@ -60,6 +60,7 @@ export function AnalysisPage() {
     const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
     const [customStartDate, customEndDate] = dateRange;
     const [useClamped, setUseClamped] = useState(false); // Toggle for clamped data in Box Plot
+    const [boxPlotSort, setBoxPlotSort] = useState<{ key: string, asc: boolean }>({ key: 'name', asc: true });
 
     // New UX Controls
     const [takeProfit, setTakeProfit] = useState<number>(() => {
@@ -999,8 +1000,7 @@ export function AnalysisPage() {
                                             margin: { l: 50, r: 20, t: 10, b: 40 },
                                             yaxis: {
                                                 title: { text: 'Return %' },
-                                                range: [-10, 10],
-                                                fixedrange: true,
+                                                autorange: true,
                                                 zeroline: true,
                                                 zerolinecolor: '#94a3b8',
                                                 gridcolor: '#e5e5e5'
@@ -1019,37 +1019,68 @@ export function AnalysisPage() {
                                         useResizeHandler={true}
                                     />
                                 </div>
-                                {/* Summary Table */}
-                                <div style={{ flex: '0 0 200px' }} className="overflow-y-auto">
-                                    <table className="w-full text-xs font-sans">
-                                        <thead>
+                                {/* Summary Table - Sortable */}
+                                <div style={{ flex: '0 0 220px', height: '100%' }} className="overflow-y-auto flex flex-col">
+                                    <table className="w-full text-xs font-sans flex-1">
+                                        <thead className="sticky top-0 bg-white">
                                             <tr className="border-b border-gray-200">
-                                                <th className="text-left py-2 text-gray-500 font-medium">Range</th>
-                                                <th className="text-right py-2 text-gray-500 font-medium">N</th>
-                                                <th className="text-right py-2 text-gray-500 font-medium">Avg</th>
-                                                <th className="text-right py-2 text-gray-500 font-medium">WR</th>
+                                                <th
+                                                    className="text-left py-2 text-gray-500 font-medium cursor-pointer hover:text-gray-700"
+                                                    onClick={() => setBoxPlotSort(s => ({ key: 'name', asc: s.key === 'name' ? !s.asc : true }))}
+                                                >
+                                                    Range {boxPlotSort.key === 'name' && (boxPlotSort.asc ? '↑' : '↓')}
+                                                </th>
+                                                <th
+                                                    className="text-right py-2 text-gray-500 font-medium cursor-pointer hover:text-gray-700"
+                                                    onClick={() => setBoxPlotSort(s => ({ key: 'count', asc: s.key === 'count' ? !s.asc : false }))}
+                                                >
+                                                    N {boxPlotSort.key === 'count' && (boxPlotSort.asc ? '↑' : '↓')}
+                                                </th>
+                                                <th
+                                                    className="text-right py-2 text-gray-500 font-medium cursor-pointer hover:text-gray-700"
+                                                    onClick={() => setBoxPlotSort(s => ({ key: 'avg', asc: s.key === 'avg' ? !s.asc : false }))}
+                                                >
+                                                    Avg {boxPlotSort.key === 'avg' && (boxPlotSort.asc ? '↑' : '↓')}
+                                                </th>
+                                                <th
+                                                    className="text-right py-2 text-gray-500 font-medium cursor-pointer hover:text-gray-700"
+                                                    onClick={() => setBoxPlotSort(s => ({ key: 'wr', asc: s.key === 'wr' ? !s.asc : false }))}
+                                                >
+                                                    WR {boxPlotSort.key === 'wr' && (boxPlotSort.asc ? '↑' : '↓')}
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {(boxPlotData || []).map((bucket, idx) => {
-                                                const vals = (bucket as any).values || [];
-                                                const count = vals.length;
-                                                const avg = count > 0 ? vals.reduce((a: number, b: number) => a + b, 0) / count : 0;
-                                                const wins = vals.filter((v: number) => v > 0).length;
-                                                const wr = count > 0 ? (wins / count) * 100 : 0;
-                                                return (
-                                                    <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                                                        <td className="py-2 font-medium text-gray-700">{bucket.name}</td>
-                                                        <td className="py-2 text-right text-gray-600">{count}</td>
-                                                        <td className={`py-2 text-right font-mono ${avg >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                                                            {avg.toFixed(2)}%
+                                            {(boxPlotData || [])
+                                                .map((bucket, idx) => {
+                                                    const vals = (bucket as any).values || [];
+                                                    const count = vals.length;
+                                                    const avg = count > 0 ? vals.reduce((a: number, b: number) => a + b, 0) / count : 0;
+                                                    const wins = vals.filter((v: number) => v > 0).length;
+                                                    const wr = count > 0 ? (wins / count) * 100 : 0;
+                                                    return { name: bucket.name, count, avg, wr, idx };
+                                                })
+                                                .sort((a, b) => {
+                                                    const key = boxPlotSort.key as keyof typeof a;
+                                                    const aVal = a[key];
+                                                    const bVal = b[key];
+                                                    if (typeof aVal === 'string' && typeof bVal === 'string') {
+                                                        return boxPlotSort.asc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+                                                    }
+                                                    return boxPlotSort.asc ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
+                                                })
+                                                .map((row) => (
+                                                    <tr key={row.idx} className="border-b border-gray-100 hover:bg-gray-50">
+                                                        <td className="py-2 font-medium text-gray-700">{row.name}</td>
+                                                        <td className="py-2 text-right text-gray-600">{row.count}</td>
+                                                        <td className={`py-2 text-right font-mono ${row.avg >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                                            {row.avg.toFixed(2)}%
                                                         </td>
-                                                        <td className={`py-2 text-right font-mono ${wr >= 75 ? 'text-emerald-600' : wr >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>
-                                                            {wr.toFixed(0)}%
+                                                        <td className={`py-2 text-right font-mono ${row.wr >= 75 ? 'text-emerald-600' : row.wr >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>
+                                                            {row.wr.toFixed(0)}%
                                                         </td>
                                                     </tr>
-                                                );
-                                            })}
+                                                ))}
                                         </tbody>
                                     </table>
                                 </div>
