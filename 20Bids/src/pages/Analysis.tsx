@@ -997,7 +997,7 @@ export function AnalysisPage() {
                                         }))}
                                         layout={{
                                             autosize: true,
-                                            margin: { l: 50, r: 20, t: 10, b: 40 },
+                                            margin: { l: 50, r: 20, t: 10, b: 60 },
                                             yaxis: {
                                                 title: { text: 'Return %' },
                                                 autorange: true,
