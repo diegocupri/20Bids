@@ -603,10 +603,11 @@ app.get('/api/stats/analysis', async (req, res) => {
                 analysis.volume.push({ x: rec.relativeVol, y: clampedMvso, rvol: rec.relativeVol });
             }
 
-            // Trade Returns for Box Plot (Granular Data - clamped represents real returns with TP/SL)
+            // Trade Returns for Box Plot (Granular Data - both raw and clamped)
             analysis.tradeReturns.push({
                 date: dateStr,
                 return: clampedMvso,
+                rawReturn: mvso, // Raw return without TP/SL
                 probability: rec.probabilityValue || 70
             });
         }

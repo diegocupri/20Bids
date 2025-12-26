@@ -59,6 +59,7 @@ export function AnalysisPage() {
     const [timeRange, setTimeRange] = useState<TimeRange>('ALL');
     const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
     const [customStartDate, customEndDate] = dateRange;
+    const [useClamped, setUseClamped] = useState(false); // Toggle for clamped data in Box Plot
 
     // New UX Controls
     const [takeProfit, setTakeProfit] = useState<number>(() => {
@@ -350,8 +351,8 @@ export function AnalysisPage() {
                 if (tradeDate < filterStart) return;
             }
 
-            // Backend 'clampedMvso' already has TP/SL applied.
-            const ret = d.return;
+            // Use raw or clamped return based on toggle
+            const ret = useClamped ? d.return : (d.rawReturn ?? d.return);
 
             const bucket = probBuckets.find(b => prob >= b.min && prob < b.max);
             if (bucket) {
@@ -395,7 +396,7 @@ export function AnalysisPage() {
             }
         };
 
-    }, [data, timeRange, takeProfit, customStartDate, customEndDate]);
+    }, [data, timeRange, takeProfit, customStartDate, customEndDate, useClamped]);
 
     // Top Periods Calculation (Moved before conditional return)
     const topPeriods = useMemo(() => {
@@ -962,11 +963,16 @@ export function AnalysisPage() {
                                     <span className="text-[10px] font-normal text-text-secondary/70">
                                         (Return Distribution by Prob %)
                                     </span>
-                                    {/* DEBUG INFO */}
-                                    <span className="text-[9px] text-red-500 font-mono ml-4">
-                                        [DEBUG: v{(data as any)?.debugVersion || 'OLD'} | Trades: {(data as any)?.tradeReturns?.length || 0} -&gt; Filtered: {(boxPlotData || []).reduce((acc, b) => acc + b.count, 0)}]
-                                    </span>
                                 </h3>
+                                <button
+                                    onClick={() => setUseClamped(!useClamped)}
+                                    className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${useClamped
+                                        ? 'bg-emerald-500 text-white'
+                                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                        }`}
+                                >
+                                    {useClamped ? 'TP/SL APPLIED' : 'RAW RETURNS'}
+                                </button>
                             </div>
                             <div style={{ width: '100%', height: 350 }}>
                                 <Plot
@@ -991,13 +997,14 @@ export function AnalysisPage() {
                                         yaxis: {
                                             title: { text: 'Return %' },
                                             range: [-10, 10],
+                                            fixedrange: true,
                                             zeroline: true,
                                             zerolinecolor: '#94a3b8',
                                             gridcolor: '#e5e5e5'
                                         },
                                         xaxis: {
-                                            title: { text: 'Probability Range' },
-                                            tickfont: { size: 11 }
+                                            tickfont: { size: 11 },
+                                            fixedrange: true
                                         },
                                         showlegend: false,
                                         paper_bgcolor: 'transparent',
