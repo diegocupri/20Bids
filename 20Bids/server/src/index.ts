@@ -447,66 +447,78 @@ app.get('/api/stats/optimization', async (req, res) => {
         const slRange = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
         // Result matrix: rows = SL, cols = TP
-        const results: { tp: number, sl: number, totalReturn: number, winRate: number, tradeCount: number, avgReturn: number }[] = [];
+        // Violin Plot Data Logic
+        const violinData: { tp: number, bestSl: number, trades: number[], totalReturn: number, winRate: number, count: number, avgReturn: number }[] = [];
 
-        for (const sl of slRange) {
-            for (const tp of tpRange) {
-                let totalReturn = 0;
+        // For each TP, find the best SL and collect trade distribution
+        for (const tp of tpRange) {
+            let bestSlForTp = 0;
+            let maxReturnForTp = -Infinity;
+            let bestStats: any = null;
+            let bestTrades: number[] = [];
+
+            // Find best SL for this TP
+            for (const sl of slRange) {
+                let currentReturn = 0;
                 let wins = 0;
-                let tradeCount = 0;
+                let count = 0;
+                const currentTrades: number[] = [];
 
                 for (const rec of allRecs) {
                     if (!rec.refPrice1020 || !rec.high || !rec.lowBeforePeak) continue;
 
-                    // Calculate base MVSO (movement vs open at 10:20)
                     const mvso = ((rec.high - rec.refPrice1020) / rec.refPrice1020) * 100;
-                    // Calculate max drawdown from lowBeforePeak
                     const maxDrawdown = Math.abs(((rec.lowBeforePeak - rec.refPrice1020) / rec.refPrice1020) * 100);
 
-                    // Simulate TP/SL
                     let tradeReturn: number;
-
-                    // Check if stopped out (max drawdown hit SL)
                     if (maxDrawdown >= sl) {
                         tradeReturn = -sl;
-                    }
-                    // Check if hit take profit
-                    else if (mvso >= tp) {
+                    } else if (mvso >= tp) {
                         tradeReturn = tp;
-                    }
-                    // Otherwise, actual return (clamped by SL)
-                    else {
-                        tradeReturn = Math.max(mvso, -sl);
+                    } else {
+                        tradeReturn = Math.max(mvso, -sl); // Validation: Is this logic consistent with clamped? Yes.
                     }
 
-                    totalReturn += tradeReturn;
+                    currentReturn += tradeReturn;
+                    currentTrades.push(tradeReturn);
                     if (tradeReturn > 0) wins++;
-                    tradeCount++;
+                    count++;
                 }
 
-                const winRate = tradeCount > 0 ? (wins / tradeCount) * 100 : 0;
-                const avgReturn = tradeCount > 0 ? totalReturn / tradeCount : 0;
+                if (currentReturn > maxReturnForTp) {
+                    maxReturnForTp = currentReturn;
+                    bestSlForTp = sl;
+                    bestTrades = currentTrades;
+                    bestStats = {
+                        totalReturn: parseFloat(currentReturn.toFixed(2)),
+                        winRate: count > 0 ? parseFloat(((wins / count) * 100).toFixed(1)) : 0,
+                        count,
+                        avgReturn: count > 0 ? parseFloat((currentReturn / count).toFixed(3)) : 0
+                    };
+                }
+            }
 
-                results.push({
+            if (bestStats) {
+                violinData.push({
                     tp,
-                    sl,
-                    totalReturn: parseFloat(totalReturn.toFixed(2)),
-                    winRate: parseFloat(winRate.toFixed(1)),
-                    tradeCount,
-                    avgReturn: parseFloat(avgReturn.toFixed(3))
+                    bestSl: bestSlForTp,
+                    trades: bestTrades, // Array of returns for the violin plot
+                    ...bestStats
                 });
             }
         }
 
-        // Find best combination
+        // Keep existing heatmap results logic (optional, but good for fallback or debug)
+        const results = violinData.map(v => ({ tp: v.tp, sl: v.bestSl, totalReturn: v.totalReturn, winRate: v.winRate, tradeCount: v.count, avgReturn: v.avgReturn }));
         const best = results.reduce((a, b) => a.totalReturn > b.totalReturn ? a : b);
 
-        console.log(`[Optimization] Best: TP=${best.tp}%, SL=${best.sl}% => Total Return: ${best.totalReturn}%`);
+        console.log(`[Optimization] Best Overall: TP=${best.tp}%, SL=${best.sl}% => Total Return: ${best.totalReturn}%`);
 
         res.json({
             tpRange,
             slRange,
-            results,
+            results, // Legacy support if needed, but violinData is main
+            violinData,
             best,
             tradeCount: allRecs.length
         });
