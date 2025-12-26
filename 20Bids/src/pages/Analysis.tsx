@@ -974,47 +974,85 @@ export function AnalysisPage() {
                                     {useClamped ? 'TP/SL APPLIED' : 'RAW RETURNS'}
                                 </button>
                             </div>
-                            <div style={{ width: '100%', height: 350 }}>
-                                <Plot
-                                    data={(boxPlotData || []).map((bucket) => ({
-                                        y: (bucket as any).values || [],
-                                        type: 'box' as const,
-                                        name: (bucket as any).name || bucket.name,
-                                        marker: { color: '#10b981' },
-                                        boxpoints: 'outliers' as const,
-                                        jitter: 0,
-                                        pointpos: 0,
-                                        hovertemplate: '<b>%{x}</b><br>' +
-                                            'Max: %{y:.2f}%<br>' +
-                                            'Q3: %{q3:.2f}%<br>' +
-                                            'Median: %{median:.2f}%<br>' +
-                                            'Q1: %{q1:.2f}%<br>' +
-                                            'Min: %{lowerfence:.2f}%<extra></extra>'
-                                    }))}
-                                    layout={{
-                                        autosize: true,
-                                        margin: { l: 50, r: 20, t: 10, b: 40 },
-                                        yaxis: {
-                                            title: { text: 'Return %' },
-                                            range: [-10, 10],
-                                            fixedrange: true,
-                                            zeroline: true,
-                                            zerolinecolor: '#94a3b8',
-                                            gridcolor: '#e5e5e5'
-                                        },
-                                        xaxis: {
-                                            tickfont: { size: 11 },
-                                            fixedrange: true
-                                        },
-                                        showlegend: false,
-                                        paper_bgcolor: 'transparent',
-                                        plot_bgcolor: 'transparent',
-                                        font: { family: 'Inter, sans-serif', size: 11, color: '#64748b' }
-                                    }}
-                                    config={{ displayModeBar: false, responsive: true }}
-                                    style={{ width: '100%', height: '100%' }}
-                                    useResizeHandler={true}
-                                />
+                            <div className="flex gap-4" style={{ height: 350 }}>
+                                {/* Box Plot Chart */}
+                                <div style={{ flex: '1 1 70%', minWidth: 0 }}>
+                                    <Plot
+                                        data={(boxPlotData || []).map((bucket) => ({
+                                            y: (bucket as any).values || [],
+                                            type: 'box' as const,
+                                            name: (bucket as any).name || bucket.name,
+                                            marker: { color: '#10b981' },
+                                            boxpoints: 'outliers' as const,
+                                            jitter: 0,
+                                            pointpos: 0,
+                                            hoverlabel: { bgcolor: 'white', bordercolor: '#e5e5e5', font: { color: '#374151' } },
+                                            hovertemplate: '<b>%{x}</b><br>' +
+                                                'Max: %{y:.2f}%<br>' +
+                                                'Q3: %{q3:.2f}%<br>' +
+                                                'Median: %{median:.2f}%<br>' +
+                                                'Q1: %{q1:.2f}%<br>' +
+                                                'Min: %{lowerfence:.2f}%<extra></extra>'
+                                        }))}
+                                        layout={{
+                                            autosize: true,
+                                            margin: { l: 50, r: 20, t: 10, b: 40 },
+                                            yaxis: {
+                                                title: { text: 'Return %' },
+                                                range: [-10, 10],
+                                                fixedrange: true,
+                                                zeroline: true,
+                                                zerolinecolor: '#94a3b8',
+                                                gridcolor: '#e5e5e5'
+                                            },
+                                            xaxis: {
+                                                tickfont: { size: 11 },
+                                                fixedrange: true
+                                            },
+                                            showlegend: false,
+                                            paper_bgcolor: 'transparent',
+                                            plot_bgcolor: 'transparent',
+                                            font: { family: 'Inter, sans-serif', size: 11, color: '#64748b' }
+                                        }}
+                                        config={{ displayModeBar: false, responsive: true }}
+                                        style={{ width: '100%', height: '100%' }}
+                                        useResizeHandler={true}
+                                    />
+                                </div>
+                                {/* Summary Table */}
+                                <div style={{ flex: '0 0 200px' }} className="overflow-y-auto">
+                                    <table className="w-full text-xs font-sans">
+                                        <thead>
+                                            <tr className="border-b border-gray-200">
+                                                <th className="text-left py-2 text-gray-500 font-medium">Range</th>
+                                                <th className="text-right py-2 text-gray-500 font-medium">N</th>
+                                                <th className="text-right py-2 text-gray-500 font-medium">Avg</th>
+                                                <th className="text-right py-2 text-gray-500 font-medium">WR</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {(boxPlotData || []).map((bucket, idx) => {
+                                                const vals = (bucket as any).values || [];
+                                                const count = vals.length;
+                                                const avg = count > 0 ? vals.reduce((a: number, b: number) => a + b, 0) / count : 0;
+                                                const wins = vals.filter((v: number) => v > 0).length;
+                                                const wr = count > 0 ? (wins / count) * 100 : 0;
+                                                return (
+                                                    <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                                                        <td className="py-2 font-medium text-gray-700">{bucket.name}</td>
+                                                        <td className="py-2 text-right text-gray-600">{count}</td>
+                                                        <td className={`py-2 text-right font-mono ${avg >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                                            {avg.toFixed(2)}%
+                                                        </td>
+                                                        <td className={`py-2 text-right font-mono ${wr >= 75 ? 'text-emerald-600' : wr >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>
+                                                            {wr.toFixed(0)}%
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </ChartCard>
 
