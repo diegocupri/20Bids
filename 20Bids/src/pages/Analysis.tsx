@@ -341,7 +341,7 @@ export function AnalysisPage() {
             { label: '75-80', min: 75, max: 80, values: [] as number[] },
             { label: '80-85', min: 80, max: 85, values: [] as number[] },
             { label: '85-90', min: 85, max: 90, values: [] as number[] },
-            { label: '90+', min: 90, max: 200, values: [] as number[] }, // 200 to capture all
+            { label: '90+', min: 90, max: 1000, values: [] as number[] }, // Capture all high probabilities
         ];
 
         // Populate buckets using granular tradeReturns if available, otherwise fallback (less accurate)
@@ -979,7 +979,7 @@ export function AnalysisPage() {
                                     {useClamped ? 'TP/SL APPLIED' : 'RAW RETURNS'}
                                 </button>
                             </div>
-                            <div className="flex gap-4" style={{ height: 350 }}>
+                            <div className="flex gap-4" style={{ height: 380 }}>
                                 {/* Box Plot Chart */}
                                 <div style={{ flex: '1 1 70%', minWidth: 0 }}>
                                     <Plot
@@ -1052,7 +1052,7 @@ export function AnalysisPage() {
                                 </div>
                                 {/* Summary Table - Sortable */}
                                 <div style={{ flex: '0 0 220px', height: '100%' }} className="overflow-y-auto flex flex-col">
-                                    <table className="w-full text-xs font-sans flex-1">
+                                    <table className="w-full text-xs font-sans">
                                         <thead className="sticky top-0 bg-white">
                                             <tr className="border-b border-gray-200">
                                                 <th
