@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    AreaChart, Area, ComposedChart, Line, Legend, LabelList, Cell, ReferenceLine
+    AreaChart, Area, ComposedChart, Line, Legend, LabelList, Cell, ReferenceLine, ErrorBar
 } from 'recharts';
 import { cn } from '../lib/utils';
 import { fetchAnalysis } from '../api/client';
@@ -379,7 +379,8 @@ export function AnalysisPage() {
                 median,
                 q3,
                 max,
-                count
+                count,
+                errorY: [median - min, max - median] // For ErrorBar whiskers
             };
         });
 
@@ -1015,6 +1016,7 @@ export function AnalysisPage() {
                                             dataKey="median"
                                             fill="#3b82f6"
                                             radius={[4, 4, 0, 0]}
+                                            barSize={40}
                                         >
                                             {(boxPlotData || []).map((entry, index) => (
                                                 <Cell
@@ -1022,6 +1024,12 @@ export function AnalysisPage() {
                                                     fill={entry.median >= 0 ? '#10b981' : '#ef4444'}
                                                 />
                                             ))}
+                                            <ErrorBar
+                                                dataKey="errorY"
+                                                width={8}
+                                                strokeWidth={2}
+                                                stroke="#64748b"
+                                            />
                                         </Bar>
                                         <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
                                     </BarChart>
