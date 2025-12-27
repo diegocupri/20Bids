@@ -111,6 +111,7 @@ export function AnalysisPage() {
     const [debouncedMinVolume, setDebouncedMinVolume] = useState<number>(minVolume);
     const [debouncedMinPrice, setDebouncedMinPrice] = useState<number>(minPrice);
     const [debouncedMinProb, setDebouncedMinProb] = useState<number>(minProb);
+    const [mvsoThreshold, setMvsoThreshold] = useState<number>(0.5); // New MVSO Threshold Filter
 
     // Debounce Take Profit
     useEffect(() => {
@@ -337,11 +338,11 @@ export function AnalysisPage() {
 
         // Box Plot Calculation: Distribution by Probability Range
         const probBuckets = [
-            { label: '70-75', min: 70, max: 75, values: [] as number[] },
-            { label: '75-80', min: 75, max: 80, values: [] as number[] },
-            { label: '80-85', min: 80, max: 85, values: [] as number[] },
-            { label: '85-90', min: 85, max: 90, values: [] as number[] },
-            { label: '90+', min: 90, max: 1000, values: [] as number[] }, // Capture all high probabilities
+            { label: '70-75', min: 70, max: 75, values: [] as number[], valuesHighMvso: [] as number[] },
+            { label: '75-80', min: 75, max: 80, values: [] as number[], valuesHighMvso: [] as number[] },
+            { label: '80-85', min: 80, max: 85, values: [] as number[], valuesHighMvso: [] as number[] },
+            { label: '85-90', min: 85, max: 90, values: [] as number[], valuesHighMvso: [] as number[] },
+            { label: '90+', min: 90, max: 1000, values: [] as number[], valuesHighMvso: [] as number[] }, // Capture all high probabilities
         ];
 
         // Populate buckets using granular tradeReturns if available, otherwise fallback (less accurate)
@@ -362,6 +363,12 @@ export function AnalysisPage() {
             const bucket = probBuckets.find(b => prob >= b.min && prob < b.max);
             if (bucket) {
                 bucket.values.push(ret);
+
+                // Compare rawReturn (MVSO) against threshold
+                const mvso = d.rawReturn ?? 0;
+                if (mvso >= mvsoThreshold) {
+                    bucket.valuesHighMvso.push(ret);
+                }
             }
         });
 
@@ -375,7 +382,9 @@ export function AnalysisPage() {
             return {
                 name: bucket.label,
                 values: values, // Raw values for Plotly
-                count
+                count,
+                valuesHighMvso: bucket.valuesHighMvso,
+                countHighMvso: bucket.valuesHighMvso.length
             };
         });
 
@@ -399,9 +408,9 @@ export function AnalysisPage() {
                 reliability,
                 reliabilityColor
             }
-        };
+        }
 
-    }, [data, timeRange, takeProfit, customStartDate, customEndDate, useClamped]);
+    }, [data, timeRange, takeProfit, customStartDate, customEndDate, useClamped, mvsoThreshold]);
 
     // Top Periods Calculation (Moved before conditional return)
     const topPeriods = useMemo(() => {
@@ -626,6 +635,23 @@ export function AnalysisPage() {
                                         placeholder="0"
                                         onChange={(e) => setMinProb(parseInt(e.target.value) || 0)}
                                         className="w-9 bg-transparent border-0 text-text-primary text-sm font-black font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
+                                    />
+                                    <span className="text-[10px] text-text-secondary opacity-50">%</span>
+                                </div>
+
+                                <div className="w-px h-5 bg-border-primary/30"></div>
+
+                                {/* MVSO Filter (Amber for distinction) */}
+                                <div className="flex items-center gap-1.5 px-2 py-1 hover:bg-white/5 rounded transition-colors group">
+                                    <span className="text-xs font-bold font-sans text-amber-500 group-hover:text-amber-400">MVSO</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.1"
+                                        value={mvsoThreshold}
+                                        placeholder="0.5"
+                                        onChange={(e) => setMvsoThreshold(parseFloat(e.target.value) || 0)}
+                                        className="w-10 bg-transparent border-0 text-text-primary text-sm font-black font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
                                     />
                                     <span className="text-[10px] text-text-secondary opacity-50">%</span>
                                 </div>
