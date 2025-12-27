@@ -384,7 +384,8 @@ export function AnalysisPage() {
                 values: values, // Raw values for Plotly
                 count,
                 valuesHighMvso: bucket.valuesHighMvso,
-                countHighMvso: bucket.valuesHighMvso.length
+                countHighMvso: bucket.valuesHighMvso.length,
+                hitRate: count > 0 ? (bucket.valuesHighMvso.length / count) * 100 : 0
             };
         });
 
@@ -1011,66 +1012,72 @@ export function AnalysisPage() {
                                     <Plot
                                         data={(() => {
                                             const traces: any[] = [];
+
+                                            // 1. Box Traces (One per bucket, all same color/group)
                                             (boxPlotData || []).forEach((bucket) => {
                                                 const vals = (bucket as any).values || [];
-                                                const valsHigh = (bucket as any).valuesHighMvso || [];
-
-                                                // Trace 1: All Trades (Blue)
                                                 if (vals.length > 0) {
                                                     traces.push({
                                                         y: vals,
                                                         type: 'box',
-                                                        name: bucket.name, // Shared x-axis name groups them
-                                                        legendgroup: 'All Trades',
-                                                        showlegend: bucket.name === '70-75', // Show legend only once
+                                                        name: bucket.name,
                                                         marker: { color: 'rgba(59, 130, 246, 0.3)', line: { color: '#3b82f6', width: 1 }, size: 2 },
                                                         boxpoints: 'all',
                                                         jitter: 0.5,
                                                         pointpos: -1.8,
                                                         fillcolor: 'rgba(59, 130, 246, 0.1)',
                                                         line: { color: '#3b82f6' },
-                                                        offsetgroup: '1'
-                                                    });
-                                                }
-
-                                                // Trace 2: High MVSO (Amber)
-                                                if (valsHigh.length > 0) {
-                                                    traces.push({
-                                                        y: valsHigh,
-                                                        type: 'box',
-                                                        name: bucket.name, // Same name to group on x-axis
-                                                        legendgroup: 'High MVSO',
-                                                        showlegend: bucket.name === '70-75',
-                                                        marker: { color: 'rgba(245, 158, 11, 0.6)', line: { color: '#d97706', width: 1 }, size: 2 },
-                                                        boxpoints: 'all',
-                                                        jitter: 0.5,
-                                                        pointpos: -1.8,
-                                                        fillcolor: 'rgba(245, 158, 11, 0.2)',
-                                                        line: { color: '#f59e0b' },
-                                                        offsetgroup: '2'
+                                                        showlegend: false
                                                     });
                                                 }
                                             });
+
+                                            // 2. Line Trace (Hit Rate %) - Overlay
+                                            // Collect x (bucket names) and y (hit rates)
+                                            const xValues = (boxPlotData || []).map(b => b.name);
+                                            const yValues = (boxPlotData || []).map(b => (b as any).hitRate || 0);
+
+                                            traces.push({
+                                                x: xValues,
+                                                y: yValues,
+                                                name: `MVSO > ${mvsoThreshold}% Rate`,
+                                                type: 'scatter',
+                                                mode: 'lines+markers',
+                                                yaxis: 'y2', // Map to secondary y-axis
+                                                line: { color: '#f59e0b', width: 2, dash: 'dot' }, // Amber dashed line
+                                                marker: { color: '#d97706', size: 6, symbol: 'circle' },
+                                                hovertemplate: 'Hit Rate: %{y:.1f}%<extra></extra>'
+                                            });
+
                                             return traces;
                                         })()}
                                         layout={{
                                             autosize: true,
-                                            margin: { l: 50, r: 20, t: 10, b: 80 },
+                                            margin: { l: 40, r: 40, t: 30, b: 40 },
                                             yaxis: {
-                                                title: { text: 'Return %' },
+                                                title: { text: 'Return %', font: { size: 10, color: '#64748b' } },
                                                 autorange: true,
                                                 zeroline: true,
-                                                zerolinecolor: '#94a3b8',
-                                                gridcolor: '#e5e5e5'
+                                                zerolinecolor: '#e5e7eb',
+                                                gridcolor: '#f3f4f6',
+                                                tickfont: { size: 10, color: '#64748b' }
+                                            },
+                                            yaxis2: {
+                                                title: { text: 'Hit Rate %', font: { size: 10, color: '#d97706' } },
+                                                overlaying: 'y',
+                                                side: 'right',
+                                                range: [0, 100],
+                                                tickfont: { size: 10, color: '#d97706' },
+                                                showgrid: false
                                             },
                                             xaxis: {
-                                                tickfont: { size: 11 },
+                                                tickfont: { size: 10, color: '#64748b' },
                                                 fixedrange: true,
-                                                tickangle: 0
+                                                tickangle: 0,
+                                                showticklabels: true
                                             },
-                                            boxmode: 'group' as const,
                                             showlegend: true,
-                                            legend: { orientation: 'h', x: 0, y: 1.1 },
+                                            legend: { orientation: 'h', x: 0, y: 1.1, font: { size: 10 } },
                                             paper_bgcolor: 'transparent',
                                             plot_bgcolor: 'transparent',
                                             font: { family: 'Inter, sans-serif', size: 11, color: '#64748b' },
