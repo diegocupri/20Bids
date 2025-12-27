@@ -427,6 +427,9 @@ app.get('/api/stats/optimization', async (req, res) => {
         // Date Filtering (optional)
         const startDateStr = req.query.startDate as string;
         const endDateStr = req.query.endDate as string;
+        const minVolume = parseFloat(req.query.minVol as string) || 0;
+        const minPrice = parseFloat(req.query.minPrice as string) || 0;
+        const minProb = parseFloat(req.query.minProb as string) || 0;
 
         const dateFilter: any = {};
         if (startDateStr) dateFilter.gte = new Date(startDateStr);
