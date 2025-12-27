@@ -1053,7 +1053,7 @@ export function AnalysisPage() {
                                         })()}
                                         layout={{
                                             autosize: true,
-                                            margin: { l: 40, r: 40, t: 30, b: 40 },
+                                            margin: { l: 40, r: 40, t: 30, b: 80 },
                                             yaxis: {
                                                 title: { text: 'Return %', font: { size: 10, color: '#64748b' } },
                                                 autorange: true,
@@ -1066,14 +1066,16 @@ export function AnalysisPage() {
                                                 title: { text: 'Hit Rate %', font: { size: 10, color: '#d97706' } },
                                                 overlaying: 'y',
                                                 side: 'right',
-                                                range: [0, 100],
+                                                range: [50, 105], // Scaled 50-100%
                                                 tickfont: { size: 10, color: '#d97706' },
                                                 showgrid: false
                                             },
                                             xaxis: {
                                                 tickfont: { size: 10, color: '#64748b' },
                                                 fixedrange: true,
-                                                tickangle: 0,
+                                                tickangle: -45, // Angled labels if crowded
+                                                type: 'category', // Force category
+                                                automargin: true,
                                                 showticklabels: true
                                             },
                                             showlegend: true,
