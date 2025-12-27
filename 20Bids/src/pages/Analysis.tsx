@@ -1010,34 +1010,48 @@ export function AnalysisPage() {
                                 <div style={{ flex: '1 1 70%', minWidth: 0 }}>
                                     <Plot
                                         data={(() => {
-                                            // Calculate max count for normalizing widths
-                                            const counts = (boxPlotData || []).map((b: any) => (b.values?.length || 0));
-                                            const maxCount = Math.max(...counts, 1);
-
-                                            return (boxPlotData || []).map((bucket) => {
+                                            const traces: any[] = [];
+                                            (boxPlotData || []).forEach((bucket) => {
                                                 const vals = (bucket as any).values || [];
-                                                const count = vals.length;
-                                                // Width proportional to count (0.2 to 0.6 range)
-                                                const width = 0.2 + (count / maxCount) * 0.4;
+                                                const valsHigh = (bucket as any).valuesHighMvso || [];
 
-                                                return {
-                                                    y: vals,
-                                                    type: 'box' as const,
-                                                    name: `${bucket.name}\n(n=${count})`,
-                                                    marker: { color: 'rgba(59, 130, 246, 0.3)', line: { color: '#3b82f6', width: 1 } },
-                                                    boxpoints: 'all' as const,
-                                                    jitter: 0.3,
-                                                    pointpos: 0,
-                                                    width: width,
-                                                    hoverlabel: { bgcolor: 'white', bordercolor: '#e5e5e5', font: { color: '#374151' } },
-                                                    hovertemplate: `<b>${bucket.name}</b> (n=${count})<br>` +
-                                                        'Max: %{y:.2f}%<br>' +
-                                                        'Q3: %{q3:.2f}%<br>' +
-                                                        'Median: %{median:.2f}%<br>' +
-                                                        'Q1: %{q1:.2f}%<br>' +
-                                                        'Min: %{lowerfence:.2f}%<extra></extra>'
-                                                };
+                                                // Trace 1: All Trades (Blue)
+                                                if (vals.length > 0) {
+                                                    traces.push({
+                                                        y: vals,
+                                                        type: 'box',
+                                                        name: bucket.name, // Shared x-axis name groups them
+                                                        legendgroup: 'All Trades',
+                                                        showlegend: bucket.name === '70-75', // Show legend only once
+                                                        marker: { color: 'rgba(59, 130, 246, 0.3)', line: { color: '#3b82f6', width: 1 }, size: 2 },
+                                                        boxpoints: 'all',
+                                                        jitter: 0.5,
+                                                        pointpos: -1.8,
+                                                        fillcolor: 'rgba(59, 130, 246, 0.1)',
+                                                        line: { color: '#3b82f6' },
+                                                        offsetgroup: '1'
+                                                    });
+                                                }
+
+                                                // Trace 2: High MVSO (Amber)
+                                                if (valsHigh.length > 0) {
+                                                    traces.push({
+                                                        y: valsHigh,
+                                                        type: 'box',
+                                                        name: bucket.name, // Same name to group on x-axis
+                                                        legendgroup: 'High MVSO',
+                                                        showlegend: bucket.name === '70-75',
+                                                        marker: { color: 'rgba(245, 158, 11, 0.6)', line: { color: '#d97706', width: 1 }, size: 2 },
+                                                        boxpoints: 'all',
+                                                        jitter: 0.5,
+                                                        pointpos: -1.8,
+                                                        fillcolor: 'rgba(245, 158, 11, 0.2)',
+                                                        line: { color: '#f59e0b' },
+                                                        offsetgroup: '2'
+                                                    });
+                                                }
                                             });
+                                            return traces;
                                         })()}
                                         layout={{
                                             autosize: true,
@@ -1054,7 +1068,9 @@ export function AnalysisPage() {
                                                 fixedrange: true,
                                                 tickangle: 0
                                             },
-                                            showlegend: false,
+                                            boxmode: 'group' as const,
+                                            showlegend: true,
+                                            legend: { orientation: 'h', x: 0, y: 1.1 },
                                             paper_bgcolor: 'transparent',
                                             plot_bgcolor: 'transparent',
                                             font: { family: 'Inter, sans-serif', size: 11, color: '#64748b' },
