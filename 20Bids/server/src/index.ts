@@ -442,82 +442,98 @@ app.get('/api/stats/optimization', async (req, res) => {
 
         console.log(`[Optimization] Found ${allRecs.length} trades with intraday data`);
 
-        // TP and SL ranges to test (1% to 10%)
-        const tpRange = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-        const slRange = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        // TP and SL ranges to test (0.5% to 12% with 0.5 steps)
+        const rangeStep = 0.5;
+        const maxVal = 12;
+        const tpRange: number[] = [];
+        const slRange: number[] = [];
+        for (let i = 0.5; i <= maxVal; i += rangeStep) {
+            tpRange.push(i);
+            slRange.push(i);
+        }
 
-        // Result matrix: rows = SL, cols = TP
-        // Violin Plot Data Logic
-        const violinData: { tp: number, bestSl: number, trades: number[], totalReturn: number, winRate: number, count: number, avgReturn: number }[] = [];
+        const bubbleData: any[] = [];
 
-        // For each TP, find the best SL and collect trade distribution
+        // Optimize loop: Pre-calculate recs data
+        const validRecs = allRecs
+            .filter(r => r.refPrice1020 && r.high && r.lowBeforePeak)
+            .map(r => {
+                const price = r.refPrice1020!;
+                return {
+                    mvso: ((r.high! - price) / price) * 100,
+                    maxDD: Math.abs(((r.lowBeforePeak! - price) / price) * 100),
+                    vol: r.relativeVol || 0,
+                    price: price,
+                    prob: r.probabilityValue || 0
+                };
+            });
+
+        // Grid Search: All TP x All SL
         for (const tp of tpRange) {
-            let bestSlForTp = 0;
-            let maxReturnForTp = -Infinity;
-            let bestStats: any = null;
-            let bestTrades: number[] = [];
-
-            // Find best SL for this TP
             for (const sl of slRange) {
                 let currentReturn = 0;
                 let wins = 0;
                 let count = 0;
-                const currentTrades: number[] = [];
+                let grossWin = 0;
+                let grossLoss = 0;
 
-                for (const rec of allRecs) {
-                    if (!rec.refPrice1020 || !rec.high || !rec.lowBeforePeak) continue;
-
-                    const mvso = ((rec.high - rec.refPrice1020) / rec.refPrice1020) * 100;
-                    const maxDrawdown = Math.abs(((rec.lowBeforePeak - rec.refPrice1020) / rec.refPrice1020) * 100);
+                for (const rec of validRecs) {
+                    if (rec.vol < minVolume) continue;
+                    if (rec.price < minPrice) continue;
+                    if (rec.prob < minProb) continue;
 
                     let tradeReturn: number;
-                    if (maxDrawdown >= sl) {
+                    // Logic: 
+                    // 1. Hit SL? -SL
+                    // 2. Hit TP? +TP
+                    // 3. Neither? (Drift) -> 0 (Breakeven / Time Stop assumption)
+                    if (rec.maxDD >= sl) {
                         tradeReturn = -sl;
-                    } else if (mvso >= tp) {
+                    } else if (rec.mvso >= tp) {
                         tradeReturn = tp;
                     } else {
-                        tradeReturn = Math.max(mvso, -sl); // Validation: Is this logic consistent with clamped? Yes.
+                        tradeReturn = 0;
                     }
 
                     currentReturn += tradeReturn;
-                    currentTrades.push(tradeReturn);
-                    if (tradeReturn > 0) wins++;
+                    if (tradeReturn > 0) {
+                        wins++;
+                        grossWin += tradeReturn;
+                    } else {
+                        grossLoss += Math.abs(tradeReturn);
+                    }
                     count++;
                 }
 
-                if (currentReturn > maxReturnForTp) {
-                    maxReturnForTp = currentReturn;
-                    bestSlForTp = sl;
-                    bestTrades = currentTrades;
-                    bestStats = {
+                if (count > 0) {
+                    const pf = grossLoss === 0 ? grossWin : grossWin / grossLoss;
+                    bubbleData.push({
+                        tp,
+                        sl,
                         totalReturn: parseFloat(currentReturn.toFixed(2)),
-                        winRate: count > 0 ? parseFloat(((wins / count) * 100).toFixed(1)) : 0,
+                        winRate: parseFloat(((wins / count) * 100).toFixed(1)),
                         count,
-                        avgReturn: count > 0 ? parseFloat((currentReturn / count).toFixed(3)) : 0
-                    };
+                        avgReturn: parseFloat((currentReturn / count).toFixed(3)),
+                        pf: parseFloat(pf.toFixed(2))
+                    });
                 }
-            }
-
-            if (bestStats) {
-                violinData.push({
-                    tp,
-                    bestSl: bestSlForTp,
-                    trades: bestTrades, // Array of returns for the violin plot
-                    ...bestStats
-                });
             }
         }
 
-        // Keep existing heatmap results logic (optional, but good for fallback or debug)
-        const results = violinData.map(v => ({ tp: v.tp, sl: v.bestSl, totalReturn: v.totalReturn, winRate: v.winRate, tradeCount: v.count, avgReturn: v.avgReturn }));
-        const best = results.reduce((a, b) => a.totalReturn > b.totalReturn ? a : b);
+        // Sort by Total Return
+        bubbleData.sort((a, b) => b.totalReturn - a.totalReturn);
+
+        // Calculate dummy results for legacy if needed, or simply pass partial
+        const best = bubbleData.length > 0 ? bubbleData[0] : { tp: 0, sl: 0, totalReturn: 0 };
 
         console.log(`[Optimization] Best Overall: TP=${best.tp}%, SL=${best.sl}% => Total Return: ${best.totalReturn}%`);
 
         res.json({
             tpRange,
             slRange,
-            results, // Legacy support if needed, but violinData is main
+            bubbleData,
+            results: bubbleData.slice(0, 1) // Dummy for compatibility
+
             violinData,
             best,
             tradeCount: allRecs.length
