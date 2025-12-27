@@ -1208,104 +1208,103 @@ export function AnalysisPage() {
                                 </button>
                             </div>
                             <div className="w-full h-full">
-                                {optimizationData && optimizationData.violinData ? (
+                                {optimizationData && (optimizationData.bubbleData || optimizationData.violinData) ? (
                                     <Plot
                                         data={(() => {
-                                            const colors = [
-                                                '#1abc9c', '#2ecc71', '#3498db', '#9b59b6', '#34495e',
-                                                '#f1c40f', '#e67e22', '#e74c3c', '#95a5a6', '#7f8c8d'
-                                            ];
+                                            const data = optimizationData.bubbleData || [];
+                                            // Handle fallback if needed, but we expect bubbleData now
+                                            if (data.length === 0) return [];
 
-                                            // 1. Violin Traces
-                                            const traces = optimizationData.violinData.map((d: any, i: number) => ({
-                                                type: 'violin',
-                                                y: d.trades,
-                                                name: `${d.tp}%`,
-                                                box: {
-                                                    visible: true,
-                                                    width: 0.1,
-                                                    line: { color: 'black', width: 1 }
-                                                },
-                                                line: {
-                                                    color: 'rgba(0,0,0,0)', // Hide the violin outline to look cleaner
-                                                },
-                                                meanline: {
-                                                    visible: true,
-                                                    color: '#b91c1c', // Red mean line
-                                                    width: 2
-                                                },
-                                                points: 'all',
-                                                jitter: 0.5,
-                                                pointpos: 0, // Points centered
-                                                marker: {
-                                                    size: 3,
-                                                    opacity: 0.4,
-                                                    color: colors[i % colors.length] // Use palette
-                                                },
-                                                fillcolor: colors[i % colors.length], // Fill with palette
-                                                opacity: 0.6, // Transparent fill
-                                                hoverinfo: 'y+name',
-                                                hovertemplate: `<b>${d.tp}% TP</b><br>Return: %{y:.2f}%<br><i>(Best SL: ${d.bestSl}%)</i><extra></extra>`
-                                            }));
+                                            // Unpack data
+                                            const tps = data.map((d: any) => d.tp);
+                                            const sls = data.map((d: any) => d.sl);
+                                            const returns = data.map((d: any) => d.totalReturn);
+                                            const winRates = data.map((d: any) => d.winRate);
 
-                                            // 2. Mean Markers (Red Dots) - Scatter Trace
-                                            const means = optimizationData.violinData.map((d: any) => d.avgReturn);
-                                            const tps = optimizationData.violinData.map((d: any) => `${d.tp}%`);
-
-                                            traces.push({
-                                                type: 'scatter',
-                                                x: tps,
-                                                y: means,
-                                                mode: 'markers',
-                                                name: 'Mean',
-                                                marker: {
-                                                    color: '#991b1b', // Dark Red
-                                                    size: 10,
-                                                    symbol: 'circle',
-                                                    line: { color: 'white', width: 1 }
-                                                },
-                                                hoverinfo: 'skip'
+                                            // Find best point for annotation
+                                            let bestIdx = 0;
+                                            let maxRet = -Infinity;
+                                            data.forEach((d: any, i: number) => {
+                                                if (d.totalReturn > maxRet) {
+                                                    maxRet = d.totalReturn;
+                                                    bestIdx = i;
+                                                }
                                             });
 
-                                            return traces;
+                                            return [
+                                                // 1. Bubble Trace
+                                                {
+                                                    x: tps,
+                                                    y: sls,
+                                                    mode: 'markers',
+                                                    marker: {
+                                                        size: winRates, // Size by Win Rate
+                                                        sizeref: 2, // Scale factor
+                                                        sizemode: 'diameter',
+                                                        color: returns, // Color by Total Return
+                                                        colorscale: 'RdBu', // Red to Blue divering
+                                                        colorbar: {
+                                                            title: 'Total Return',
+                                                            titleside: 'right',
+                                                            thickness: 10,
+                                                            len: 0.8
+                                                        },
+                                                        showscale: true,
+                                                        line: { color: 'white', width: 0.5 },
+                                                        symbol: 'circle',
+                                                        opacity: 0.85
+                                                    },
+                                                    text: data.map((d: any) =>
+                                                        `TP: ${d.tp}% | SL: ${d.sl}%<br>` +
+                                                        `Return: ${d.totalReturn.toFixed(2)}%<br>` +
+                                                        `Win Rate: ${d.winRate.toFixed(1)}%<br>` +
+                                                        `PF: ${d.pf}`
+                                                    ),
+                                                    hoverinfo: 'text',
+                                                    type: 'scatter'
+                                                },
+                                                // 2. Best Point Marker (Star/Highlight)
+                                                {
+                                                    x: [tps[bestIdx]],
+                                                    y: [sls[bestIdx]],
+                                                    mode: 'markers+text',
+                                                    marker: {
+                                                        symbol: 'star',
+                                                        size: 20,
+                                                        color: 'gold',
+                                                        line: { color: 'black', width: 1 }
+                                                    },
+                                                    text: ['BEST'],
+                                                    textposition: 'top center',
+                                                    textfont: { size: 12, color: 'gold', weight: 'bold' },
+                                                    hoverinfo: 'skip'
+                                                }
+                                            ];
                                         })()}
                                         layout={{
                                             autosize: true,
-                                            margin: { l: 50, r: 20, t: 40, b: 80 },
+                                            margin: { l: 50, r: 20, t: 40, b: 60 },
+                                            title: {
+                                                text: 'TP/SL Efficiency Map (Size=WinRate, Color=Return)',
+                                                font: { size: 14, color: '#64748b' }
+                                            },
                                             yaxis: {
-                                                title: { text: 'Trade Return %', font: { size: 12 } },
+                                                title: { text: 'Stop Loss (%)', font: { size: 12 } },
                                                 gridcolor: '#f3f4f6',
-                                                zeroline: true,
-                                                zerolinecolor: '#9ca3af',
+                                                zeroline: false,
                                                 tickfont: { size: 10 }
                                             },
                                             xaxis: {
                                                 title: { text: 'Take Profit (%)', font: { size: 12 } },
-                                                tickmode: 'array',
-                                                tickvals: optimizationData.violinData.map((d: any) => `${d.tp}%`), // Match trace names
-                                                ticktext: optimizationData.violinData.map((d: any) => `${d.tp}%\n(n=${d.count})`),
+                                                gridcolor: '#f3f4f6',
+                                                zeroline: false,
                                                 tickfont: { size: 10 }
                                             },
                                             showlegend: false,
                                             hovermode: 'closest',
-                                            font: { family: 'Inter', size: 11 },
-                                            // Annotations for Mean Values
-                                            annotations: optimizationData.violinData.map((d: any) => ({
-                                                x: `${d.tp}%`,
-                                                y: d.avgReturn,
-                                                xref: 'x',
-                                                yref: 'y',
-                                                text: `μ=${d.avgReturn.toFixed(2)}`,
-                                                showarrow: true,
-                                                arrowhead: 0,
-                                                ax: 40,
-                                                ay: -20,
-                                                font: { size: 10, color: '#374151', bgcolor: 'rgba(255,255,255,0.8)' },
-                                                bordercolor: '#e5e7eb',
-                                                borderwidth: 1,
-                                                borderpad: 2,
-                                                opacity: 0.9
-                                            }))
+                                            paper_bgcolor: 'transparent',
+                                            plot_bgcolor: 'transparent',
+                                            font: { family: 'Inter', size: 11 }
                                         }}
                                         config={{ displayModeBar: false, responsive: true }}
                                         style={{ width: '100%', height: '100%' }}
