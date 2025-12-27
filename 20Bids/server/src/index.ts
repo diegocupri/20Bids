@@ -532,9 +532,7 @@ app.get('/api/stats/optimization', async (req, res) => {
             tpRange,
             slRange,
             bubbleData,
-            results: bubbleData.slice(0, 1) // Dummy for compatibility
-
-            violinData,
+            results: bubbleData.slice(0, 1),
             best,
             tradeCount: allRecs.length
         });
