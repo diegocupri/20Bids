@@ -3,8 +3,7 @@ import Plot from 'react-plotly.js';
 import { Sidebar } from '../components/Sidebar';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    AreaChart, Area, ComposedChart, Line, Legend, LabelList, Cell,
-    ScatterChart, Scatter, LineChart, ReferenceDot
+    AreaChart, Area, ComposedChart, Line, Legend, LabelList, Cell
 } from 'recharts';
 import { cn } from '../lib/utils';
 import { fetchAnalysis } from '../api/client';
@@ -1442,155 +1441,134 @@ export function AnalysisPage() {
                                 </div>
                             </ChartCard>
 
-                            {/* EFFICIENT FRONTIER: Return vs Risk Trade-off - TREMOR */}
-                            <ChartCard title="" height={420} className="w-full">
-                                <div className="flex items-center justify-between mb-3">
+                            {/* TOP PICKS: Best TP/SL Combinations */}
+                            <ChartCard title="" height={280} className="w-full">
+                                <div className="flex items-center justify-between mb-4">
                                     <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                        EFFICIENT FRONTIER
+                                        🎯 TOP PICKS
                                         <span className="text-[10px] font-normal text-gray-400">
-                                            (Return vs Risk)
+                                            (Best TP/SL Combinations)
                                         </span>
                                     </h3>
                                 </div>
-                                <div className="w-full h-[340px]">
+                                <div className="grid grid-cols-3 gap-4 h-full">
                                     {optimizationData?.bubbleData?.length > 0 ? (() => {
-                                        // Filter by risk tolerance
                                         const filteredData = optimizationData.bubbleData.filter((d: any) => d.sl <= maxRiskTolerance);
-                                        if (filteredData.length === 0) return <div className="text-center text-gray-400 py-10">No data for selected risk level</div>;
+                                        if (filteredData.length === 0) return <div className="col-span-3 text-center text-gray-400 py-10">No data for selected risk level</div>;
 
-                                        // Find Pareto optimal points (efficient frontier)
-                                        const paretoPoints: any[] = [];
-                                        filteredData.forEach((point: any) => {
-                                            const dominated = filteredData.some((other: any) =>
-                                                other.sl <= point.sl && other.totalReturn >= point.totalReturn &&
-                                                (other.sl < point.sl || other.totalReturn > point.totalReturn)
-                                            );
-                                            if (!dominated) {
-                                                paretoPoints.push(point);
-                                            }
-                                        });
-                                        paretoPoints.sort((a, b) => a.sl - b.sl);
-
-                                        // Find the best point on the frontier
-                                        let bestFrontierPoint = paretoPoints.length > 0 ? paretoPoints[0] : null;
-                                        paretoPoints.forEach(p => {
-                                            if (p.efficiency > (bestFrontierPoint?.efficiency || -Infinity)) {
-                                                bestFrontierPoint = p;
-                                            }
-                                        });
-
-                                        // Format data for Recharts ScatterChart
-                                        const scatterData = filteredData.map((d: any) => ({
-                                            risk: d.sl,
-                                            return: d.totalReturn,
-                                            efficiency: d.efficiency,
-                                            tp: d.tp,
-                                            winRate: d.winRate,
-                                            isOptimal: paretoPoints.some(p => p.tp === d.tp && p.sl === d.sl),
-                                        }));
-
-                                        const optimalData = scatterData.filter((d: any) => d.isOptimal);
-                                        const regularData = scatterData.filter((d: any) => !d.isOptimal);
-
-                                        return (
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <ScatterChart margin={{ top: 20, right: 30, bottom: 40, left: 40 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                                    <XAxis
-                                                        type="number"
-                                                        dataKey="risk"
-                                                        name="Risk"
-                                                        unit="%"
-                                                        domain={[0, 'auto']}
-                                                        label={{ value: 'Risk (Stop Loss %)', position: 'bottom', offset: 10, style: { fontSize: 11, fill: '#6b7280' } }}
-                                                        tick={{ fontSize: 10 }}
-                                                    />
-                                                    <YAxis
-                                                        type="number"
-                                                        dataKey="return"
-                                                        name="Return"
-                                                        unit="%"
-                                                        label={{ value: 'Total Return (%)', angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 11, fill: '#6b7280' } }}
-                                                        tick={{ fontSize: 10 }}
-                                                    />
-                                                    <Tooltip
-                                                        cursor={{ strokeDasharray: '3 3' }}
-                                                        content={({ active, payload }) => {
-                                                            if (active && payload && payload.length) {
-                                                                const d = payload[0].payload;
-                                                                return (
-                                                                    <div className="bg-white p-2 rounded-lg shadow-lg border border-gray-200 text-xs">
-                                                                        <p className="font-bold">TP: {d.tp}% | SL: {d.risk}%</p>
-                                                                        <p>Return: {d.return}%</p>
-                                                                        <p>Efficiency: {d.efficiency?.toFixed(1)}</p>
-                                                                        <p>Win Rate: {d.winRate}%</p>
-                                                                    </div>
-                                                                );
-                                                            }
-                                                            return null;
-                                                        }}
-                                                    />
-                                                    <Legend verticalAlign="top" height={36} />
-                                                    <Scatter
-                                                        name="All Combinations"
-                                                        data={regularData}
-                                                        fill="#94a3b8"
-                                                        fillOpacity={0.5}
-                                                    />
-                                                    <Scatter
-                                                        name="Efficient Frontier"
-                                                        data={optimalData}
-                                                        fill="#f59e0b"
-                                                        shape="diamond"
-                                                    />
-                                                    {bestFrontierPoint && (
-                                                        <ReferenceDot
-                                                            x={bestFrontierPoint.sl}
-                                                            y={bestFrontierPoint.totalReturn}
-                                                            r={8}
-                                                            fill="#059669"
-                                                            stroke="#fff"
-                                                            strokeWidth={2}
-                                                        />
-                                                    )}
-                                                </ScatterChart>
-                                            </ResponsiveContainer>
+                                        // Find best efficiency (return per unit of risk)
+                                        const bestEfficiency = filteredData.reduce((a: any, b: any) =>
+                                            a.efficiency > b.efficiency ? a : b
                                         );
+
+                                        // Find highest return
+                                        const highestReturn = filteredData.reduce((a: any, b: any) =>
+                                            a.totalReturn > b.totalReturn ? a : b
+                                        );
+
+                                        // Find safest bet (highest win rate)
+                                        const safestBet = filteredData.reduce((a: any, b: any) =>
+                                            a.winRate > b.winRate ? a : b
+                                        );
+
+                                        const cards = [
+                                            {
+                                                title: "Best Efficiency",
+                                                emoji: "🏆",
+                                                description: "Highest return per unit of risk",
+                                                data: bestEfficiency,
+                                                color: "from-amber-50 to-orange-50",
+                                                border: "border-amber-200",
+                                                accent: "text-amber-600",
+                                                badge: "bg-amber-100 text-amber-700"
+                                            },
+                                            {
+                                                title: "Highest Return",
+                                                emoji: "💰",
+                                                description: "Maximum total return",
+                                                data: highestReturn,
+                                                color: "from-emerald-50 to-green-50",
+                                                border: "border-emerald-200",
+                                                accent: "text-emerald-600",
+                                                badge: "bg-emerald-100 text-emerald-700"
+                                            },
+                                            {
+                                                title: "Safest Bet",
+                                                emoji: "🛡️",
+                                                description: "Best win rate",
+                                                data: safestBet,
+                                                color: "from-blue-50 to-indigo-50",
+                                                border: "border-blue-200",
+                                                accent: "text-blue-600",
+                                                badge: "bg-blue-100 text-blue-700"
+                                            }
+                                        ];
+
+                                        return cards.map((card, idx) => (
+                                            <div key={idx} className={`bg-gradient-to-br ${card.color} ${card.border} border rounded-xl p-4 flex flex-col justify-between`}>
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="text-2xl">{card.emoji}</span>
+                                                        <span className={`text-sm font-bold ${card.accent}`}>{card.title}</span>
+                                                    </div>
+                                                    <p className="text-[10px] text-gray-500 mb-3">{card.description}</p>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-xs text-gray-600">Take Profit</span>
+                                                        <span className={`text-sm font-bold ${card.accent}`}>{card.data.tp}%</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-xs text-gray-600">Stop Loss</span>
+                                                        <span className={`text-sm font-bold ${card.accent}`}>{card.data.sl}%</span>
+                                                    </div>
+                                                    <div className="border-t border-gray-200 pt-2 mt-2">
+                                                        <div className="flex justify-between items-center text-xs">
+                                                            <span className="text-gray-500">Return</span>
+                                                            <span className={`font-semibold ${card.data.totalReturn >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                                {card.data.totalReturn >= 0 ? '+' : ''}{card.data.totalReturn}%
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center text-xs mt-1">
+                                                            <span className="text-gray-500">Win Rate</span>
+                                                            <span className="font-semibold text-gray-700">{card.data.winRate}%</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ));
                                     })() : (
-                                        <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
-                                            <p>Loading efficient frontier...</p>
+                                        <div className="col-span-3 flex flex-col items-center justify-center h-full text-gray-400 text-sm">
+                                            <p>Loading recommendations...</p>
                                         </div>
                                     )}
                                 </div>
                             </ChartCard>
                         </div>
 
-                        {/* OPTIMAL SL PATH - TREMOR LineChart */}
-                        <ChartCard title="" height={380} className="w-full mt-6">
+                        {/* RECOMMENDED SL PER TP - Table + Bar Chart */}
+                        <ChartCard title="" height={420} className="w-full mt-6">
                             <div className="flex items-center justify-between mb-3">
                                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                    OPTIMAL SL PATH
+                                    📊 RECOMMENDED STOP LOSS
                                     <span className="text-[10px] font-normal text-gray-400">
-                                        (Best Stop Loss for each Take Profit target)
+                                        (Optimal SL for each TP target)
                                     </span>
                                 </h3>
                             </div>
-                            <div className="w-full h-[300px]">
+                            <div className="grid grid-cols-2 gap-4 h-[350px]">
                                 {optimizationData?.bubbleData?.length > 0 ? (() => {
                                     const data = optimizationData.bubbleData;
-
-                                    // Get unique TP levels
                                     const tpLevels = optimizationData.tpRange ||
-                                        ([...new Set(data.map((d: any) => d.tp))] as number[]).sort((a, b) => a - b);
+                                        ([...new Set(data.map((d: any) => d.tp))] as number[]).sort((a: number, b: number) => a - b);
 
-                                    // For each TP, find the SL with best efficiency (within risk tolerance)
-                                    const optimalPath: {
-                                        "Take Profit": string;
-                                        "Optimal SL": number;
-                                        efficiency: number;
+                                    const recommendations: {
+                                        tp: number;
+                                        sl: number;
                                         avgReturn: number;
                                         winRate: number;
-                                        isSelected: boolean;
+                                        efficiency: number;
                                     }[] = [];
 
                                     for (const tp of tpLevels) {
@@ -1599,68 +1577,110 @@ export function AnalysisPage() {
                                             const best = tpData.reduce((a: any, b: any) =>
                                                 a.efficiency > b.efficiency ? a : b
                                             );
-                                            optimalPath.push({
-                                                "Take Profit": `${best.tp}%`,
-                                                "Optimal SL": best.sl,
-                                                efficiency: best.efficiency,
+                                            recommendations.push({
+                                                tp: best.tp,
+                                                sl: best.sl,
                                                 avgReturn: best.avgReturn || 0,
                                                 winRate: best.winRate || 0,
-                                                isSelected: best.tp === targetTP
+                                                efficiency: best.efficiency || 0
                                             });
                                         }
                                     }
 
-
-                                    if (optimalPath.length === 0) {
-                                        return <div className="text-center text-gray-400 py-10">No data for selected risk level</div>;
+                                    if (recommendations.length === 0) {
+                                        return <div className="col-span-2 text-center text-gray-400 py-10">No data for selected risk level</div>;
                                     }
 
                                     return (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <LineChart data={optimalPath} margin={{ top: 20, right: 30, bottom: 40, left: 40 }}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                                <XAxis
-                                                    dataKey="Take Profit"
-                                                    label={{ value: 'Take Profit Target', position: 'bottom', offset: 10, style: { fontSize: 11, fill: '#6b7280' } }}
-                                                    tick={{ fontSize: 10 }}
-                                                />
-                                                <YAxis
-                                                    domain={[0, 'auto']}
-                                                    label={{ value: 'Optimal Stop Loss (%)', angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 11, fill: '#6b7280' } }}
-                                                    tick={{ fontSize: 10 }}
-                                                />
-                                                <Tooltip
-                                                    content={({ active, payload }) => {
-                                                        if (active && payload && payload.length) {
-                                                            const d = payload[0].payload;
-                                                            return (
-                                                                <div className="bg-white p-2 rounded-lg shadow-lg border border-gray-200 text-xs">
-                                                                    <p className="font-bold">{d["Take Profit"]}</p>
-                                                                    <p>Optimal SL: {d["Optimal SL"]}%</p>
-                                                                    <p>Efficiency: {d.efficiency?.toFixed(1)}</p>
-                                                                    <p>Avg Return: {d.avgReturn?.toFixed(2)}%</p>
-                                                                    <p>Win Rate: {d.winRate}%</p>
-                                                                </div>
-                                                            );
-                                                        }
-                                                        return null;
-                                                    }}
-                                                />
-                                                <Legend verticalAlign="top" height={36} />
-                                                <Line
-                                                    type="monotone"
-                                                    dataKey="Optimal SL"
-                                                    stroke="#3b82f6"
-                                                    strokeWidth={2}
-                                                    dot={{ fill: '#3b82f6', r: 4 }}
-                                                    activeDot={{ r: 6, fill: '#1d4ed8' }}
-                                                />
-                                            </LineChart>
-                                        </ResponsiveContainer>
+                                        <>
+                                            {/* Table */}
+                                            <div className="overflow-y-auto pr-2">
+                                                <table className="w-full text-xs">
+                                                    <thead className="sticky top-0 bg-white">
+                                                        <tr className="border-b border-gray-200 text-gray-500 uppercase text-[10px]">
+                                                            <th className="py-2 text-left font-medium">TP Target</th>
+                                                            <th className="py-2 text-center font-medium">SL</th>
+                                                            <th className="py-2 text-right font-medium">Return</th>
+                                                            <th className="py-2 text-right font-medium">Win Rate</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {recommendations.map((rec, idx) => (
+                                                            <tr
+                                                                key={idx}
+                                                                className={`border-b border-gray-100 transition-colors ${rec.tp === targetTP ? 'bg-blue-50 font-semibold' : 'hover:bg-gray-50'}`}
+                                                            >
+                                                                <td className="py-2 text-left">
+                                                                    {rec.tp === targetTP && <span className="mr-1">→</span>}
+                                                                    {rec.tp}%
+                                                                </td>
+                                                                <td className="py-2 text-center">
+                                                                    <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-[10px] font-medium">
+                                                                        {rec.sl}%
+                                                                    </span>
+                                                                </td>
+                                                                <td className={`py-2 text-right font-medium ${rec.avgReturn >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                                    {rec.avgReturn >= 0 ? '+' : ''}{rec.avgReturn.toFixed(2)}%
+                                                                </td>
+                                                                <td className="py-2 text-right text-gray-600">
+                                                                    {rec.winRate}%
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            {/* Bar Chart */}
+                                            <div className="h-full">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <BarChart data={recommendations} layout="vertical" margin={{ top: 10, right: 30, bottom: 10, left: 40 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={true} vertical={false} />
+                                                        <XAxis
+                                                            type="number"
+                                                            tick={{ fontSize: 10 }}
+                                                            label={{ value: 'Stop Loss %', position: 'bottom', offset: 0, style: { fontSize: 10, fill: '#6b7280' } }}
+                                                        />
+                                                        <YAxis
+                                                            type="category"
+                                                            dataKey="tp"
+                                                            tick={{ fontSize: 10 }}
+                                                            tickFormatter={(v) => `${v}%`}
+                                                            width={40}
+                                                        />
+                                                        <Tooltip
+                                                            content={({ active, payload }) => {
+                                                                if (active && payload && payload.length) {
+                                                                    const d = payload[0].payload;
+                                                                    return (
+                                                                        <div className="bg-white p-2 rounded-lg shadow-lg border border-gray-200 text-xs">
+                                                                            <p className="font-bold">TP: {d.tp}%</p>
+                                                                            <p>Recommended SL: {d.sl}%</p>
+                                                                            <p>Avg Return: {d.avgReturn?.toFixed(2)}%</p>
+                                                                            <p>Win Rate: {d.winRate}%</p>
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                                return null;
+                                                            }}
+                                                        />
+                                                        <Bar dataKey="sl" radius={[0, 4, 4, 0]}>
+                                                            {recommendations.map((entry, index) => (
+                                                                <Cell
+                                                                    key={`cell-${index}`}
+                                                                    fill={entry.tp === targetTP ? '#3b82f6' : '#94a3b8'}
+                                                                    fillOpacity={entry.tp === targetTP ? 1 : 0.6}
+                                                                />
+                                                            ))}
+                                                        </Bar>
+                                                    </BarChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </>
                                     );
                                 })() : (
-                                    <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
-                                        <p>Loading optimal path data...</p>
+                                    <div className="col-span-2 flex flex-col items-center justify-center h-full text-gray-400 text-sm">
+                                        <p>Loading recommendations...</p>
                                     </div>
                                 )}
                             </div>
