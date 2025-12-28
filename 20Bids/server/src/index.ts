@@ -541,6 +541,7 @@ app.get('/api/stats/optimization', async (req, res) => {
             tradeCount: allRecs.length,
             validRecsCount: validRecs.length, // DEBUG
             sampleRec: validRecs.length > 0 ? validRecs[0] : null, // DEBUG
+            rawSample: allRecs.length > 0 ? allRecs[0] : null, // DEBUG: Show full DB schema
             paramsReceived: { minVolume, minPrice, minProb } // DEBUG
         });
 
