@@ -510,6 +510,7 @@ app.get('/api/stats/optimization', async (req, res) => {
 
                 if (count > 0) {
                     const pf = grossLoss === 0 ? grossWin : grossWin / grossLoss;
+                    const efficiency = sl > 0 ? currentReturn / sl : 0; // Return per unit of risk
                     bubbleData.push({
                         tp,
                         sl,
@@ -517,7 +518,8 @@ app.get('/api/stats/optimization', async (req, res) => {
                         winRate: parseFloat(((wins / count) * 100).toFixed(1)),
                         count,
                         avgReturn: parseFloat((currentReturn / count).toFixed(3)),
-                        pf: parseFloat(pf.toFixed(2))
+                        pf: parseFloat(pf.toFixed(2)),
+                        efficiency: parseFloat(efficiency.toFixed(2)) // Risk-adjusted return
                     });
                 }
             }

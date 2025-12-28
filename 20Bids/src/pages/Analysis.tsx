@@ -1205,133 +1205,270 @@ export function AnalysisPage() {
                             </div>
                         </ChartCard>
 
-                        {/* TP/SL OPTIMIZATION VIOLIN PLOT */}
-                        <ChartCard title="" height={450} className="w-full">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 font-sans">
-                                    TP OPTIMIZATION
-                                    <span className="text-[10px] font-normal text-text-secondary/70">
-                                        (Return Distribution by TP % with optimal SL)
-                                    </span>
-                                </h3>
-                                <button
-                                    onClick={fetchOptimizationData}
-                                    disabled={optimizationLoading}
-                                    className="px-4 py-1.5 text-[11px] font-bold rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-all disabled:opacity-50"
-                                >
-                                    {optimizationLoading ? 'Calculating...' : 'Run Analysis'}
-                                </button>
-                            </div>
-                            <div className="w-full h-full">
-                                {optimizationData && (optimizationData.bubbleData || optimizationData.violinData) ? (
-                                    <Plot
-                                        data={(() => {
-                                            const data = optimizationData.bubbleData || [];
-                                            // Handle fallback if needed, but we expect bubbleData now
-                                            if (data.length === 0) return [];
+                        {/* TP/SL OPTIMIZATION - DUAL VISUALIZATION */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+                            {/* HEATMAP: Efficiency (Return per Unit Risk) */}
+                            <ChartCard title="" height={420} className="w-full">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 font-sans">
+                                        EFFICIENCY HEATMAP
+                                        <span className="text-[10px] font-normal text-text-secondary/70">
+                                            (Return ÷ Risk = Return per % SL)
+                                        </span>
+                                    </h3>
+                                    <button
+                                        onClick={fetchOptimizationData}
+                                        disabled={optimizationLoading}
+                                        className="px-3 py-1 text-[10px] font-bold rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-all disabled:opacity-50"
+                                    >
+                                        {optimizationLoading ? '...' : 'Refresh'}
+                                    </button>
+                                </div>
+                                <div className="w-full h-full">
+                                    {optimizationData?.bubbleData?.length > 0 ? (() => {
+                                        const data = optimizationData.bubbleData;
+                                        const tpVals = optimizationData.tpRange || ([...new Set(data.map((d: any) => d.tp))] as number[]).sort((a, b) => a - b);
+                                        const slVals = optimizationData.slRange || ([...new Set(data.map((d: any) => d.sl))] as number[]).sort((a, b) => a - b);
 
-                                            // Unpack data
-                                            const tps = data.map((d: any) => d.tp);
-                                            const sls = data.map((d: any) => d.sl);
-                                            const returns = data.map((d: any) => d.totalReturn);
-                                            const winRates = data.map((d: any) => d.winRate);
+                                        // Build 2D matrix for heatmap (Z values)
+                                        const zMatrix: number[][] = [];
+                                        const textMatrix: string[][] = [];
 
-                                            // Find best point for annotation
-                                            let bestIdx = 0;
-                                            let maxRet = -Infinity;
-                                            data.forEach((d: any, i: number) => {
-                                                if (d.totalReturn > maxRet) {
-                                                    maxRet = d.totalReturn;
-                                                    bestIdx = i;
-                                                }
-                                            });
+                                        for (const sl of slVals) {
+                                            const row: number[] = [];
+                                            const textRow: string[] = [];
+                                            for (const tp of tpVals) {
+                                                const point = data.find((d: any) => d.tp === tp && d.sl === sl);
+                                                const eff = point ? point.efficiency : 0;
+                                                row.push(eff);
+                                                textRow.push(point ?
+                                                    `TP: ${tp}% | SL: ${sl}%<br>Efficiency: ${eff.toFixed(1)}<br>Return: ${point.totalReturn}%<br>WinRate: ${point.winRate}%<br>PF: ${point.pf}`
+                                                    : '');
+                                            }
+                                            zMatrix.push(row);
+                                            textMatrix.push(textRow);
+                                        }
 
-                                            return [
-                                                // 1. Bubble Trace
-                                                {
-                                                    x: tps,
-                                                    y: sls,
-                                                    mode: 'markers',
-                                                    marker: {
-                                                        size: winRates, // Size by Win Rate
-                                                        sizeref: 2, // Scale factor
-                                                        sizemode: 'diameter',
-                                                        color: returns, // Color by Total Return
-                                                        colorscale: 'RdBu', // Red to Blue divering
+                                        // Find best efficiency point
+                                        let bestEff = { tp: 0, sl: 0, efficiency: -Infinity };
+                                        data.forEach((d: any) => {
+                                            if (d.efficiency > bestEff.efficiency) {
+                                                bestEff = { tp: d.tp, sl: d.sl, efficiency: d.efficiency };
+                                            }
+                                        });
+
+                                        return (
+                                            <Plot
+                                                data={[
+                                                    {
+                                                        z: zMatrix,
+                                                        x: tpVals,
+                                                        y: slVals,
+                                                        type: 'heatmap',
+                                                        colorscale: [
+                                                            [0, '#dc2626'],      // Red (bad)
+                                                            [0.25, '#f97316'],   // Orange
+                                                            [0.5, '#fbbf24'],    // Yellow
+                                                            [0.75, '#22c55e'],   // Green
+                                                            [1, '#059669']       // Emerald (best)
+                                                        ],
                                                         colorbar: {
-                                                            title: 'Total Return',
+                                                            title: 'Efficiency',
                                                             titleside: 'right',
-                                                            thickness: 10,
-                                                            len: 0.8
+                                                            thickness: 12,
+                                                            len: 0.9
                                                         },
-                                                        showscale: true,
-                                                        line: { color: 'white', width: 0.5 },
-                                                        symbol: 'circle',
-                                                        opacity: 0.85
+                                                        text: textMatrix,
+                                                        hoverinfo: 'text',
+                                                        showscale: true
+                                                    } as any,
+                                                    // Best point marker
+                                                    {
+                                                        x: [bestEff.tp],
+                                                        y: [bestEff.sl],
+                                                        mode: 'markers',
+                                                        marker: {
+                                                            symbol: 'star',
+                                                            size: 18,
+                                                            color: 'white',
+                                                            line: { color: 'black', width: 2 }
+                                                        },
+                                                        hoverinfo: 'skip',
+                                                        showlegend: false
+                                                    }
+                                                ]}
+                                                layout={{
+                                                    autosize: true,
+                                                    margin: { l: 50, r: 60, t: 30, b: 50 },
+                                                    xaxis: {
+                                                        title: { text: 'Take Profit (%)', font: { size: 11 } },
+                                                        tickfont: { size: 9 },
+                                                        dtick: 1
                                                     },
-                                                    text: data.map((d: any) =>
-                                                        `TP: ${d.tp}% | SL: ${d.sl}%<br>` +
-                                                        `Return: ${d.totalReturn.toFixed(2)}%<br>` +
-                                                        `Win Rate: ${d.winRate.toFixed(1)}%<br>` +
-                                                        `PF: ${d.pf}`
-                                                    ),
-                                                    hoverinfo: 'text',
-                                                    type: 'scatter'
-                                                },
-                                                // 2. Best Point Marker (Star/Highlight)
-                                                {
-                                                    x: [tps[bestIdx]],
-                                                    y: [sls[bestIdx]],
-                                                    mode: 'markers+text',
-                                                    marker: {
-                                                        symbol: 'star',
-                                                        size: 20,
-                                                        color: 'gold',
-                                                        line: { color: 'black', width: 1 }
+                                                    yaxis: {
+                                                        title: { text: 'Stop Loss (%)', font: { size: 11 } },
+                                                        tickfont: { size: 9 },
+                                                        dtick: 1
                                                     },
-                                                    text: ['BEST'],
-                                                    textposition: 'top center',
-                                                    textfont: { size: 12, color: 'gold', weight: 'bold' },
-                                                    hoverinfo: 'skip'
-                                                }
-                                            ];
-                                        })()}
-                                        layout={{
-                                            autosize: true,
-                                            margin: { l: 50, r: 20, t: 40, b: 60 },
-                                            title: {
-                                                text: 'TP/SL Efficiency Map (Size=WinRate, Color=Return)',
-                                                font: { size: 14, color: '#64748b' }
-                                            },
-                                            yaxis: {
-                                                title: { text: 'Stop Loss (%)', font: { size: 12 } },
-                                                gridcolor: '#f3f4f6',
-                                                zeroline: false,
-                                                tickfont: { size: 10 }
-                                            },
-                                            xaxis: {
-                                                title: { text: 'Take Profit (%)', font: { size: 12 } },
-                                                gridcolor: '#f3f4f6',
-                                                zeroline: false,
-                                                tickfont: { size: 10 }
-                                            },
-                                            showlegend: false,
-                                            hovermode: 'closest',
-                                            paper_bgcolor: 'transparent',
-                                            plot_bgcolor: 'transparent',
-                                            font: { family: 'Inter', size: 11 }
-                                        }}
-                                        config={{ displayModeBar: false, responsive: true }}
-                                        style={{ width: '100%', height: '100%' }}
-                                        useResizeHandler={true}
-                                    />
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
-                                        <p>Click "Run Analysis" to calculate optimal TP/SL distributions</p>
-                                    </div>
-                                )}
-                            </div>
-                        </ChartCard>
+                                                    paper_bgcolor: 'transparent',
+                                                    plot_bgcolor: 'transparent',
+                                                    font: { family: 'Inter', size: 10 },
+                                                    annotations: [{
+                                                        x: bestEff.tp,
+                                                        y: bestEff.sl,
+                                                        text: `BEST: ${bestEff.efficiency.toFixed(1)}`,
+                                                        showarrow: true,
+                                                        arrowhead: 2,
+                                                        ax: 30,
+                                                        ay: -25,
+                                                        font: { size: 10, color: 'white' },
+                                                        bgcolor: '#059669',
+                                                        borderpad: 3
+                                                    }]
+                                                }}
+                                                config={{ displayModeBar: false, responsive: true }}
+                                                style={{ width: '100%', height: '100%' }}
+                                                useResizeHandler={true}
+                                            />
+                                        );
+                                    })() : (
+                                        <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
+                                            <p>Loading optimization data...</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </ChartCard>
+
+                            {/* EFFICIENT FRONTIER: Return vs Risk Trade-off */}
+                            <ChartCard title="" height={420} className="w-full">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 font-sans">
+                                        EFFICIENT FRONTIER
+                                        <span className="text-[10px] font-normal text-text-secondary/70">
+                                            (Return vs Risk Trade-off)
+                                        </span>
+                                    </h3>
+                                </div>
+                                <div className="w-full h-full">
+                                    {optimizationData?.bubbleData?.length > 0 ? (() => {
+                                        const data = optimizationData.bubbleData;
+
+                                        // For efficient frontier: X = SL (risk), Y = Return
+                                        const sls = data.map((d: any) => d.sl);
+                                        const returns = data.map((d: any) => d.totalReturn);
+                                        const efficiencies = data.map((d: any) => d.efficiency);
+
+                                        // Find Pareto optimal points (efficient frontier)
+                                        // A point is Pareto optimal if no other point has both higher return AND lower risk
+                                        const paretoPoints: any[] = [];
+                                        data.forEach((point: any) => {
+                                            const dominated = data.some((other: any) =>
+                                                other.sl <= point.sl && other.totalReturn >= point.totalReturn &&
+                                                (other.sl < point.sl || other.totalReturn > point.totalReturn)
+                                            );
+                                            if (!dominated) {
+                                                paretoPoints.push(point);
+                                            }
+                                        });
+                                        // Sort Pareto points by SL for line drawing
+                                        paretoPoints.sort((a, b) => a.sl - b.sl);
+
+                                        return (
+                                            <Plot
+                                                data={[
+                                                    // All points (scatter)
+                                                    {
+                                                        x: sls,
+                                                        y: returns,
+                                                        mode: 'markers',
+                                                        type: 'scatter',
+                                                        marker: {
+                                                            size: 8,
+                                                            color: efficiencies,
+                                                            colorscale: 'Viridis',
+                                                            colorbar: {
+                                                                title: { text: 'Efficiency', side: 'right' },
+                                                                thickness: 12,
+                                                                len: 0.9
+                                                            },
+                                                            showscale: true,
+                                                            opacity: 0.6
+                                                        },
+                                                        text: data.map((d: any) =>
+                                                            `TP: ${d.tp}% | SL: ${d.sl}%<br>Return: ${d.totalReturn}%<br>Efficiency: ${d.efficiency}<br>WinRate: ${d.winRate}%`
+                                                        ),
+                                                        hoverinfo: 'text',
+                                                        name: 'All Combinations'
+                                                    },
+                                                    // Efficient Frontier Line
+                                                    {
+                                                        x: paretoPoints.map(p => p.sl),
+                                                        y: paretoPoints.map(p => p.totalReturn),
+                                                        mode: 'lines+markers',
+                                                        type: 'scatter',
+                                                        line: { color: '#f59e0b', width: 3 },
+                                                        marker: { size: 10, color: '#f59e0b', symbol: 'diamond' },
+                                                        text: paretoPoints.map(p =>
+                                                            `⭐ OPTIMAL<br>TP: ${p.tp}% | SL: ${p.sl}%<br>Return: ${p.totalReturn}%<br>Efficiency: ${p.efficiency}`
+                                                        ),
+                                                        hoverinfo: 'text',
+                                                        name: 'Efficient Frontier'
+                                                    }
+                                                ]}
+                                                layout={{
+                                                    autosize: true,
+                                                    margin: { l: 50, r: 60, t: 30, b: 50 },
+                                                    xaxis: {
+                                                        title: { text: 'Risk (Stop Loss %)', font: { size: 11 } },
+                                                        tickfont: { size: 9 },
+                                                        gridcolor: '#f3f4f6',
+                                                        zeroline: false
+                                                    },
+                                                    yaxis: {
+                                                        title: { text: 'Total Return (%)', font: { size: 11 } },
+                                                        tickfont: { size: 9 },
+                                                        gridcolor: '#f3f4f6',
+                                                        zeroline: true,
+                                                        zerolinecolor: '#e5e7eb'
+                                                    },
+                                                    paper_bgcolor: 'transparent',
+                                                    plot_bgcolor: 'transparent',
+                                                    font: { family: 'Inter', size: 10 },
+                                                    showlegend: true,
+                                                    legend: {
+                                                        x: 0.02,
+                                                        y: 0.98,
+                                                        bgcolor: 'rgba(255,255,255,0.8)',
+                                                        bordercolor: '#e5e7eb',
+                                                        borderwidth: 1,
+                                                        font: { size: 9 }
+                                                    },
+                                                    annotations: paretoPoints.length > 0 ? [{
+                                                        x: paretoPoints[0].sl,
+                                                        y: paretoPoints[0].totalReturn,
+                                                        text: `Best Risk/Return<br>TP:${paretoPoints[0].tp}% SL:${paretoPoints[0].sl}%`,
+                                                        showarrow: true,
+                                                        arrowhead: 2,
+                                                        ax: 50,
+                                                        ay: 20,
+                                                        font: { size: 9, color: 'white' },
+                                                        bgcolor: '#f59e0b',
+                                                        borderpad: 3
+                                                    }] : []
+                                                }}
+                                                config={{ displayModeBar: false, responsive: true }}
+                                                style={{ width: '100%', height: '100%' }}
+                                                useResizeHandler={true}
+                                            />
+                                        );
+                                    })() : (
+                                        <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
+                                            <p>Loading efficient frontier...</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </ChartCard>
+                        </div>
 
                         {/* ROW 2: Tables (Top Tickers + Top Periods + Sectors) */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1499,7 +1636,7 @@ export function AnalysisPage() {
                             </ResponsiveContainer>
                         </ChartCard>
                     </div>
-                </div>
+                </div >
             </div >
         </div >
     );
