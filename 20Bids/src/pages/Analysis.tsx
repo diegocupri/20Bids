@@ -157,6 +157,12 @@ export function AnalysisPage() {
             });
             const res = await fetch(`${API_URL}/stats/optimization?${params.toString()}`);
             const data = await res.json();
+            console.log('[Frontend] Optimization Data Received:', data); // DEBUG
+            if (data.bubbleData) {
+                console.log(`[Frontend] Bubble Data items: ${data.bubbleData.length}`);
+            } else {
+                console.warn('[Frontend] No bubbleData found in response');
+            }
             setOptimizationData(data);
         } catch (err) {
             console.error('Optimization fetch error:', err);
