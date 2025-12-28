@@ -1506,13 +1506,13 @@ export function AnalysisPage() {
                             </ChartCard>
                         </div>
 
-                        {/* SL SENSITIVITY ANALYSIS - Multi-Line Chart */}
+                        {/* OPTIMAL SL PATH - Best SL for each TP Target */}
                         <ChartCard title="" height={380} className="w-full mt-6">
                             <div className="flex items-center justify-between mb-2">
                                 <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 font-sans">
-                                    SL SENSITIVITY ANALYSIS
+                                    OPTIMAL SL PATH
                                     <span className="text-[10px] font-normal text-text-secondary/70">
-                                        (Return by TP Target for each Stop Loss level)
+                                        (Best Stop Loss for each Take Profit target)
                                     </span>
                                 </h3>
                             </div>
@@ -1520,50 +1520,90 @@ export function AnalysisPage() {
                                 {optimizationData?.bubbleData?.length > 0 ? (() => {
                                     const data = optimizationData.bubbleData;
 
-                                    // Get unique SL levels (filtered by risk tolerance)
-                                    const slLevels = ([...new Set(data.map((d: any) => d.sl))] as number[])
-                                        .filter(sl => sl <= maxRiskTolerance)
-                                        .sort((a, b) => a - b);
-
                                     // Get unique TP levels
-                                    const tpLevels = optimizationData.tpRange || ([...new Set(data.map((d: any) => d.tp))] as number[]).sort((a, b) => a - b);
+                                    const tpLevels = optimizationData.tpRange ||
+                                        ([...new Set(data.map((d: any) => d.tp))] as number[]).sort((a, b) => a - b);
 
-                                    // Create a line trace for each SL level
-                                    const traces = slLevels.map((sl: number, idx: number) => {
-                                        const slData = data.filter((d: any) => d.sl === sl);
-                                        const xVals: number[] = [];
-                                        const yVals: number[] = [];
+                                    // For each TP, find the SL with best efficiency (within risk tolerance)
+                                    const optimalPath: { tp: number; sl: number; efficiency: number; avgReturn: number; winRate: number }[] = [];
 
-                                        for (const tp of tpLevels) {
-                                            const point = slData.find((d: any) => d.tp === tp);
-                                            if (point) {
-                                                xVals.push(tp);
-                                                yVals.push(point.avgReturn || 0);
-                                            }
+                                    for (const tp of tpLevels) {
+                                        const tpData = data.filter((d: any) => d.tp === tp && d.sl <= maxRiskTolerance);
+                                        if (tpData.length > 0) {
+                                            // Find best efficiency point for this TP
+                                            const best = tpData.reduce((a: any, b: any) =>
+                                                a.efficiency > b.efficiency ? a : b
+                                            );
+                                            optimalPath.push({
+                                                tp: best.tp,
+                                                sl: best.sl,
+                                                efficiency: best.efficiency,
+                                                avgReturn: best.avgReturn || 0,
+                                                winRate: best.winRate || 0
+                                            });
                                         }
+                                    }
 
-                                        // Color gradient from red (tight SL) to green (wide SL)
-                                        const hue = (idx / (slLevels.length - 1)) * 120; // 0 (red) to 120 (green)
-                                        const color = `hsl(${hue}, 70%, 45%)`;
+                                    if (optimalPath.length === 0) {
+                                        return <div className="text-center text-gray-400 py-10">No data for selected risk level</div>;
+                                    }
 
-                                        return {
-                                            x: xVals,
-                                            y: yVals,
-                                            mode: 'lines+markers',
-                                            type: 'scatter',
-                                            name: `SL ${sl}%`,
-                                            line: { width: 2, color },
-                                            marker: { size: 5, color },
-                                            hovertemplate: `SL: ${sl}%<br>TP: %{x}%<br>Avg Return: %{y:.2f}%<extra></extra>`
-                                        };
-                                    });
+                                    // Find the global optimum
+                                    const globalBest = optimalPath.reduce((a, b) => a.efficiency > b.efficiency ? a : b);
 
                                     return (
                                         <Plot
-                                            data={traces as any}
+                                            data={[
+                                                // Main line trace
+                                                {
+                                                    x: optimalPath.map(p => p.tp),
+                                                    y: optimalPath.map(p => p.sl),
+                                                    mode: 'lines+markers',
+                                                    type: 'scatter',
+                                                    name: 'Optimal SL',
+                                                    line: {
+                                                        width: 3,
+                                                        color: '#3b82f6',
+                                                        shape: 'spline'
+                                                    },
+                                                    marker: {
+                                                        size: optimalPath.map(p => Math.max(8, Math.min(18, p.efficiency / 5))),
+                                                        color: optimalPath.map(p => p.avgReturn),
+                                                        colorscale: 'RdYlGn',
+                                                        colorbar: {
+                                                            title: 'Avg Ret %',
+                                                            titleside: 'right',
+                                                            thickness: 12,
+                                                            len: 0.8
+                                                        },
+                                                        showscale: true,
+                                                        line: { color: '#1e40af', width: 1 }
+                                                    },
+                                                    text: optimalPath.map(p =>
+                                                        `<b>TP: ${p.tp}%</b><br>Optimal SL: ${p.sl}%<br>Efficiency: ${p.efficiency.toFixed(1)}<br>Avg Return: ${p.avgReturn.toFixed(2)}%<br>Win Rate: ${p.winRate}%`
+                                                    ),
+                                                    hoverinfo: 'text'
+                                                },
+                                                // Global best marker
+                                                {
+                                                    x: [globalBest.tp],
+                                                    y: [globalBest.sl],
+                                                    mode: 'markers',
+                                                    type: 'scatter',
+                                                    name: 'Global Optimum',
+                                                    marker: {
+                                                        size: 22,
+                                                        color: '#059669',
+                                                        symbol: 'star',
+                                                        line: { color: '#ffffff', width: 2 }
+                                                    },
+                                                    hoverinfo: 'skip',
+                                                    showlegend: true
+                                                }
+                                            ] as any}
                                             layout={{
                                                 autosize: true,
-                                                margin: { l: 55, r: 20, t: 20, b: 55 },
+                                                margin: { l: 55, r: 70, t: 30, b: 55 },
                                                 xaxis: {
                                                     title: { text: 'Take Profit Target (%)', font: { size: 11 } },
                                                     tickfont: { size: 9 },
@@ -1572,25 +1612,36 @@ export function AnalysisPage() {
                                                     dtick: 1
                                                 },
                                                 yaxis: {
-                                                    title: { text: 'Avg Return per Trade (%)', font: { size: 11 } },
+                                                    title: { text: 'Optimal Stop Loss (%)', font: { size: 11 } },
                                                     tickfont: { size: 9 },
                                                     gridcolor: '#f3f4f6',
-                                                    zeroline: true,
-                                                    zerolinecolor: '#e5e7eb',
-                                                    zerolinewidth: 2
+                                                    zeroline: false,
+                                                    range: [0, maxRiskTolerance + 1]
                                                 },
                                                 paper_bgcolor: 'transparent',
                                                 plot_bgcolor: 'transparent',
                                                 font: { family: 'Inter', size: 10 },
                                                 showlegend: true,
                                                 legend: {
-                                                    orientation: 'h',
-                                                    x: 0,
-                                                    y: 1.15,
-                                                    font: { size: 9 },
-                                                    bgcolor: 'transparent'
+                                                    x: 0.02,
+                                                    y: 0.98,
+                                                    bgcolor: 'rgba(255,255,255,0.9)',
+                                                    bordercolor: '#e5e7eb',
+                                                    borderwidth: 1,
+                                                    font: { size: 9 }
                                                 },
-                                                hovermode: 'x unified'
+                                                annotations: [{
+                                                    x: globalBest.tp,
+                                                    y: globalBest.sl,
+                                                    text: `BEST<br>TP:${globalBest.tp}% SL:${globalBest.sl}%<br>Eff: ${globalBest.efficiency.toFixed(0)}`,
+                                                    showarrow: true,
+                                                    arrowhead: 2,
+                                                    ax: 50,
+                                                    ay: -30,
+                                                    font: { size: 9, color: 'white' },
+                                                    bgcolor: '#059669',
+                                                    borderpad: 4
+                                                }]
                                             }}
                                             config={{ displayModeBar: false, responsive: true }}
                                             style={{ width: '100%', height: '100%' }}
@@ -1599,7 +1650,7 @@ export function AnalysisPage() {
                                     );
                                 })() : (
                                     <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
-                                        <p>Loading SL sensitivity data...</p>
+                                        <p>Loading optimal path data...</p>
                                     </div>
                                 )}
                             </div>
