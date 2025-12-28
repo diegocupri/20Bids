@@ -529,9 +529,10 @@ app.get('/api/stats/optimization', async (req, res) => {
         // Calculate dummy results for legacy if needed, or simply pass partial
         const best = bubbleData.length > 0 ? bubbleData[0] : { tp: 0, sl: 0, totalReturn: 0 };
 
-        console.log(`[Optimization] Best Overall: TP=${best.tp}%, SL=${best.sl}% => Total Return: ${best.totalReturn}%`);
+        console.log(`[Optimization v3] Best Overall: TP=${best.tp}%, SL=${best.sl}% => Total Return: ${best.totalReturn}%`);
 
         res.json({
+            version: 'v3-debug', // FORCE UPDATE CHECK
             tpRange,
             slRange,
             bubbleData,
