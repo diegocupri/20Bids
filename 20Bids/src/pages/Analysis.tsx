@@ -5,6 +5,10 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     AreaChart, Area, ComposedChart, Line, Legend, LabelList, Cell
 } from 'recharts';
+import {
+    LineChart as TremorLineChart,
+    ScatterChart as TremorScatterChart
+} from '@tremor/react';
 import { cn } from '../lib/utils';
 import { fetchAnalysis } from '../api/client';
 import { startOfYear, subWeeks, subMonths, isAfter, startOfWeek, startOfMonth, format } from 'date-fns';
@@ -1441,26 +1445,21 @@ export function AnalysisPage() {
                                 </div>
                             </ChartCard>
 
-                            {/* EFFICIENT FRONTIER: Return vs Risk Trade-off */}
+                            {/* EFFICIENT FRONTIER: Return vs Risk Trade-off - TREMOR */}
                             <ChartCard title="" height={420} className="w-full">
-                                <div className="flex items-center justify-between mb-2">
-                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 font-sans">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
                                         EFFICIENT FRONTIER
-                                        <span className="text-[10px] font-normal text-text-secondary/70">
+                                        <span className="text-[10px] font-normal text-gray-400">
                                             (Return vs Risk)
                                         </span>
                                     </h3>
                                 </div>
-                                <div className="w-full h-full">
+                                <div className="w-full h-[340px]">
                                     {optimizationData?.bubbleData?.length > 0 ? (() => {
                                         // Filter by risk tolerance
                                         const filteredData = optimizationData.bubbleData.filter((d: any) => d.sl <= maxRiskTolerance);
                                         if (filteredData.length === 0) return <div className="text-center text-gray-400 py-10">No data for selected risk level</div>;
-
-                                        // For efficient frontier: X = SL (risk), Y = Return
-                                        const sls = filteredData.map((d: any) => d.sl);
-                                        const returns = filteredData.map((d: any) => d.totalReturn);
-                                        const efficiencies = filteredData.map((d: any) => d.efficiency);
 
                                         // Find Pareto optimal points (efficient frontier)
                                         const paretoPoints: any[] = [];
@@ -1475,7 +1474,7 @@ export function AnalysisPage() {
                                         });
                                         paretoPoints.sort((a, b) => a.sl - b.sl);
 
-                                        // Find the best point on the frontier (highest efficiency among Pareto points)
+                                        // Find the best point on the frontier
                                         let bestFrontierPoint = paretoPoints.length > 0 ? paretoPoints[0] : null;
                                         paretoPoints.forEach(p => {
                                             if (p.efficiency > (bestFrontierPoint?.efficiency || -Infinity)) {
@@ -1483,106 +1482,30 @@ export function AnalysisPage() {
                                             }
                                         });
 
+                                        // Format data for Tremor ScatterChart
+                                        const scatterData = filteredData.map((d: any) => ({
+                                            risk: d.sl,
+                                            return: d.totalReturn,
+                                            efficiency: d.efficiency,
+                                            tp: d.tp,
+                                            winRate: d.winRate,
+                                            isOptimal: paretoPoints.some(p => p.tp === d.tp && p.sl === d.sl),
+                                            isBest: bestFrontierPoint?.tp === d.tp && bestFrontierPoint?.sl === d.sl
+                                        }));
+
                                         return (
-                                            <Plot
-                                                data={[
-                                                    // All points (scatter)
-                                                    {
-                                                        x: sls,
-                                                        y: returns,
-                                                        mode: 'markers',
-                                                        type: 'scatter',
-                                                        marker: {
-                                                            size: 8,
-                                                            color: efficiencies,
-                                                            colorscale: 'RdYlGn',
-                                                            colorbar: {
-                                                                title: { text: 'Efficiency', side: 'right' },
-                                                                thickness: 12,
-                                                                len: 0.9
-                                                            },
-                                                            showscale: true,
-                                                            opacity: 0.5
-                                                        },
-                                                        text: filteredData.map((d: any) =>
-                                                            `TP: ${d.tp}% | SL: ${d.sl}%<br>Return: ${d.totalReturn}%<br>Efficiency: ${d.efficiency}<br>WinRate: ${d.winRate}%`
-                                                        ),
-                                                        hoverinfo: 'text',
-                                                        name: 'All Combinations'
-                                                    },
-                                                    // Efficient Frontier Line
-                                                    {
-                                                        x: paretoPoints.map(p => p.sl),
-                                                        y: paretoPoints.map(p => p.totalReturn),
-                                                        mode: 'lines+markers',
-                                                        type: 'scatter',
-                                                        line: { color: '#f59e0b', width: 3 },
-                                                        marker: { size: 10, color: '#f59e0b', symbol: 'diamond' },
-                                                        text: paretoPoints.map(p =>
-                                                            `⭐ OPTIMAL<br>TP: ${p.tp}% | SL: ${p.sl}%<br>Return: ${p.totalReturn}%<br>Efficiency: ${p.efficiency}`
-                                                        ),
-                                                        hoverinfo: 'text',
-                                                        name: 'Efficient Frontier'
-                                                    }
-                                                ]}
-                                                layout={{
-                                                    autosize: true,
-                                                    margin: { l: 60, r: 70, t: 20, b: 70 },
-                                                    xaxis: {
-                                                        title: {
-                                                            text: 'Risk (Stop Loss %)',
-                                                            font: { size: 11, color: '#6b7280' },
-                                                            standoff: 15
-                                                        },
-                                                        tickfont: { size: 10, color: '#374151' },
-                                                        gridcolor: '#f0f1f2',
-                                                        linecolor: '#e5e7eb',
-                                                        zeroline: false
-                                                    },
-                                                    yaxis: {
-                                                        title: {
-                                                            text: 'Total Return (%)',
-                                                            font: { size: 11, color: '#6b7280' },
-                                                            standoff: 10
-                                                        },
-                                                        tickfont: { size: 10, color: '#374151' },
-                                                        gridcolor: '#f0f1f2',
-                                                        linecolor: '#e5e7eb',
-                                                        zeroline: true,
-                                                        zerolinecolor: '#e5e7eb',
-                                                        zerolinewidth: 1
-                                                    },
-                                                    paper_bgcolor: 'transparent',
-                                                    plot_bgcolor: '#fafbfc',
-                                                    font: { family: 'Inter, system-ui, sans-serif', size: 10, color: '#374151' },
-                                                    showlegend: true,
-                                                    legend: {
-                                                        orientation: 'h',
-                                                        x: 0.5,
-                                                        xanchor: 'center',
-                                                        y: 1.08,
-                                                        bgcolor: 'transparent',
-                                                        font: { size: 10 }
-                                                    },
-                                                    annotations: bestFrontierPoint ? [{
-                                                        x: bestFrontierPoint.sl,
-                                                        y: bestFrontierPoint.totalReturn,
-                                                        text: `<b>Best Efficiency</b><br>TP:${bestFrontierPoint.tp}% SL:${bestFrontierPoint.sl}%`,
-                                                        showarrow: true,
-                                                        arrowhead: 0,
-                                                        arrowcolor: '#f59e0b',
-                                                        ax: 55,
-                                                        ay: -25,
-                                                        font: { size: 10, color: '#78350f' },
-                                                        bgcolor: '#fef3c7',
-                                                        borderpad: 5,
-                                                        bordercolor: '#f59e0b',
-                                                        borderwidth: 1
-                                                    }] : []
-                                                }}
-                                                config={{ displayModeBar: false, responsive: true }}
-                                                style={{ width: '100%', height: '100%' }}
-                                                useResizeHandler={true}
+                                            <TremorScatterChart
+                                                data={scatterData}
+                                                x="risk"
+                                                y="return"
+                                                size="efficiency"
+                                                category="isOptimal"
+                                                colors={['slate', 'amber']}
+                                                showLegend={true}
+                                                showGridLines={true}
+                                                xAxisLabel="Risk (Stop Loss %)"
+                                                yAxisLabel="Total Return (%)"
+                                                className="h-full"
                                             />
                                         );
                                     })() : (
@@ -1594,17 +1517,17 @@ export function AnalysisPage() {
                             </ChartCard>
                         </div>
 
-                        {/* OPTIMAL SL PATH - Best SL for each TP Target */}
+                        {/* OPTIMAL SL PATH - TREMOR LineChart */}
                         <ChartCard title="" height={380} className="w-full mt-6">
-                            <div className="flex items-center justify-between mb-2">
-                                <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 font-sans">
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
                                     OPTIMAL SL PATH
-                                    <span className="text-[10px] font-normal text-text-secondary/70">
+                                    <span className="text-[10px] font-normal text-gray-400">
                                         (Best Stop Loss for each Take Profit target)
                                     </span>
                                 </h3>
                             </div>
-                            <div className="w-full h-full">
+                            <div className="w-full h-[300px]">
                                 {optimizationData?.bubbleData?.length > 0 ? (() => {
                                     const data = optimizationData.bubbleData;
 
@@ -1613,179 +1536,50 @@ export function AnalysisPage() {
                                         ([...new Set(data.map((d: any) => d.tp))] as number[]).sort((a, b) => a - b);
 
                                     // For each TP, find the SL with best efficiency (within risk tolerance)
-                                    const optimalPath: { tp: number; sl: number; efficiency: number; avgReturn: number; winRate: number }[] = [];
+                                    const optimalPath: {
+                                        "Take Profit": string;
+                                        "Optimal SL": number;
+                                        efficiency: number;
+                                        avgReturn: number;
+                                        winRate: number;
+                                        isSelected: boolean;
+                                    }[] = [];
 
                                     for (const tp of tpLevels) {
                                         const tpData = data.filter((d: any) => d.tp === tp && d.sl <= maxRiskTolerance);
                                         if (tpData.length > 0) {
-                                            // Find best efficiency point for this TP
                                             const best = tpData.reduce((a: any, b: any) =>
                                                 a.efficiency > b.efficiency ? a : b
                                             );
                                             optimalPath.push({
-                                                tp: best.tp,
-                                                sl: best.sl,
+                                                "Take Profit": `${best.tp}%`,
+                                                "Optimal SL": best.sl,
                                                 efficiency: best.efficiency,
                                                 avgReturn: best.avgReturn || 0,
-                                                winRate: best.winRate || 0
+                                                winRate: best.winRate || 0,
+                                                isSelected: best.tp === targetTP
                                             });
                                         }
                                     }
+
 
                                     if (optimalPath.length === 0) {
                                         return <div className="text-center text-gray-400 py-10">No data for selected risk level</div>;
                                     }
 
-                                    // Find the global optimum
-                                    const globalBest = optimalPath.reduce((a, b) => a.efficiency > b.efficiency ? a : b);
-
                                     return (
-                                        <Plot
-                                            data={[
-                                                // Main line trace
-                                                {
-                                                    x: optimalPath.map(p => p.tp),
-                                                    y: optimalPath.map(p => p.sl),
-                                                    mode: 'lines+markers',
-                                                    type: 'scatter',
-                                                    name: 'Optimal SL',
-                                                    line: {
-                                                        width: 3,
-                                                        color: '#3b82f6',
-                                                        shape: 'spline'
-                                                    },
-                                                    marker: {
-                                                        size: optimalPath.map(p => Math.max(8, Math.min(18, p.efficiency / 5))),
-                                                        color: optimalPath.map(p => p.avgReturn),
-                                                        colorscale: 'RdYlGn',
-                                                        colorbar: {
-                                                            title: 'Avg Ret %',
-                                                            titleside: 'right',
-                                                            thickness: 12,
-                                                            len: 0.8
-                                                        },
-                                                        showscale: true,
-                                                        line: { color: '#1e40af', width: 1 }
-                                                    },
-                                                    text: optimalPath.map(p =>
-                                                        `<b>TP: ${p.tp}%</b><br>Optimal SL: ${p.sl}%<br>Efficiency: ${p.efficiency.toFixed(1)}<br>Avg Return: ${p.avgReturn.toFixed(2)}%<br>Win Rate: ${p.winRate}%`
-                                                    ),
-                                                    hoverinfo: 'text'
-                                                },
-                                                // Global best marker
-                                                {
-                                                    x: [globalBest.tp],
-                                                    y: [globalBest.sl],
-                                                    mode: 'markers',
-                                                    type: 'scatter',
-                                                    name: 'Global Optimum',
-                                                    marker: {
-                                                        size: 22,
-                                                        color: '#059669',
-                                                        symbol: 'star',
-                                                        line: { color: '#ffffff', width: 2 }
-                                                    },
-                                                    hoverinfo: 'skip',
-                                                    showlegend: true
-                                                },
-                                                // User's selected TP marker
-                                                (() => {
-                                                    const userPoint = optimalPath.find(p => p.tp === targetTP);
-                                                    if (!userPoint) return null;
-                                                    return {
-                                                        x: [userPoint.tp],
-                                                        y: [userPoint.sl],
-                                                        mode: 'markers',
-                                                        type: 'scatter',
-                                                        name: 'Your Selection',
-                                                        marker: {
-                                                            size: 18,
-                                                            color: '#3b82f6',
-                                                            symbol: 'circle',
-                                                            line: { color: '#1e40af', width: 3 }
-                                                        },
-                                                        hoverinfo: 'skip',
-                                                        showlegend: true
-                                                    };
-                                                })()
-                                            ].filter(Boolean) as any}
-                                            layout={{
-                                                autosize: true,
-                                                margin: { l: 60, r: 70, t: 30, b: 70 },
-                                                xaxis: {
-                                                    title: {
-                                                        text: 'Take Profit Target (%)',
-                                                        font: { size: 11, color: '#6b7280' },
-                                                        standoff: 15
-                                                    },
-                                                    tickfont: { size: 10, color: '#374151' },
-                                                    gridcolor: '#f0f1f2',
-                                                    linecolor: '#e5e7eb',
-                                                    zeroline: false,
-                                                    dtick: 1
-                                                },
-                                                yaxis: {
-                                                    title: {
-                                                        text: 'Optimal Stop Loss (%)',
-                                                        font: { size: 11, color: '#6b7280' },
-                                                        standoff: 10
-                                                    },
-                                                    tickfont: { size: 10, color: '#374151' },
-                                                    gridcolor: '#f0f1f2',
-                                                    linecolor: '#e5e7eb',
-                                                    zeroline: false,
-                                                    range: [0, maxRiskTolerance + 1]
-                                                },
-                                                paper_bgcolor: 'transparent',
-                                                plot_bgcolor: '#fafbfc',
-                                                font: { family: 'Inter, system-ui, sans-serif', size: 10, color: '#374151' },
-                                                showlegend: true,
-                                                legend: {
-                                                    orientation: 'h',
-                                                    x: 0.5,
-                                                    xanchor: 'center',
-                                                    y: 1.12,
-                                                    bgcolor: 'transparent',
-                                                    font: { size: 10 }
-                                                },
-                                                annotations: [
-                                                    // Global best annotation
-                                                    {
-                                                        x: globalBest.tp,
-                                                        y: globalBest.sl,
-                                                        text: `<b>Global Best</b><br>TP:${globalBest.tp}% SL:${globalBest.sl}%`,
-                                                        showarrow: true,
-                                                        arrowhead: 0,
-                                                        arrowcolor: '#059669',
-                                                        ax: 45,
-                                                        ay: -25,
-                                                        font: { size: 9, color: '#065f46' },
-                                                        bgcolor: '#d1fae5',
-                                                        borderpad: 4,
-                                                        bordercolor: '#10b981',
-                                                        borderwidth: 1
-                                                    },
-                                                    // User's selection annotation
-                                                    ...(optimalPath.find(p => p.tp === targetTP) ? [{
-                                                        x: targetTP,
-                                                        y: optimalPath.find(p => p.tp === targetTP)?.sl || 0,
-                                                        text: `<b>Your TP</b>`,
-                                                        showarrow: true,
-                                                        arrowhead: 0,
-                                                        arrowcolor: '#3b82f6',
-                                                        ax: -35,
-                                                        ay: 25,
-                                                        font: { size: 9, color: '#1e40af' },
-                                                        bgcolor: '#dbeafe',
-                                                        borderpad: 3,
-                                                        bordercolor: '#3b82f6',
-                                                        borderwidth: 1
-                                                    }] : [])
-                                                ]
-                                            }}
-                                            config={{ displayModeBar: false, responsive: true }}
-                                            style={{ width: '100%', height: '100%' }}
-                                            useResizeHandler={true}
+                                        <TremorLineChart
+                                            data={optimalPath}
+                                            index="Take Profit"
+                                            categories={["Optimal SL"]}
+                                            colors={["blue"]}
+                                            showLegend={true}
+                                            showGridLines={true}
+                                            yAxisLabel="Stop Loss (%)"
+                                            xAxisLabel="Take Profit Target"
+                                            valueFormatter={(value) => `${value.toFixed(1)}%`}
+                                            className="h-full"
+                                            curveType="monotone"
                                         />
                                     );
                                 })() : (
