@@ -139,6 +139,36 @@ export function AnalysisPage() {
         return () => clearTimeout(handler);
     }, [minProb]);
 
+    // Optimization Data Fetcher
+    const fetchOptimizationData = async () => {
+        setOptimizationLoading(true);
+        try {
+            const { API_URL } = await import('../api/client');
+            // Handle volume in millions
+            const volValue = minVolume || 0;
+            const volParam = volValue < 1000 ? volValue * 1000000 : volValue;
+
+            const params = new URLSearchParams({
+                tp: takeProfit.toString(),
+                sl: stopLoss.toString(),
+                minVol: volParam.toString(),
+                minPrice: minPrice.toString(),
+                minProb: minProb.toString()
+            });
+            const res = await fetch(`${API_URL}/stats/optimization?${params.toString()}`);
+            const data = await res.json();
+            setOptimizationData(data);
+        } catch (err) {
+            console.error('Optimization fetch error:', err);
+        }
+        setOptimizationLoading(false);
+    };
+
+    // Auto-Run on Mount
+    useEffect(() => {
+        fetchOptimizationData();
+    }, []);
+
     // Save filters to localStorage
     useEffect(() => { localStorage.setItem('stopLoss', stopLoss.toString()); }, [stopLoss]);
     useEffect(() => { localStorage.setItem('analysisMinVolume', minVolume.toString()); }, [minVolume]);
@@ -1179,30 +1209,7 @@ export function AnalysisPage() {
                                     </span>
                                 </h3>
                                 <button
-                                    onClick={async () => {
-                                        setOptimizationLoading(true);
-                                        try {
-                                            // Use the centralized API_URL from client.ts
-                                            const { API_URL } = await import('../api/client');
-                                            // Handle volume in millions
-                                            const volValue = minVolume || 0;
-                                            const volParam = volValue < 1000 ? volValue * 1000000 : volValue;
-
-                                            const params = new URLSearchParams({
-                                                tp: takeProfit.toString(),
-                                                sl: stopLoss.toString(),
-                                                minVol: volParam.toString(),
-                                                minPrice: minPrice.toString(),
-                                                minProb: minProb.toString()
-                                            });
-                                            const res = await fetch(`${API_URL}/stats/optimization?${params.toString()}`);
-                                            const data = await res.json();
-                                            setOptimizationData(data);
-                                        } catch (err) {
-                                            console.error('Optimization fetch error:', err);
-                                        }
-                                        setOptimizationLoading(false);
-                                    }}
+                                    onClick={fetchOptimizationData}
                                     disabled={optimizationLoading}
                                     className="px-4 py-1.5 text-[11px] font-bold rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-all disabled:opacity-50"
                                 >
