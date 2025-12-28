@@ -3,9 +3,12 @@ import Plot from 'react-plotly.js';
 import { Sidebar } from '../components/Sidebar';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    AreaChart, Area, ComposedChart, Line, Legend, LabelList, Cell,
-    ScatterChart, Scatter, LineChart, ReferenceDot
+    AreaChart, Area, ComposedChart, Line, Legend, LabelList, Cell
 } from 'recharts';
+import {
+    ScatterChart as TremorScatter,
+    LineChart as TremorLine
+} from '@tremor/react';
 import { cn } from '../lib/utils';
 import { fetchAnalysis } from '../api/client';
 import { startOfYear, subWeeks, subMonths, isAfter, startOfWeek, startOfMonth, format } from 'date-fns';
@@ -1479,82 +1482,30 @@ export function AnalysisPage() {
                                             }
                                         });
 
-                                        // Format data for Recharts ScatterChart
+                                        // Format data for Tremor ScatterChart
                                         const scatterData = filteredData.map((d: any) => ({
                                             risk: d.sl,
                                             return: d.totalReturn,
                                             efficiency: d.efficiency,
                                             tp: d.tp,
                                             winRate: d.winRate,
-                                            isOptimal: paretoPoints.some(p => p.tp === d.tp && p.sl === d.sl),
+                                            isOptimal: paretoPoints.some(p => p.tp === d.tp && p.sl === d.sl) ? "Optimal" : "Regular",
                                         }));
 
-                                        const optimalData = scatterData.filter((d: any) => d.isOptimal);
-                                        const regularData = scatterData.filter((d: any) => !d.isOptimal);
-
                                         return (
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <ScatterChart margin={{ top: 20, right: 30, bottom: 40, left: 40 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                                    <XAxis
-                                                        type="number"
-                                                        dataKey="risk"
-                                                        name="Risk"
-                                                        unit="%"
-                                                        domain={[0, 'auto']}
-                                                        label={{ value: 'Risk (Stop Loss %)', position: 'bottom', offset: 10, style: { fontSize: 11, fill: '#6b7280' } }}
-                                                        tick={{ fontSize: 10 }}
-                                                    />
-                                                    <YAxis
-                                                        type="number"
-                                                        dataKey="return"
-                                                        name="Return"
-                                                        unit="%"
-                                                        label={{ value: 'Total Return (%)', angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 11, fill: '#6b7280' } }}
-                                                        tick={{ fontSize: 10 }}
-                                                    />
-                                                    <Tooltip
-                                                        cursor={{ strokeDasharray: '3 3' }}
-                                                        content={({ active, payload }) => {
-                                                            if (active && payload && payload.length) {
-                                                                const d = payload[0].payload;
-                                                                return (
-                                                                    <div className="bg-white p-2 rounded-lg shadow-lg border border-gray-200 text-xs">
-                                                                        <p className="font-bold">TP: {d.tp}% | SL: {d.risk}%</p>
-                                                                        <p>Return: {d.return}%</p>
-                                                                        <p>Efficiency: {d.efficiency?.toFixed(1)}</p>
-                                                                        <p>Win Rate: {d.winRate}%</p>
-                                                                    </div>
-                                                                );
-                                                            }
-                                                            return null;
-                                                        }}
-                                                    />
-                                                    <Legend verticalAlign="top" height={36} />
-                                                    <Scatter
-                                                        name="All Combinations"
-                                                        data={regularData}
-                                                        fill="#94a3b8"
-                                                        fillOpacity={0.5}
-                                                    />
-                                                    <Scatter
-                                                        name="Efficient Frontier"
-                                                        data={optimalData}
-                                                        fill="#f59e0b"
-                                                        shape="diamond"
-                                                    />
-                                                    {bestFrontierPoint && (
-                                                        <ReferenceDot
-                                                            x={bestFrontierPoint.sl}
-                                                            y={bestFrontierPoint.totalReturn}
-                                                            r={8}
-                                                            fill="#059669"
-                                                            stroke="#fff"
-                                                            strokeWidth={2}
-                                                        />
-                                                    )}
-                                                </ScatterChart>
-                                            </ResponsiveContainer>
+                                            <TremorScatter
+                                                data={scatterData}
+                                                x="risk"
+                                                y="return"
+                                                size="efficiency"
+                                                category="isOptimal"
+                                                colors={['slate', 'amber']}
+                                                showLegend={true}
+                                                showGridLines={true}
+                                                xAxisLabel="Risk (Stop Loss %)"
+                                                yAxisLabel="Total Return (%)"
+                                                className="h-full"
+                                            />
                                         );
                                     })() : (
                                         <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
@@ -1616,47 +1567,18 @@ export function AnalysisPage() {
                                     }
 
                                     return (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <LineChart data={optimalPath} margin={{ top: 20, right: 30, bottom: 40, left: 40 }}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                                <XAxis
-                                                    dataKey="Take Profit"
-                                                    label={{ value: 'Take Profit Target', position: 'bottom', offset: 10, style: { fontSize: 11, fill: '#6b7280' } }}
-                                                    tick={{ fontSize: 10 }}
-                                                />
-                                                <YAxis
-                                                    domain={[0, 'auto']}
-                                                    label={{ value: 'Optimal Stop Loss (%)', angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 11, fill: '#6b7280' } }}
-                                                    tick={{ fontSize: 10 }}
-                                                />
-                                                <Tooltip
-                                                    content={({ active, payload }) => {
-                                                        if (active && payload && payload.length) {
-                                                            const d = payload[0].payload;
-                                                            return (
-                                                                <div className="bg-white p-2 rounded-lg shadow-lg border border-gray-200 text-xs">
-                                                                    <p className="font-bold">{d["Take Profit"]}</p>
-                                                                    <p>Optimal SL: {d["Optimal SL"]}%</p>
-                                                                    <p>Efficiency: {d.efficiency?.toFixed(1)}</p>
-                                                                    <p>Avg Return: {d.avgReturn?.toFixed(2)}%</p>
-                                                                    <p>Win Rate: {d.winRate}%</p>
-                                                                </div>
-                                                            );
-                                                        }
-                                                        return null;
-                                                    }}
-                                                />
-                                                <Legend verticalAlign="top" height={36} />
-                                                <Line
-                                                    type="monotone"
-                                                    dataKey="Optimal SL"
-                                                    stroke="#3b82f6"
-                                                    strokeWidth={2}
-                                                    dot={{ fill: '#3b82f6', r: 4 }}
-                                                    activeDot={{ r: 6, fill: '#1d4ed8' }}
-                                                />
-                                            </LineChart>
-                                        </ResponsiveContainer>
+                                        <TremorLine
+                                            data={optimalPath}
+                                            index="Take Profit"
+                                            categories={["Optimal SL"]}
+                                            colors={["blue"]}
+                                            showLegend={true}
+                                            showGridLines={true}
+                                            yAxisLabel="Stop Loss (%)"
+                                            xAxisLabel="Take Profit Target"
+                                            className="h-full"
+                                            curveType="monotone"
+                                        />
                                     );
                                 })() : (
                                     <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
