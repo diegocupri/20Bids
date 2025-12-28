@@ -481,7 +481,7 @@ app.get('/api/stats/optimization', async (req, res) => {
                 let grossLoss = 0;
 
                 for (const rec of validRecs) {
-                    if (rec.vol < minVolume) continue;
+                    // Note: minVolume filter removed - rec.vol is relativeVol (ratio), not absolute volume
                     if (rec.price < minPrice) continue;
                     if (rec.prob < minProb) continue;
 
