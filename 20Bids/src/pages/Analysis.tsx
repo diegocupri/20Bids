@@ -112,6 +112,7 @@ export function AnalysisPage() {
     const [debouncedMinPrice, setDebouncedMinPrice] = useState<number>(minPrice);
     const [debouncedMinProb, setDebouncedMinProb] = useState<number>(minProb);
     const [mvsoThreshold, setMvsoThreshold] = useState<number>(0.5); // New MVSO Threshold Filter
+    const [maxRiskTolerance, setMaxRiskTolerance] = useState<number>(12); // Max SL% user is willing to accept
 
     // Debounce Take Profit
     useEffect(() => {
@@ -1206,6 +1207,32 @@ export function AnalysisPage() {
                         </ChartCard>
 
                         {/* TP/SL OPTIMIZATION - DUAL VISUALIZATION */}
+                        {/* Risk Tolerance Control */}
+                        <div className="flex items-center gap-4 mb-4 p-3 bg-bg-tertiary/30 rounded-lg border border-border-primary">
+                            <label className="text-xs font-bold text-text-secondary uppercase tracking-wide">
+                                Max Risk Tolerance:
+                            </label>
+                            <input
+                                type="range"
+                                min="1"
+                                max="12"
+                                step="0.5"
+                                value={maxRiskTolerance}
+                                onChange={(e) => setMaxRiskTolerance(parseFloat(e.target.value))}
+                                className="w-48 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                            />
+                            <span className="text-sm font-bold text-text-primary min-w-[50px]">
+                                {maxRiskTolerance}% SL
+                            </span>
+                            <button
+                                onClick={fetchOptimizationData}
+                                disabled={optimizationLoading}
+                                className="ml-auto px-4 py-1.5 text-[11px] font-bold rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-all disabled:opacity-50"
+                            >
+                                {optimizationLoading ? 'Calculating...' : 'Refresh Data'}
+                            </button>
+                        </div>
+
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
                             {/* HEATMAP: Efficiency (Return per Unit Risk) */}
                             <ChartCard title="" height={420} className="w-full">
@@ -1213,22 +1240,18 @@ export function AnalysisPage() {
                                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 font-sans">
                                         EFFICIENCY HEATMAP
                                         <span className="text-[10px] font-normal text-text-secondary/70">
-                                            (Return ÷ Risk = Return per % SL)
+                                            (Return ÷ Risk)
                                         </span>
                                     </h3>
-                                    <button
-                                        onClick={fetchOptimizationData}
-                                        disabled={optimizationLoading}
-                                        className="px-3 py-1 text-[10px] font-bold rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-all disabled:opacity-50"
-                                    >
-                                        {optimizationLoading ? '...' : 'Refresh'}
-                                    </button>
                                 </div>
                                 <div className="w-full h-full">
                                     {optimizationData?.bubbleData?.length > 0 ? (() => {
-                                        const data = optimizationData.bubbleData;
-                                        const tpVals = optimizationData.tpRange || ([...new Set(data.map((d: any) => d.tp))] as number[]).sort((a, b) => a - b);
-                                        const slVals = optimizationData.slRange || ([...new Set(data.map((d: any) => d.sl))] as number[]).sort((a, b) => a - b);
+                                        // Filter data by risk tolerance
+                                        const filteredData = optimizationData.bubbleData.filter((d: any) => d.sl <= maxRiskTolerance);
+                                        if (filteredData.length === 0) return <div className="text-center text-gray-400 py-10">No data for selected risk level</div>;
+
+                                        const tpVals = optimizationData.tpRange?.filter((v: number) => v <= 12) || ([...new Set(filteredData.map((d: any) => d.tp))] as number[]).sort((a, b) => a - b);
+                                        const slVals = (optimizationData.slRange?.filter((v: number) => v <= maxRiskTolerance) || ([...new Set(filteredData.map((d: any) => d.sl))] as number[])).sort((a: number, b: number) => a - b);
 
                                         // Build 2D matrix for heatmap (Z values)
                                         const zMatrix: number[][] = [];
@@ -1238,7 +1261,7 @@ export function AnalysisPage() {
                                             const row: number[] = [];
                                             const textRow: string[] = [];
                                             for (const tp of tpVals) {
-                                                const point = data.find((d: any) => d.tp === tp && d.sl === sl);
+                                                const point = filteredData.find((d: any) => d.tp === tp && d.sl === sl);
                                                 const eff = point ? point.efficiency : 0;
                                                 row.push(eff);
                                                 textRow.push(point ?
@@ -1249,13 +1272,15 @@ export function AnalysisPage() {
                                             textMatrix.push(textRow);
                                         }
 
-                                        // Find best efficiency point
-                                        let bestEff = { tp: 0, sl: 0, efficiency: -Infinity };
-                                        data.forEach((d: any) => {
+                                        // Find best efficiency point within risk tolerance
+                                        let bestEff = { tp: 0, sl: 0, efficiency: -Infinity, totalReturn: 0 };
+                                        filteredData.forEach((d: any) => {
                                             if (d.efficiency > bestEff.efficiency) {
-                                                bestEff = { tp: d.tp, sl: d.sl, efficiency: d.efficiency };
+                                                bestEff = { tp: d.tp, sl: d.sl, efficiency: d.efficiency, totalReturn: d.totalReturn };
                                             }
                                         });
+
+                                        // Using zmid: 0 to center colorscale at efficiency = 0
 
                                         return (
                                             <Plot
@@ -1266,12 +1291,15 @@ export function AnalysisPage() {
                                                         y: slVals,
                                                         type: 'heatmap',
                                                         colorscale: [
-                                                            [0, '#dc2626'],      // Red (bad)
-                                                            [0.25, '#f97316'],   // Orange
-                                                            [0.5, '#fbbf24'],    // Yellow
-                                                            [0.75, '#22c55e'],   // Green
+                                                            [0, '#ef4444'],      // Red (negative)
+                                                            [0.3, '#fca5a5'],    // Light red
+                                                            [0.45, '#fef3c7'],   // Light yellow
+                                                            [0.5, '#ffffff'],    // White (zero)
+                                                            [0.55, '#d1fae5'],   // Light green
+                                                            [0.7, '#34d399'],    // Green
                                                             [1, '#059669']       // Emerald (best)
                                                         ],
+                                                        zmid: 0, // Center colorscale at 0
                                                         colorbar: {
                                                             title: 'Efficiency',
                                                             titleside: 'right',
@@ -1281,25 +1309,11 @@ export function AnalysisPage() {
                                                         text: textMatrix,
                                                         hoverinfo: 'text',
                                                         showscale: true
-                                                    } as any,
-                                                    // Best point marker
-                                                    {
-                                                        x: [bestEff.tp],
-                                                        y: [bestEff.sl],
-                                                        mode: 'markers',
-                                                        marker: {
-                                                            symbol: 'star',
-                                                            size: 18,
-                                                            color: 'white',
-                                                            line: { color: 'black', width: 2 }
-                                                        },
-                                                        hoverinfo: 'skip',
-                                                        showlegend: false
-                                                    }
+                                                    } as any
                                                 ]}
                                                 layout={{
                                                     autosize: true,
-                                                    margin: { l: 50, r: 60, t: 30, b: 50 },
+                                                    margin: { l: 55, r: 60, t: 30, b: 55 },
                                                     xaxis: {
                                                         title: { text: 'Take Profit (%)', font: { size: 11 } },
                                                         tickfont: { size: 9 },
@@ -1313,17 +1327,29 @@ export function AnalysisPage() {
                                                     paper_bgcolor: 'transparent',
                                                     plot_bgcolor: 'transparent',
                                                     font: { family: 'Inter', size: 10 },
+                                                    // Border highlight for best cell instead of star
+                                                    shapes: [{
+                                                        type: 'rect',
+                                                        x0: bestEff.tp - 0.25,
+                                                        x1: bestEff.tp + 0.25,
+                                                        y0: bestEff.sl - 0.25,
+                                                        y1: bestEff.sl + 0.25,
+                                                        line: { color: '#000000', width: 3 },
+                                                        fillcolor: 'transparent'
+                                                    }],
                                                     annotations: [{
                                                         x: bestEff.tp,
                                                         y: bestEff.sl,
-                                                        text: `BEST: ${bestEff.efficiency.toFixed(1)}`,
+                                                        text: `BEST<br>Eff: ${bestEff.efficiency.toFixed(1)}<br>Ret: ${bestEff.totalReturn}%`,
                                                         showarrow: true,
                                                         arrowhead: 2,
-                                                        ax: 30,
-                                                        ay: -25,
-                                                        font: { size: 10, color: 'white' },
-                                                        bgcolor: '#059669',
-                                                        borderpad: 3
+                                                        ax: 40,
+                                                        ay: -35,
+                                                        font: { size: 9, color: 'white' },
+                                                        bgcolor: '#1f2937',
+                                                        borderpad: 4,
+                                                        bordercolor: '#059669',
+                                                        borderwidth: 2
                                                     }]
                                                 }}
                                                 config={{ displayModeBar: false, responsive: true }}
@@ -1345,24 +1371,25 @@ export function AnalysisPage() {
                                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 font-sans">
                                         EFFICIENT FRONTIER
                                         <span className="text-[10px] font-normal text-text-secondary/70">
-                                            (Return vs Risk Trade-off)
+                                            (Return vs Risk)
                                         </span>
                                     </h3>
                                 </div>
                                 <div className="w-full h-full">
                                     {optimizationData?.bubbleData?.length > 0 ? (() => {
-                                        const data = optimizationData.bubbleData;
+                                        // Filter by risk tolerance
+                                        const filteredData = optimizationData.bubbleData.filter((d: any) => d.sl <= maxRiskTolerance);
+                                        if (filteredData.length === 0) return <div className="text-center text-gray-400 py-10">No data for selected risk level</div>;
 
                                         // For efficient frontier: X = SL (risk), Y = Return
-                                        const sls = data.map((d: any) => d.sl);
-                                        const returns = data.map((d: any) => d.totalReturn);
-                                        const efficiencies = data.map((d: any) => d.efficiency);
+                                        const sls = filteredData.map((d: any) => d.sl);
+                                        const returns = filteredData.map((d: any) => d.totalReturn);
+                                        const efficiencies = filteredData.map((d: any) => d.efficiency);
 
                                         // Find Pareto optimal points (efficient frontier)
-                                        // A point is Pareto optimal if no other point has both higher return AND lower risk
                                         const paretoPoints: any[] = [];
-                                        data.forEach((point: any) => {
-                                            const dominated = data.some((other: any) =>
+                                        filteredData.forEach((point: any) => {
+                                            const dominated = filteredData.some((other: any) =>
                                                 other.sl <= point.sl && other.totalReturn >= point.totalReturn &&
                                                 (other.sl < point.sl || other.totalReturn > point.totalReturn)
                                             );
@@ -1370,8 +1397,15 @@ export function AnalysisPage() {
                                                 paretoPoints.push(point);
                                             }
                                         });
-                                        // Sort Pareto points by SL for line drawing
                                         paretoPoints.sort((a, b) => a.sl - b.sl);
+
+                                        // Find the best point on the frontier (highest efficiency among Pareto points)
+                                        let bestFrontierPoint = paretoPoints.length > 0 ? paretoPoints[0] : null;
+                                        paretoPoints.forEach(p => {
+                                            if (p.efficiency > (bestFrontierPoint?.efficiency || -Infinity)) {
+                                                bestFrontierPoint = p;
+                                            }
+                                        });
 
                                         return (
                                             <Plot
@@ -1385,16 +1419,16 @@ export function AnalysisPage() {
                                                         marker: {
                                                             size: 8,
                                                             color: efficiencies,
-                                                            colorscale: 'Viridis',
+                                                            colorscale: 'RdYlGn',
                                                             colorbar: {
                                                                 title: { text: 'Efficiency', side: 'right' },
                                                                 thickness: 12,
                                                                 len: 0.9
                                                             },
                                                             showscale: true,
-                                                            opacity: 0.6
+                                                            opacity: 0.5
                                                         },
-                                                        text: data.map((d: any) =>
+                                                        text: filteredData.map((d: any) =>
                                                             `TP: ${d.tp}% | SL: ${d.sl}%<br>Return: ${d.totalReturn}%<br>Efficiency: ${d.efficiency}<br>WinRate: ${d.winRate}%`
                                                         ),
                                                         hoverinfo: 'text',
@@ -1417,7 +1451,7 @@ export function AnalysisPage() {
                                                 ]}
                                                 layout={{
                                                     autosize: true,
-                                                    margin: { l: 50, r: 60, t: 30, b: 50 },
+                                                    margin: { l: 55, r: 60, t: 30, b: 55 },
                                                     xaxis: {
                                                         title: { text: 'Risk (Stop Loss %)', font: { size: 11 } },
                                                         tickfont: { size: 9 },
@@ -1438,22 +1472,22 @@ export function AnalysisPage() {
                                                     legend: {
                                                         x: 0.02,
                                                         y: 0.98,
-                                                        bgcolor: 'rgba(255,255,255,0.8)',
+                                                        bgcolor: 'rgba(255,255,255,0.9)',
                                                         bordercolor: '#e5e7eb',
                                                         borderwidth: 1,
                                                         font: { size: 9 }
                                                     },
-                                                    annotations: paretoPoints.length > 0 ? [{
-                                                        x: paretoPoints[0].sl,
-                                                        y: paretoPoints[0].totalReturn,
-                                                        text: `Best Risk/Return<br>TP:${paretoPoints[0].tp}% SL:${paretoPoints[0].sl}%`,
+                                                    annotations: bestFrontierPoint ? [{
+                                                        x: bestFrontierPoint.sl,
+                                                        y: bestFrontierPoint.totalReturn,
+                                                        text: `Best Efficiency<br>TP:${bestFrontierPoint.tp}% SL:${bestFrontierPoint.sl}%<br>Return: ${bestFrontierPoint.totalReturn}%`,
                                                         showarrow: true,
                                                         arrowhead: 2,
-                                                        ax: 50,
-                                                        ay: 20,
+                                                        ax: 60,
+                                                        ay: -30,
                                                         font: { size: 9, color: 'white' },
-                                                        bgcolor: '#f59e0b',
-                                                        borderpad: 3
+                                                        bgcolor: '#059669',
+                                                        borderpad: 4
                                                     }] : []
                                                 }}
                                                 config={{ displayModeBar: false, responsive: true }}
