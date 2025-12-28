@@ -537,7 +537,10 @@ app.get('/api/stats/optimization', async (req, res) => {
             bubbleData,
             results: bubbleData.slice(0, 1),
             best,
-            tradeCount: allRecs.length
+            tradeCount: allRecs.length,
+            validRecsCount: validRecs.length, // DEBUG
+            sampleRec: validRecs.length > 0 ? validRecs[0] : null, // DEBUG
+            paramsReceived: { minVolume, minPrice, minProb } // DEBUG
         });
 
     } catch (error) {
