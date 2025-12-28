@@ -113,6 +113,7 @@ export function AnalysisPage() {
     const [debouncedMinProb, setDebouncedMinProb] = useState<number>(minProb);
     const [mvsoThreshold, setMvsoThreshold] = useState<number>(0.5); // New MVSO Threshold Filter
     const [maxRiskTolerance, setMaxRiskTolerance] = useState<number>(12); // Max SL% user is willing to accept
+    const [targetTP, setTargetTP] = useState<number>(5); // User's target Take Profit for SL calculator
 
     // Debounce Take Profit
     useEffect(() => {
@@ -1207,29 +1208,90 @@ export function AnalysisPage() {
                         </ChartCard>
 
                         {/* TP/SL OPTIMIZATION - DUAL VISUALIZATION */}
-                        {/* Risk Tolerance Control */}
-                        <div className="flex items-center gap-4 mb-4 p-3 bg-bg-tertiary/30 rounded-lg border border-border-primary">
-                            <label className="text-xs font-bold text-text-secondary uppercase tracking-wide">
-                                Max Risk Tolerance:
-                            </label>
-                            <input
-                                type="range"
-                                min="1"
-                                max="12"
-                                step="0.5"
-                                value={maxRiskTolerance}
-                                onChange={(e) => setMaxRiskTolerance(parseFloat(e.target.value))}
-                                className="w-48 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                            />
-                            <span className="text-sm font-bold text-text-primary min-w-[50px]">
-                                {maxRiskTolerance}% SL
-                            </span>
+                        {/* Premium Controls Panel */}
+                        <div className="flex flex-wrap items-center gap-6 mb-6 p-4 bg-gradient-to-r from-slate-50 to-gray-50 rounded-xl border border-gray-200/60 shadow-sm">
+                            {/* Risk Tolerance Control */}
+                            <div className="flex items-center gap-3">
+                                <div className="flex flex-col">
+                                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                                        Max Risk Tolerance
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="range"
+                                            min="1"
+                                            max="12"
+                                            step="0.5"
+                                            value={maxRiskTolerance}
+                                            onChange={(e) => setMaxRiskTolerance(parseFloat(e.target.value))}
+                                            className="w-32 h-1.5 bg-gray-200 rounded-full appearance-none cursor-pointer accent-blue-500"
+                                        />
+                                        <span className="text-sm font-bold text-gray-700 bg-white px-2 py-0.5 rounded-md border border-gray-200 min-w-[55px] text-center">
+                                            {maxRiskTolerance}% SL
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Divider */}
+                            <div className="h-10 w-px bg-gray-300"></div>
+
+                            {/* Target TP Calculator */}
+                            <div className="flex items-center gap-3">
+                                <div className="flex flex-col">
+                                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                                        Your Target TP
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            min="0.5"
+                                            max="12"
+                                            step="0.5"
+                                            value={targetTP}
+                                            onChange={(e) => setTargetTP(parseFloat(e.target.value) || 5)}
+                                            className="w-16 h-8 text-sm font-bold text-center text-gray-800 bg-white border-2 border-blue-400 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+                                        />
+                                        <span className="text-xs text-gray-500">%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Calculated Optimal SL Display */}
+                            {optimizationData?.bubbleData?.length > 0 && (() => {
+                                const tpData = optimizationData.bubbleData.filter((d: any) => d.tp === targetTP && d.sl <= maxRiskTolerance);
+                                if (tpData.length === 0) return null;
+                                const best = tpData.reduce((a: any, b: any) => a.efficiency > b.efficiency ? a : b);
+                                return (
+                                    <div className="flex items-center gap-4 ml-2 px-4 py-2 bg-gradient-to-r from-emerald-50 to-green-50 rounded-lg border border-emerald-200">
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-[9px] font-semibold text-emerald-600 uppercase">Optimal SL</span>
+                                            <span className="text-lg font-black text-emerald-700">{best.sl}%</span>
+                                        </div>
+                                        <div className="h-8 w-px bg-emerald-200"></div>
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-[9px] font-semibold text-gray-500 uppercase">Avg Return</span>
+                                            <span className="text-sm font-bold text-gray-700">{best.avgReturn?.toFixed(2) || '0'}%</span>
+                                        </div>
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-[9px] font-semibold text-gray-500 uppercase">Win Rate</span>
+                                            <span className="text-sm font-bold text-gray-700">{best.winRate}%</span>
+                                        </div>
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-[9px] font-semibold text-gray-500 uppercase">Efficiency</span>
+                                            <span className="text-sm font-bold text-gray-700">{best.efficiency?.toFixed(1)}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Refresh Button */}
                             <button
                                 onClick={fetchOptimizationData}
                                 disabled={optimizationLoading}
-                                className="ml-auto px-4 py-1.5 text-[11px] font-bold rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-all disabled:opacity-50"
+                                className="ml-auto px-4 py-2 text-xs font-semibold rounded-lg bg-gray-800 text-white hover:bg-gray-700 transition-all disabled:opacity-50 shadow-sm"
                             >
-                                {optimizationLoading ? 'Calculating...' : 'Refresh Data'}
+                                {optimizationLoading ? 'Calculating...' : '↻ Refresh'}
                             </button>
                         </div>
 
@@ -1315,43 +1377,55 @@ export function AnalysisPage() {
                                                 ]}
                                                 layout={{
                                                     autosize: true,
-                                                    margin: { l: 55, r: 60, t: 30, b: 60 },
+                                                    margin: { l: 60, r: 70, t: 20, b: 70 },
                                                     xaxis: {
-                                                        title: { text: 'Take Profit (%)  |  Efficiency = AvgReturn ÷ SL', font: { size: 10 } },
-                                                        tickfont: { size: 9 },
+                                                        title: {
+                                                            text: 'Take Profit (%)',
+                                                            font: { size: 11, color: '#6b7280' },
+                                                            standoff: 15
+                                                        },
+                                                        tickfont: { size: 10, color: '#374151' },
+                                                        gridcolor: '#f0f1f2',
+                                                        linecolor: '#e5e7eb',
                                                         dtick: 1
                                                     },
                                                     yaxis: {
-                                                        title: { text: 'Stop Loss (%)', font: { size: 11 } },
-                                                        tickfont: { size: 9 },
+                                                        title: {
+                                                            text: 'Stop Loss (%)',
+                                                            font: { size: 11, color: '#6b7280' },
+                                                            standoff: 10
+                                                        },
+                                                        tickfont: { size: 10, color: '#374151' },
+                                                        gridcolor: '#f0f1f2',
+                                                        linecolor: '#e5e7eb',
                                                         dtick: 1
                                                     },
                                                     paper_bgcolor: 'transparent',
-                                                    plot_bgcolor: 'transparent',
-                                                    font: { family: 'Inter', size: 10 },
-                                                    // Border highlight for best cell instead of star
+                                                    plot_bgcolor: '#fafbfc',
+                                                    font: { family: 'Inter, system-ui, sans-serif', size: 10, color: '#374151' },
                                                     shapes: [{
                                                         type: 'rect',
-                                                        x0: bestEff.tp - 0.25,
-                                                        x1: bestEff.tp + 0.25,
-                                                        y0: bestEff.sl - 0.25,
-                                                        y1: bestEff.sl + 0.25,
-                                                        line: { color: '#000000', width: 3 },
+                                                        x0: bestEff.tp - 0.3,
+                                                        x1: bestEff.tp + 0.3,
+                                                        y0: bestEff.sl - 0.3,
+                                                        y1: bestEff.sl + 0.3,
+                                                        line: { color: '#1f2937', width: 2 },
                                                         fillcolor: 'transparent'
                                                     }],
                                                     annotations: [{
                                                         x: bestEff.tp,
                                                         y: bestEff.sl,
-                                                        text: `BEST<br>Eff: ${bestEff.efficiency.toFixed(1)}<br>Ret: ${bestEff.totalReturn}%`,
+                                                        text: `<b>BEST</b><br>Eff: ${bestEff.efficiency.toFixed(0)}`,
                                                         showarrow: true,
-                                                        arrowhead: 2,
-                                                        ax: 40,
-                                                        ay: -35,
-                                                        font: { size: 9, color: 'white' },
-                                                        bgcolor: '#1f2937',
-                                                        borderpad: 4,
-                                                        bordercolor: '#059669',
-                                                        borderwidth: 2
+                                                        arrowhead: 0,
+                                                        arrowcolor: '#059669',
+                                                        ax: 45,
+                                                        ay: -30,
+                                                        font: { size: 10, color: '#065f46' },
+                                                        bgcolor: '#d1fae5',
+                                                        borderpad: 5,
+                                                        bordercolor: '#10b981',
+                                                        borderwidth: 1
                                                     }]
                                                 }}
                                                 config={{ displayModeBar: false, responsive: true }}
@@ -1453,43 +1527,57 @@ export function AnalysisPage() {
                                                 ]}
                                                 layout={{
                                                     autosize: true,
-                                                    margin: { l: 55, r: 60, t: 30, b: 55 },
+                                                    margin: { l: 60, r: 70, t: 20, b: 70 },
                                                     xaxis: {
-                                                        title: { text: 'Risk (Stop Loss %)', font: { size: 11 } },
-                                                        tickfont: { size: 9 },
-                                                        gridcolor: '#f3f4f6',
+                                                        title: {
+                                                            text: 'Risk (Stop Loss %)',
+                                                            font: { size: 11, color: '#6b7280' },
+                                                            standoff: 15
+                                                        },
+                                                        tickfont: { size: 10, color: '#374151' },
+                                                        gridcolor: '#f0f1f2',
+                                                        linecolor: '#e5e7eb',
                                                         zeroline: false
                                                     },
                                                     yaxis: {
-                                                        title: { text: 'Total Return (%)', font: { size: 11 } },
-                                                        tickfont: { size: 9 },
-                                                        gridcolor: '#f3f4f6',
+                                                        title: {
+                                                            text: 'Total Return (%)',
+                                                            font: { size: 11, color: '#6b7280' },
+                                                            standoff: 10
+                                                        },
+                                                        tickfont: { size: 10, color: '#374151' },
+                                                        gridcolor: '#f0f1f2',
+                                                        linecolor: '#e5e7eb',
                                                         zeroline: true,
-                                                        zerolinecolor: '#e5e7eb'
+                                                        zerolinecolor: '#e5e7eb',
+                                                        zerolinewidth: 1
                                                     },
                                                     paper_bgcolor: 'transparent',
-                                                    plot_bgcolor: 'transparent',
-                                                    font: { family: 'Inter', size: 10 },
+                                                    plot_bgcolor: '#fafbfc',
+                                                    font: { family: 'Inter, system-ui, sans-serif', size: 10, color: '#374151' },
                                                     showlegend: true,
                                                     legend: {
-                                                        x: 0.02,
-                                                        y: 0.98,
-                                                        bgcolor: 'rgba(255,255,255,0.9)',
-                                                        bordercolor: '#e5e7eb',
-                                                        borderwidth: 1,
-                                                        font: { size: 9 }
+                                                        orientation: 'h',
+                                                        x: 0.5,
+                                                        xanchor: 'center',
+                                                        y: 1.08,
+                                                        bgcolor: 'transparent',
+                                                        font: { size: 10 }
                                                     },
                                                     annotations: bestFrontierPoint ? [{
                                                         x: bestFrontierPoint.sl,
                                                         y: bestFrontierPoint.totalReturn,
-                                                        text: `Best Efficiency<br>TP:${bestFrontierPoint.tp}% SL:${bestFrontierPoint.sl}%<br>Return: ${bestFrontierPoint.totalReturn}%`,
+                                                        text: `<b>Best Efficiency</b><br>TP:${bestFrontierPoint.tp}% SL:${bestFrontierPoint.sl}%`,
                                                         showarrow: true,
-                                                        arrowhead: 2,
-                                                        ax: 60,
-                                                        ay: -30,
-                                                        font: { size: 9, color: 'white' },
-                                                        bgcolor: '#059669',
-                                                        borderpad: 4
+                                                        arrowhead: 0,
+                                                        arrowcolor: '#f59e0b',
+                                                        ax: 55,
+                                                        ay: -25,
+                                                        font: { size: 10, color: '#78350f' },
+                                                        bgcolor: '#fef3c7',
+                                                        borderpad: 5,
+                                                        bordercolor: '#f59e0b',
+                                                        borderwidth: 1
                                                     }] : []
                                                 }}
                                                 config={{ displayModeBar: false, responsive: true }}
@@ -1599,49 +1687,101 @@ export function AnalysisPage() {
                                                     },
                                                     hoverinfo: 'skip',
                                                     showlegend: true
-                                                }
-                                            ] as any}
+                                                },
+                                                // User's selected TP marker
+                                                (() => {
+                                                    const userPoint = optimalPath.find(p => p.tp === targetTP);
+                                                    if (!userPoint) return null;
+                                                    return {
+                                                        x: [userPoint.tp],
+                                                        y: [userPoint.sl],
+                                                        mode: 'markers',
+                                                        type: 'scatter',
+                                                        name: 'Your Selection',
+                                                        marker: {
+                                                            size: 18,
+                                                            color: '#3b82f6',
+                                                            symbol: 'circle',
+                                                            line: { color: '#1e40af', width: 3 }
+                                                        },
+                                                        hoverinfo: 'skip',
+                                                        showlegend: true
+                                                    };
+                                                })()
+                                            ].filter(Boolean) as any}
                                             layout={{
                                                 autosize: true,
-                                                margin: { l: 55, r: 70, t: 30, b: 55 },
+                                                margin: { l: 60, r: 70, t: 30, b: 70 },
                                                 xaxis: {
-                                                    title: { text: 'Take Profit Target (%)', font: { size: 11 } },
-                                                    tickfont: { size: 9 },
-                                                    gridcolor: '#f3f4f6',
+                                                    title: {
+                                                        text: 'Take Profit Target (%)',
+                                                        font: { size: 11, color: '#6b7280' },
+                                                        standoff: 15
+                                                    },
+                                                    tickfont: { size: 10, color: '#374151' },
+                                                    gridcolor: '#f0f1f2',
+                                                    linecolor: '#e5e7eb',
                                                     zeroline: false,
                                                     dtick: 1
                                                 },
                                                 yaxis: {
-                                                    title: { text: 'Optimal Stop Loss (%)', font: { size: 11 } },
-                                                    tickfont: { size: 9 },
-                                                    gridcolor: '#f3f4f6',
+                                                    title: {
+                                                        text: 'Optimal Stop Loss (%)',
+                                                        font: { size: 11, color: '#6b7280' },
+                                                        standoff: 10
+                                                    },
+                                                    tickfont: { size: 10, color: '#374151' },
+                                                    gridcolor: '#f0f1f2',
+                                                    linecolor: '#e5e7eb',
                                                     zeroline: false,
                                                     range: [0, maxRiskTolerance + 1]
                                                 },
                                                 paper_bgcolor: 'transparent',
-                                                plot_bgcolor: 'transparent',
-                                                font: { family: 'Inter', size: 10 },
+                                                plot_bgcolor: '#fafbfc',
+                                                font: { family: 'Inter, system-ui, sans-serif', size: 10, color: '#374151' },
                                                 showlegend: true,
                                                 legend: {
-                                                    x: 0.02,
-                                                    y: 0.98,
-                                                    bgcolor: 'rgba(255,255,255,0.9)',
-                                                    bordercolor: '#e5e7eb',
-                                                    borderwidth: 1,
-                                                    font: { size: 9 }
+                                                    orientation: 'h',
+                                                    x: 0.5,
+                                                    xanchor: 'center',
+                                                    y: 1.12,
+                                                    bgcolor: 'transparent',
+                                                    font: { size: 10 }
                                                 },
-                                                annotations: [{
-                                                    x: globalBest.tp,
-                                                    y: globalBest.sl,
-                                                    text: `BEST<br>TP:${globalBest.tp}% SL:${globalBest.sl}%<br>Eff: ${globalBest.efficiency.toFixed(0)}`,
-                                                    showarrow: true,
-                                                    arrowhead: 2,
-                                                    ax: 50,
-                                                    ay: -30,
-                                                    font: { size: 9, color: 'white' },
-                                                    bgcolor: '#059669',
-                                                    borderpad: 4
-                                                }]
+                                                annotations: [
+                                                    // Global best annotation
+                                                    {
+                                                        x: globalBest.tp,
+                                                        y: globalBest.sl,
+                                                        text: `<b>Global Best</b><br>TP:${globalBest.tp}% SL:${globalBest.sl}%`,
+                                                        showarrow: true,
+                                                        arrowhead: 0,
+                                                        arrowcolor: '#059669',
+                                                        ax: 45,
+                                                        ay: -25,
+                                                        font: { size: 9, color: '#065f46' },
+                                                        bgcolor: '#d1fae5',
+                                                        borderpad: 4,
+                                                        bordercolor: '#10b981',
+                                                        borderwidth: 1
+                                                    },
+                                                    // User's selection annotation
+                                                    ...(optimalPath.find(p => p.tp === targetTP) ? [{
+                                                        x: targetTP,
+                                                        y: optimalPath.find(p => p.tp === targetTP)?.sl || 0,
+                                                        text: `<b>Your TP</b>`,
+                                                        showarrow: true,
+                                                        arrowhead: 0,
+                                                        arrowcolor: '#3b82f6',
+                                                        ax: -35,
+                                                        ay: 25,
+                                                        font: { size: 9, color: '#1e40af' },
+                                                        bgcolor: '#dbeafe',
+                                                        borderpad: 3,
+                                                        bordercolor: '#3b82f6',
+                                                        borderwidth: 1
+                                                    }] : [])
+                                                ]
                                             }}
                                             config={{ displayModeBar: false, responsive: true }}
                                             style={{ width: '100%', height: '100%' }}
