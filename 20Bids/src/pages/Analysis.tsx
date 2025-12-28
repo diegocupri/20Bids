@@ -1239,8 +1239,8 @@ export function AnalysisPage() {
                                 <div className="flex items-center justify-between mb-2">
                                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 font-sans">
                                         EFFICIENCY HEATMAP
-                                        <span className="text-[10px] font-normal text-text-secondary/70">
-                                            (Return ÷ Risk)
+                                        <span className="text-[10px] font-normal text-text-secondary/70 font-mono">
+                                            Efficiency = Avg Return / SL%
                                         </span>
                                     </h3>
                                 </div>
@@ -1265,7 +1265,7 @@ export function AnalysisPage() {
                                                 const eff = point ? point.efficiency : 0;
                                                 row.push(eff);
                                                 textRow.push(point ?
-                                                    `TP: ${tp}% | SL: ${sl}%<br>Efficiency: ${eff.toFixed(1)}<br>Return: ${point.totalReturn}%<br>WinRate: ${point.winRate}%<br>PF: ${point.pf}`
+                                                    `TP: ${tp}% | SL: ${sl}%<br>Efficiency: ${eff.toFixed(1)}<br>Avg Return/Trade: ${point.avgReturn?.toFixed(2) || '0'}%<br>WinRate: ${point.winRate}%<br>PF: ${point.pf}`
                                                     : '');
                                             }
                                             zMatrix.push(row);
@@ -1291,15 +1291,17 @@ export function AnalysisPage() {
                                                         y: slVals,
                                                         type: 'heatmap',
                                                         colorscale: [
-                                                            [0, '#ef4444'],      // Red (negative)
-                                                            [0.3, '#fca5a5'],    // Light red
-                                                            [0.45, '#fef3c7'],   // Light yellow
-                                                            [0.5, '#ffffff'],    // White (zero)
-                                                            [0.55, '#d1fae5'],   // Light green
-                                                            [0.7, '#34d399'],    // Green
+                                                            [0, '#dc2626'],      // Red (very negative)
+                                                            [0.2, '#ef4444'],    // Light red
+                                                            [0.35, '#fca5a5'],   // Pink
+                                                            [0.4, '#ffffff'],    // White starts at -30
+                                                            [0.6, '#ffffff'],    // White ends at +30
+                                                            [0.65, '#86efac'],   // Light green
+                                                            [0.8, '#22c55e'],    // Green
                                                             [1, '#059669']       // Emerald (best)
                                                         ],
-                                                        zmid: 0, // Center colorscale at 0
+                                                        zmin: -100,  // Fixed scale
+                                                        zmax: 100,   // Fixed scale
                                                         colorbar: {
                                                             title: 'Efficiency',
                                                             titleside: 'right',
@@ -1313,9 +1315,9 @@ export function AnalysisPage() {
                                                 ]}
                                                 layout={{
                                                     autosize: true,
-                                                    margin: { l: 55, r: 60, t: 30, b: 55 },
+                                                    margin: { l: 55, r: 60, t: 30, b: 60 },
                                                     xaxis: {
-                                                        title: { text: 'Take Profit (%)', font: { size: 11 } },
+                                                        title: { text: 'Take Profit (%)  |  Efficiency = AvgReturn ÷ SL', font: { size: 10 } },
                                                         tickfont: { size: 9 },
                                                         dtick: 1
                                                     },
