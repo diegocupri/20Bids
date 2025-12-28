@@ -1506,6 +1506,105 @@ export function AnalysisPage() {
                             </ChartCard>
                         </div>
 
+                        {/* SL SENSITIVITY ANALYSIS - Multi-Line Chart */}
+                        <ChartCard title="" height={380} className="w-full mt-6">
+                            <div className="flex items-center justify-between mb-2">
+                                <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 font-sans">
+                                    SL SENSITIVITY ANALYSIS
+                                    <span className="text-[10px] font-normal text-text-secondary/70">
+                                        (Return by TP Target for each Stop Loss level)
+                                    </span>
+                                </h3>
+                            </div>
+                            <div className="w-full h-full">
+                                {optimizationData?.bubbleData?.length > 0 ? (() => {
+                                    const data = optimizationData.bubbleData;
+
+                                    // Get unique SL levels (filtered by risk tolerance)
+                                    const slLevels = ([...new Set(data.map((d: any) => d.sl))] as number[])
+                                        .filter(sl => sl <= maxRiskTolerance)
+                                        .sort((a, b) => a - b);
+
+                                    // Get unique TP levels
+                                    const tpLevels = optimizationData.tpRange || ([...new Set(data.map((d: any) => d.tp))] as number[]).sort((a, b) => a - b);
+
+                                    // Create a line trace for each SL level
+                                    const traces = slLevels.map((sl: number, idx: number) => {
+                                        const slData = data.filter((d: any) => d.sl === sl);
+                                        const xVals: number[] = [];
+                                        const yVals: number[] = [];
+
+                                        for (const tp of tpLevels) {
+                                            const point = slData.find((d: any) => d.tp === tp);
+                                            if (point) {
+                                                xVals.push(tp);
+                                                yVals.push(point.avgReturn || 0);
+                                            }
+                                        }
+
+                                        // Color gradient from red (tight SL) to green (wide SL)
+                                        const hue = (idx / (slLevels.length - 1)) * 120; // 0 (red) to 120 (green)
+                                        const color = `hsl(${hue}, 70%, 45%)`;
+
+                                        return {
+                                            x: xVals,
+                                            y: yVals,
+                                            mode: 'lines+markers',
+                                            type: 'scatter',
+                                            name: `SL ${sl}%`,
+                                            line: { width: 2, color },
+                                            marker: { size: 5, color },
+                                            hovertemplate: `SL: ${sl}%<br>TP: %{x}%<br>Avg Return: %{y:.2f}%<extra></extra>`
+                                        };
+                                    });
+
+                                    return (
+                                        <Plot
+                                            data={traces as any}
+                                            layout={{
+                                                autosize: true,
+                                                margin: { l: 55, r: 20, t: 20, b: 55 },
+                                                xaxis: {
+                                                    title: { text: 'Take Profit Target (%)', font: { size: 11 } },
+                                                    tickfont: { size: 9 },
+                                                    gridcolor: '#f3f4f6',
+                                                    zeroline: false,
+                                                    dtick: 1
+                                                },
+                                                yaxis: {
+                                                    title: { text: 'Avg Return per Trade (%)', font: { size: 11 } },
+                                                    tickfont: { size: 9 },
+                                                    gridcolor: '#f3f4f6',
+                                                    zeroline: true,
+                                                    zerolinecolor: '#e5e7eb',
+                                                    zerolinewidth: 2
+                                                },
+                                                paper_bgcolor: 'transparent',
+                                                plot_bgcolor: 'transparent',
+                                                font: { family: 'Inter', size: 10 },
+                                                showlegend: true,
+                                                legend: {
+                                                    orientation: 'h',
+                                                    x: 0,
+                                                    y: 1.15,
+                                                    font: { size: 9 },
+                                                    bgcolor: 'transparent'
+                                                },
+                                                hovermode: 'x unified'
+                                            }}
+                                            config={{ displayModeBar: false, responsive: true }}
+                                            style={{ width: '100%', height: '100%' }}
+                                            useResizeHandler={true}
+                                        />
+                                    );
+                                })() : (
+                                    <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
+                                        <p>Loading SL sensitivity data...</p>
+                                    </div>
+                                )}
+                            </div>
+                        </ChartCard>
+
                         {/* ROW 2: Tables (Top Tickers + Top Periods + Sectors) */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             {/* Top Tickers Leaderboard */}
