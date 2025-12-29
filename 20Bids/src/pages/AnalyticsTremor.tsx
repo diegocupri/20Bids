@@ -767,7 +767,7 @@ export function AnalyticsTremorPage() {
                     <div className="space-y-6">
                         {/* ROW 1: Charts (Performance Evolution 75% + Seasonality 25%) */}
                         <div className="grid grid-cols-1 md:grid-cols-[2.5fr_1fr] lg:grid-cols-[3fr_1fr] gap-6">
-                            {/* Performance Evolution Chart - EXACT Tremor Portfolio Style */}
+                            {/* Performance Evolution Chart - EXACT COPY OF TREMOR EXAMPLE */}
                             {(() => {
                                 const totalReturn = equityCurve.reduce((acc, d) => acc + (d.return || 0), 0);
                                 const totalTrades = equityCurve.reduce((acc, d) => acc + (d.count || 0), 0);
@@ -776,83 +776,96 @@ export function AnalyticsTremorPage() {
                                 const totalOther = equityCurve.reduce((acc, d) => acc + (d.other || 0), 0);
                                 const lastEquity = equityCurve.length > 0 ? equityCurve[equityCurve.length - 1]?.equity || 0 : 0;
                                 const isPositive = totalReturn >= 0;
-                                const avgReturnPerTrade = totalTrades > 0 ? totalReturn / totalTrades : 0;
 
-                                // Calculate running totals for multi-line chart
-                                let runningTP = 0;
-                                let runningSL = 0;
-                                const chartData = equityCurve.map(d => {
-                                    runningTP += (d.hitTP || 0);
-                                    runningSL += (d.hitSL || 0);
-                                    return {
-                                        date: d.date.slice(5),
-                                        'Cumulative Return': parseFloat(d.equity.toFixed(2)),
-                                        'TP Wins': runningTP,
-                                        'SL Losses': runningSL
-                                    };
-                                });
+                                // Build chart data with 3 series like the example
+                                const chartData = equityCurve.map(d => ({
+                                    date: d.date.slice(5),
+                                    'Cumulative': parseFloat(d.equity.toFixed(2)),
+                                    'Daily Return': parseFloat(d.return.toFixed(2)),
+                                    'Drawdown': parseFloat((d.drawdown || 0).toFixed(2))
+                                }));
 
-                                // Summary data for table
+                                // Summary data for table - matching example structure
                                 const summary = [
                                     {
-                                        name: 'Hit Take Profit',
-                                        count: totalHitTP,
-                                        pct: totalTrades > 0 ? ((totalHitTP / totalTrades) * 100).toFixed(1) : '0',
+                                        name: 'Take Profit Hits',
+                                        value: `${totalHitTP}`,
+                                        invested: `${totalTrades > 0 ? ((totalHitTP / totalTrades) * 100).toFixed(1) : 0}%`,
+                                        cashflow: `+${(totalHitTP * takeProfit).toFixed(2)}%`,
                                         gain: `+${(totalHitTP * takeProfit).toFixed(2)}%`,
-                                        bgColor: 'bg-emerald-500',
+                                        realized: `${totalHitTP}`,
+                                        dividends: 'TP',
+                                        bgColor: 'bg-blue-500',
                                         changeType: 'positive'
                                     },
                                     {
-                                        name: 'Hit Stop Loss',
-                                        count: totalHitSL,
-                                        pct: totalTrades > 0 ? ((totalHitSL / totalTrades) * 100).toFixed(1) : '0',
+                                        name: 'Stop Loss Hits',
+                                        value: `${totalHitSL}`,
+                                        invested: `${totalTrades > 0 ? ((totalHitSL / totalTrades) * 100).toFixed(1) : 0}%`,
+                                        cashflow: `-${(totalHitSL * stopLoss).toFixed(2)}%`,
                                         gain: `-${(totalHitSL * stopLoss).toFixed(2)}%`,
-                                        bgColor: 'bg-red-500',
+                                        realized: `${totalHitSL}`,
+                                        dividends: 'SL',
+                                        bgColor: 'bg-violet-500',
                                         changeType: 'negative'
                                     },
                                     {
-                                        name: 'Other (Expired)',
-                                        count: totalOther,
-                                        pct: totalTrades > 0 ? ((totalOther / totalTrades) * 100).toFixed(1) : '0',
+                                        name: 'Other Outcomes',
+                                        value: `${totalOther}`,
+                                        invested: `${totalTrades > 0 ? ((totalOther / totalTrades) * 100).toFixed(1) : 0}%`,
+                                        cashflow: '0%',
                                         gain: '0%',
-                                        bgColor: 'bg-gray-400',
+                                        realized: `${totalOther}`,
+                                        dividends: 'N/A',
+                                        bgColor: 'bg-fuchsia-500',
                                         changeType: 'neutral'
                                     }
                                 ];
 
+                                const valueFormatter = (number: number) => `${number.toFixed(2)}%`;
+
                                 return (
-                                    <Card className="p-6">
+                                    <>
                                         <h3 className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
-                                            Portfolio Performance
+                                            Portfolio performance
                                         </h3>
                                         <p className="mt-1 text-tremor-metric font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
                                             {lastEquity.toFixed(2)}%
                                         </p>
                                         <p className="mt-1 text-tremor-default font-medium">
                                             <span className={isPositive ? 'text-emerald-700 dark:text-emerald-500' : 'text-red-700 dark:text-red-500'}>
-                                                {isPositive ? '+' : ''}{totalReturn.toFixed(2)}% ({avgReturnPerTrade.toFixed(2)}%/trade)
+                                                {isPositive ? '+' : ''}{totalReturn.toFixed(2)}% ({totalTrades} trades)
                                             </span>{' '}
                                             <span className="font-normal text-tremor-content dark:text-dark-tremor-content">
-                                                {totalTrades} trades (TP: {takeProfit}%)
+                                                TP: {takeProfit}%
                                             </span>
                                         </p>
-
                                         <LineChart
                                             data={chartData}
                                             index="date"
-                                            categories={['Cumulative Return', 'TP Wins', 'SL Losses']}
-                                            colors={['blue', 'emerald', 'rose']}
-                                            valueFormatter={(v) => `${v}`}
+                                            categories={['Cumulative', 'Daily Return', 'Drawdown']}
+                                            colors={['blue', 'violet', 'fuchsia']}
+                                            valueFormatter={valueFormatter}
                                             yAxisWidth={60}
                                             onValueChange={() => { }}
-                                            className="mt-6 h-80"
+                                            className="mt-6 hidden h-96 sm:block"
                                         />
-
+                                        <LineChart
+                                            data={chartData}
+                                            index="date"
+                                            categories={['Cumulative', 'Daily Return', 'Drawdown']}
+                                            colors={['blue', 'violet', 'fuchsia']}
+                                            valueFormatter={valueFormatter}
+                                            showYAxis={false}
+                                            showLegend={false}
+                                            startEndOnly={true}
+                                            className="mt-6 h-72 sm:hidden"
+                                        />
                                         <Table className="mt-8">
                                             <TableHead>
                                                 <TableRow className="border-b border-tremor-border dark:border-dark-tremor-border">
                                                     <TableHeaderCell className="text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                                                        Outcome
+                                                        Name
                                                     </TableHeaderCell>
                                                     <TableHeaderCell className="text-right text-tremor-content-strong dark:text-dark-tremor-content-strong">
                                                         Count
@@ -863,32 +876,60 @@ export function AnalyticsTremorPage() {
                                                     <TableHeaderCell className="text-right text-tremor-content-strong dark:text-dark-tremor-content-strong">
                                                         Impact
                                                     </TableHeaderCell>
+                                                    <TableHeaderCell className="text-right text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                                                        Gain
+                                                    </TableHeaderCell>
+                                                    <TableHeaderCell className="text-right text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                                                        Type
+                                                    </TableHeaderCell>
                                                 </TableRow>
                                             </TableHead>
                                             <TableBody>
                                                 {summary.map((item) => (
                                                     <TableRow key={item.name}>
                                                         <TableCell className="font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                                                            <div className="flex items-center space-x-3">
-                                                                <span className={cn(item.bgColor, 'w-1 h-4 shrink-0 rounded')} />
+                                                            <div className="flex space-x-3">
+                                                                <span
+                                                                    className={cn(item.bgColor, 'w-1 shrink-0 rounded')}
+                                                                    aria-hidden={true}
+                                                                />
                                                                 <span>{item.name}</span>
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell className="text-right font-semibold">{item.count}</TableCell>
-                                                        <TableCell className="text-right">{item.pct}%</TableCell>
+                                                        <TableCell className="text-right">{item.value}</TableCell>
+                                                        <TableCell className="text-right">{item.invested}</TableCell>
+                                                        <TableCell className="text-right">{item.cashflow}</TableCell>
                                                         <TableCell className="text-right">
-                                                            <span className={cn(
-                                                                item.changeType === 'positive' ? 'text-emerald-700 dark:text-emerald-500' :
-                                                                    item.changeType === 'negative' ? 'text-red-700 dark:text-red-500' : 'text-gray-500'
-                                                            )}>
+                                                            <span
+                                                                className={cn(
+                                                                    item.changeType === 'positive'
+                                                                        ? 'text-emerald-700 dark:text-emerald-500'
+                                                                        : item.changeType === 'negative'
+                                                                            ? 'text-red-700 dark:text-red-500'
+                                                                            : 'text-gray-500'
+                                                                )}
+                                                            >
                                                                 {item.gain}
+                                                            </span>
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <span
+                                                                className={cn(
+                                                                    item.changeType === 'positive'
+                                                                        ? 'text-emerald-700 dark:text-emerald-500'
+                                                                        : item.changeType === 'negative'
+                                                                            ? 'text-red-700 dark:text-red-500'
+                                                                            : 'text-gray-500'
+                                                                )}
+                                                            >
+                                                                {item.dividends}
                                                             </span>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
                                         </Table>
-                                    </Card>
+                                    </>
                                 );
                             })()}
 
