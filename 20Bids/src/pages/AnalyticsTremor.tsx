@@ -798,7 +798,8 @@ export function AnalyticsTremorPage() {
                                         categories={["Return"]}
                                         colors={["emerald"]}
                                         valueFormatter={(v) => `${v.toFixed(2)}%`}
-                                        showLegend={false}
+                                        showLegend={true}
+                                        showGridLines={true}
                                     />
                                 )}
                             </Card>
