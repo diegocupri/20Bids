@@ -467,7 +467,12 @@ app.get('/api/stats/optimization', async (req, res) => {
                     maxDD: Math.abs(((r.lowBeforePeak! - price) / price) * 100),
                     vol: r.relativeVol || 0,
                     price: price,
-                    prob: r.probabilityValue || 0
+                    prob: r.probabilityValue || 0,
+                    // New fields for additional stats
+                    sector: r.sector || 'Unknown',
+                    rsi: r.rsi || 50,
+                    volume: r.volume || 0,
+                    relativeVol: r.relativeVol || 0
                 };
             });
 
@@ -533,18 +538,95 @@ app.get('/api/stats/optimization', async (req, res) => {
 
         console.log(`[Optimization v3] Best Overall: TP=${best.tp}%, SL=${best.sl}% => Total Return: ${best.totalReturn}%`);
 
+        // ========== NEW STATS FOR TRADING CHARTS ==========
+
+        // 1. Sector Stats - Performance by sector
+        const sectorMap = new Map<string, { returns: number[], wins: number, count: number }>();
+        for (const rec of validRecs) {
+            if (!sectorMap.has(rec.sector)) {
+                sectorMap.set(rec.sector, { returns: [], wins: 0, count: 0 });
+            }
+            const s = sectorMap.get(rec.sector)!;
+            const tradeReturn = rec.mvso >= 5 ? 5 : (rec.maxDD >= 2 ? -2 : 0); // Simple 5/2 TP/SL for sector analysis
+            s.returns.push(tradeReturn);
+            if (tradeReturn > 0) s.wins++;
+            s.count++;
+        }
+        const sectorStats = Array.from(sectorMap.entries()).map(([sector, data]) => ({
+            sector,
+            avgReturn: parseFloat((data.returns.reduce((a, b) => a + b, 0) / data.count).toFixed(2)),
+            winRate: parseFloat(((data.wins / data.count) * 100).toFixed(1)),
+            count: data.count
+        })).sort((a, b) => b.avgReturn - a.avgReturn);
+
+        // 2. RSI Stats - Performance by RSI zone
+        const rsiStats = validRecs.map(rec => {
+            const tradeReturn = rec.mvso >= 5 ? 5 : (rec.maxDD >= 2 ? -2 : 0);
+            return {
+                rsi: parseFloat(rec.rsi.toFixed(0)),
+                avgReturn: tradeReturn,
+                mvso: parseFloat(rec.mvso.toFixed(2)),
+                maxDD: parseFloat(rec.maxDD.toFixed(2))
+            };
+        });
+
+        // 3. Volume Stats - Performance by volume segment (€)
+        const volumeSegments = ['<2M', '2-5M', '5-10M', '>10M'];
+        const getVolumeSegment = (vol: number) => {
+            if (vol < 2_000_000) return '<2M';
+            if (vol < 5_000_000) return '2-5M';
+            if (vol < 10_000_000) return '5-10M';
+            return '>10M';
+        };
+        const volumeMap = new Map<string, { returns: number[], wins: number, count: number }>();
+        volumeSegments.forEach(s => volumeMap.set(s, { returns: [], wins: 0, count: 0 }));
+
+        for (const rec of validRecs) {
+            const segment = getVolumeSegment(rec.volume);
+            const v = volumeMap.get(segment)!;
+            const tradeReturn = rec.mvso >= 5 ? 5 : (rec.maxDD >= 2 ? -2 : 0);
+            v.returns.push(tradeReturn);
+            if (tradeReturn > 0) v.wins++;
+            v.count++;
+        }
+        const volumeStats = volumeSegments.map(segment => {
+            const data = volumeMap.get(segment)!;
+            return {
+                segment,
+                avgReturn: data.count > 0 ? parseFloat((data.returns.reduce((a, b) => a + b, 0) / data.count).toFixed(2)) : 0,
+                winRate: data.count > 0 ? parseFloat(((data.wins / data.count) * 100).toFixed(1)) : 0,
+                count: data.count
+            };
+        });
+
+        // 4. Relative Volume Stats - Scatter data
+        const relVolStats = validRecs.map(rec => {
+            const tradeReturn = rec.mvso >= 5 ? 5 : (rec.maxDD >= 2 ? -2 : 0);
+            return {
+                relativeVol: parseFloat(rec.relativeVol.toFixed(2)),
+                avgReturn: tradeReturn,
+                mvso: parseFloat(rec.mvso.toFixed(2)),
+                sector: rec.sector
+            };
+        });
+
+        // ========== END NEW STATS ==========
+
         res.json({
-            version: 'v3-debug', // FORCE UPDATE CHECK
+            version: 'v4-analytics', // NEW VERSION
             tpRange,
             slRange,
             bubbleData,
             results: bubbleData.slice(0, 1),
             best,
             tradeCount: allRecs.length,
-            validRecsCount: validRecs.length, // DEBUG
-            sampleRec: validRecs.length > 0 ? validRecs[0] : null, // DEBUG
-            rawSample: allRecs.length > 0 ? allRecs[0] : null, // DEBUG: Show full DB schema
-            paramsReceived: { minVolume, minPrice, minProb } // DEBUG
+            validRecsCount: validRecs.length,
+            // New trading analytics stats
+            sectorStats,
+            rsiStats,
+            volumeStats,
+            relVolStats,
+            paramsReceived: { minVolume, minPrice, minProb }
         });
 
     } catch (error) {
