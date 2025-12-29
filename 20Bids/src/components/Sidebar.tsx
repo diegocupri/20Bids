@@ -128,7 +128,7 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                         onClick={() => navigate('/')}
                         className={cn(
                             "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
-                            !isAnalysis
+                            !isAnalysis && location.pathname !== '/analytics-tremor'
                                 ? "bg-accent-primary/10 text-accent-primary shadow-sm"
                                 : "text-text-secondary hover:bg-bg-secondary hover:text-text-primary"
                         )}
@@ -147,6 +147,19 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                     >
                         <PieChart className="w-4 h-4" />
                         Analysis
+                    </button>
+                    <button
+                        onClick={() => navigate('/analytics-tremor')}
+                        className={cn(
+                            "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
+                            location.pathname === '/analytics-tremor'
+                                ? "bg-violet-500/10 text-violet-500 shadow-sm"
+                                : "text-text-secondary hover:bg-bg-secondary hover:text-text-primary"
+                        )}
+                    >
+                        <PieChart className="w-4 h-4" />
+                        Analytics (Tremor)
+                        <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-600 font-bold">NEW</span>
                     </button>
                 </div>
             </div>
