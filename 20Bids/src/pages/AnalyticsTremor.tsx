@@ -825,18 +825,18 @@ export function AnalyticsTremorPage() {
                                 const valueFormatter = (number: number) => `${number.toFixed(2)}%`;
 
                                 return (
-                                    <>
-                                        <h3 className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
+                                    <Card className="p-6">
+                                        <h3 className="text-sm text-gray-500 dark:text-gray-400">
                                             Portfolio performance
                                         </h3>
-                                        <p className="mt-1 text-tremor-metric font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                                        <p className="mt-2 text-3xl font-semibold text-gray-900 dark:text-gray-100">
                                             {lastEquity.toFixed(2)}%
                                         </p>
-                                        <p className="mt-1 text-tremor-default font-medium">
-                                            <span className={isPositive ? 'text-emerald-700 dark:text-emerald-500' : 'text-red-700 dark:text-red-500'}>
+                                        <p className="mt-2 text-sm font-medium">
+                                            <span className={isPositive ? 'text-emerald-600' : 'text-red-600'}>
                                                 {isPositive ? '+' : ''}{totalReturn.toFixed(2)}% ({totalTrades} trades)
                                             </span>{' '}
-                                            <span className="font-normal text-tremor-content dark:text-dark-tremor-content">
+                                            <span className="text-gray-500">
                                                 TP: {takeProfit}%
                                             </span>
                                         </p>
@@ -929,7 +929,7 @@ export function AnalyticsTremorPage() {
                                                 ))}
                                             </TableBody>
                                         </Table>
-                                    </>
+                                    </Card>
                                 );
                             })()}
 
