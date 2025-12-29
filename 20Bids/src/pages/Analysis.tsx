@@ -950,71 +950,45 @@ export function AnalysisPage() {
                                         const otherPct = total > 0 ? (totals.other / total) * 100 : 0;
 
                                         return (
-                                            <div className="flex flex-col h-full" style={{ fontFamily: '__Inter_f367f3, __Inter_Fallback_f367f3, sans-serif' }}>
+                                            <div className="flex flex-col h-full">
                                                 {/* Title */}
-                                                <p style={{ fontSize: '14px', color: '#4B5563' }} className="mb-2">Period Summary</p>
+                                                <p className="text-sm text-text-secondary mb-2">Period Summary</p>
 
                                                 {/* Big Total Return */}
-                                                <p className={`text-4xl font-medium mb-8 ${totals.return >= 0 ? 'text-gray-900' : 'text-red-500'}`}>
+                                                <p className={`text-3xl font-medium mb-6 ${totals.return >= 0 ? 'text-text-primary' : 'text-rose-500'}`}>
                                                     {totals.return >= 0 ? '+' : ''}{totals.return.toFixed(2)}%
                                                 </p>
 
-                                                {/* Metric Rows - Minimalist */}
-                                                <div className="space-y-5">
-                                                    {/* Hit TP */}
-                                                    <div className="flex items-center justify-between">
-                                                        <span style={{ fontSize: '16px', color: '#1f2937' }}>Hit TP ({takeProfit}%)</span>
-                                                        <div className="flex items-center gap-3">
-                                                            <span style={{ fontSize: '16px', color: '#4B5563' }}>({tpPct.toFixed(0)}%)</span>
-                                                            <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                                                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${tpPct}%` }} />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Hit SL */}
-                                                    <div className="flex items-center justify-between">
-                                                        <span style={{ fontSize: '16px', color: '#1f2937' }}>Hit SL ({stopLoss === 100 ? 'Off' : `-${stopLoss}%`})</span>
-                                                        <div className="flex items-center gap-3">
-                                                            <span style={{ fontSize: '16px', color: '#4B5563' }}>({slPct.toFixed(0)}%)</span>
-                                                            <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                                                <div className="h-full bg-red-400 rounded-full" style={{ width: `${slPct}%` }} />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Other */}
-                                                    <div className="flex items-center justify-between">
-                                                        <span style={{ fontSize: '16px', color: '#1f2937' }}>Other</span>
-                                                        <div className="flex items-center gap-3">
-                                                            <span style={{ fontSize: '16px', color: '#4B5563' }}>({otherPct.toFixed(0)}%)</span>
-                                                            <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                                                <div className="h-full bg-gray-400 rounded-full" style={{ width: `${otherPct}%` }} />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Avg Return */}
-                                                    <div className="flex items-center justify-between">
-                                                        <span style={{ fontSize: '16px', color: '#1f2937' }}>Avg Return</span>
-                                                        <div className="flex items-center gap-3">
-                                                            <span style={{ fontSize: '16px' }} className={avgReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}>
+                                                {/* Simple Table */}
+                                                <table className="w-full text-sm">
+                                                    <tbody>
+                                                        <tr className="border-b border-border-primary/40">
+                                                            <td className="py-3 text-text-secondary">Hit TP ({takeProfit}%)</td>
+                                                            <td className="py-3 text-right font-medium text-text-primary">{totals.hitTP}</td>
+                                                            <td className="py-3 text-right text-text-secondary w-16">({tpPct.toFixed(0)}%)</td>
+                                                        </tr>
+                                                        <tr className="border-b border-border-primary/40">
+                                                            <td className="py-3 text-text-secondary">Hit SL ({stopLoss === 100 ? 'Off' : `-${stopLoss}%`})</td>
+                                                            <td className="py-3 text-right font-medium text-text-primary">{totals.hitSL}</td>
+                                                            <td className="py-3 text-right text-text-secondary w-16">({slPct.toFixed(0)}%)</td>
+                                                        </tr>
+                                                        <tr className="border-b border-border-primary/40">
+                                                            <td className="py-3 text-text-secondary">Other</td>
+                                                            <td className="py-3 text-right font-medium text-text-primary">{totals.other}</td>
+                                                            <td className="py-3 text-right text-text-secondary w-16">({otherPct.toFixed(0)}%)</td>
+                                                        </tr>
+                                                        <tr className="border-b border-border-primary/40">
+                                                            <td className="py-3 text-text-secondary">Avg Return</td>
+                                                            <td colSpan={2} className={`py-3 text-right font-medium ${avgReturn >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                                                                 {avgReturn >= 0 ? '+' : ''}{avgReturn.toFixed(2)}%
-                                                            </span>
-                                                            <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                                                <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(Math.abs(avgReturn) * 20, 100)}%` }} />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Total Trades Footer */}
-                                                <div className="mt-8 pt-4 border-t border-gray-200">
-                                                    <div className="flex justify-between items-center">
-                                                        <span style={{ fontSize: '16px', color: '#1f2937' }}>Total Trades</span>
-                                                        <span className="text-2xl font-semibold text-gray-900">{totals.count}</span>
-                                                    </div>
-                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td className="py-3 text-text-secondary font-medium">Total Trades</td>
+                                                            <td colSpan={2} className="py-3 text-right font-bold text-text-primary text-lg">{totals.count}</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
                                             </div>
                                         );
 
