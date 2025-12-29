@@ -11,7 +11,7 @@ import { fetchAnalysis } from '../api/client';
 import { startOfYear, subWeeks, subMonths, isAfter, startOfWeek, startOfMonth, format } from 'date-fns';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { Calendar, Info, TrendingUp, TrendingDown, BarChart2, DollarSign, Percent } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, BarChart2, DollarSign, Percent } from 'lucide-react';
 
 interface AnalysisData {
     equityCurve: { date: string, return: number, equity: number, drawdown: number, hitTP?: number, hitSL?: number, other?: number, count?: number }[];
@@ -715,14 +715,14 @@ export function AnalysisPage() {
                         </div>
                     </div>
 
-                    {/* Advanced Intraday Metrics Grid (8 Cards) */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+                    {/* Advanced Intraday Metrics Grid (4 Cards) */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         {/* 1. Profit Factor */}
                         <TerminalMetric
                             label="Profit Factor"
                             value={(riskMetrics as any).profitFactor.toFixed(2)}
+                            subValue={((riskMetrics as any).profitFactor > 1.5 ? 'Healthy' : 'Low')}
                             trend={(riskMetrics as any).profitFactor > 1.5 ? 'up' : 'neutral'}
-                            tooltip="Ratio of Gross Win / Gross Loss (>1.5 Ideal)"
                         />
 
                         {/* 2. Max Drawdown */}
@@ -730,56 +730,23 @@ export function AnalysisPage() {
                             label="Max Drawdown"
                             value={`${(riskMetrics as any).maxDrawdown.toFixed(2)}%`}
                             trend="down"
-                            color="#f43f5e"
-                            tooltip="Maximum peak-to-valley decline"
+                            subValue="Peak Drop"
                         />
 
-                        {/* 3. Win Streak */}
-                        <TerminalMetric
-                            label="Win Streak"
-                            value={(riskMetrics as any).maxWinStreak.toString()}
-                            tooltip="Consecutive profitable sessions"
-                        />
-
-                        {/* 4. Loss Streak */}
-                        <TerminalMetric
-                            label="Loss Streak"
-                            value={(riskMetrics as any).maxLossStreak.toString()}
-                            color="#f43f5e"
-                            tooltip="Consecutive losing sessions"
-                        />
-
-                        {/* 5. Best Day */}
+                        {/* 3. Best Day */}
                         <TerminalMetric
                             label="Best Day"
                             value={(riskMetrics as any).bestDayName || '-'}
-                            subValue={`${(riskMetrics as any).bestDayWR?.toFixed(0)}% WR`}
-                            tooltip="Most profitable day of the week"
+                            subValue={`${(riskMetrics as any).bestDayWR?.toFixed(0)}% Win Rate`}
+                            trend="up"
                         />
 
-                        {/* 6. Avg R (Est) */}
-                        <TerminalMetric
-                            label="Avg R (Est)"
-                            value={(riskMetrics as any).avgR ? (riskMetrics as any).avgR.toFixed(1) : '0.0'}
-                            subValue="Risk/Reward"
-                            tooltip="Ratio of Avg Win / Avg Loss"
-                        />
-
-                        {/* 7. Expectancy */}
+                        {/* 4. Expectancy */}
                         <TerminalMetric
                             label="Expectancy"
                             value={`${(riskMetrics as any).expectancy?.toFixed(2)}%`}
-                            color={(riskMetrics as any).expectancy > 0 ? '#10b981' : '#f43f5e'}
+                            subValue="Per Trade"
                             trend={(riskMetrics as any).expectancy > 0 ? 'up' : 'down'}
-                            tooltip="Avg Return per Trade/Session"
-                        />
-
-                        {/* 8. Reliability */}
-                        <TerminalMetric
-                            label="Reliability"
-                            value={(riskMetrics as any).reliability || 'Low'}
-                            color={(riskMetrics as any).reliability === 'High' ? '#10b981' : (riskMetrics as any).reliability === 'Medium' ? '#f59e0b' : '#f43f5e'}
-                            tooltip="Based on Profit Factor consistency"
                         />
                     </div>
 
@@ -791,7 +758,7 @@ export function AnalysisPage() {
                                 {/* Header with Big Metric */}
                                 <div className="mb-3 pl-0" style={{ fontFamily: '__Inter_f367f3, __Inter_Fallback_f367f3, sans-serif' }}>
                                     <p className="text-sm text-gray-500 mb-1">Portfolio Value</p>
-                                    <p className="font-semibold" style={{ fontSize: '26px' }}>
+                                    <p className="text-3xl font-semibold">
                                         {(() => {
                                             const total = equityCurve.reduce((acc, d) => acc + (d.return || 0), 0);
                                             return (
@@ -807,7 +774,7 @@ export function AnalysisPage() {
                                 </div>
                                 <ResponsiveContainer width="100%" height="75%">
                                     <ComposedChart data={equityCurve} margin={{ left: -24, right: 0, top: 10, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} vertical={false} />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={1} vertical={false} />
                                         <XAxis
                                             dataKey="date"
                                             stroke="#6b7280"
@@ -1958,41 +1925,53 @@ export function AnalysisPage() {
     );
 }
 
-function InfoTooltip({ text }: { text: string }) {
-    if (!text) return null;
-    return (
-        <div className="group relative ml-1.5 cursor-help inline-flex items-center">
-            <Info className="w-3 h-3 text-text-secondary opacity-50 hover:opacity-100 transition-opacity" />
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1.5 bg-bg-secondary border border-border-primary rounded text-[10px] text-text-primary whitespace-nowrap shadow-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                {text}
-                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px w-2 h-2 bg-bg-secondary border-b border-r border-border-primary rotate-45"></div>
-            </div>
-        </div>
-    );
-}
+// Minimalist KPI Card
+function TerminalMetric({
+    label,
+    value,
+    subValue,
+    trend,
+    tooltip
+}: {
+    label: string,
+    value: string,
+    subValue?: string,
+    trend?: 'up' | 'down' | 'neutral',
+    tooltip?: string
+}) {
+    // Determine color based on trend and inverse logic
+    // Normal: Up=Green, Down=Red
+    // Inverse: Up/High=Green (if good), Down/Low=Red (if bad).
+    // Actually simplicity:
+    // User wants "Green for positive change", "Red for negative".
+    // For things like Drawdown, usually "Low is good", but typically standard is "Red if value is negative or drops".
+    // Let's stick to standard colors: Green/Emerald for "Good/Up", Rose for "Bad/Down".
 
-function TerminalMetric({ label, value, subValue, trend, color, tooltip }: { label: string, value: string, subValue?: string, trend?: 'up' | 'down' | 'neutral', color?: string, tooltip?: string }) {
+    // If we pass trend='down' for DD, we usually mean it's a negative value we want to highlight as 'bad'.
+    // If we pass trend='up' for Profit, it's 'good'.
+
+    // Revised logic to match image:
+    // Image has Green for positive %, Red for negative %.
+    // Let's assume the passed 'trend' prop indicates the color direction directly or use a specific color prop.
+
+    // Simplified logic:
+    // If trend is 'up' -> Green. If 'down' -> Red.
+    const colorClass = trend === 'up' ? 'text-emerald-500' : trend === 'down' ? 'text-rose-500' : 'text-gray-400';
+
     return (
-        <div className={cn(
-            "rounded-xl p-4 flex flex-col justify-between bg-bg-primary border border-border-primary/20 shadow-sm hover:shadow-md transition-all duration-200",
-        )}>
-            <div className="flex items-center justify-between mb-2">
-                <div className="text-[10px] font-bold text-text-secondary uppercase tracking-widest flex items-center gap-1.5 opacity-80">
-                    {label}
-                    {tooltip && <InfoTooltip text={tooltip} />}
-                </div>
-                {trend && <div className={cn("w-1.5 h-1.5 rounded-full", trend === 'up' ? "bg-emerald-500" : trend === 'down' ? "bg-rose-500" : "bg-gray-400")}></div>}
-            </div>
-            <div>
-                <div className={cn(
-                    "text-2xl font-bold font-sans tracking-tight",
-                    color ? "" :
-                        !color && trend === 'up' ? "text-emerald-600" :
-                            !color && trend === 'down' ? "text-rose-600" : "text-text-primary"
-                )} style={{ color }}>
+        <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm flex flex-col justify-between h-32 hover:border-gray-200 transition-colors" title={tooltip}>
+            <span className="text-sm font-medium text-gray-500 font-sans tracking-wide">
+                {label}
+            </span>
+            <div className="flex items-end gap-3 mt-2">
+                <span className="text-3xl font-bold text-gray-900 tracking-tight font-sans">
                     {value}
-                </div>
-                {subValue && <div className="text-[10px] text-text-secondary font-medium mt-1 opacity-70">{subValue}</div>}
+                </span>
+                {subValue && (
+                    <span className={`text-xs font-bold mb-1.5 ${colorClass} bg-opacity-10 px-1.5 py-0.5 rounded`}>
+                        {subValue}
+                    </span>
+                )}
             </div>
         </div>
     );
