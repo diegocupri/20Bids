@@ -570,7 +570,7 @@ app.get('/api/stats/optimization', async (req, res) => {
             };
         });
 
-        // 3. Volume Stats - Performance by volume segment (€)
+        // 3. Volume Stats - Performance by volume segment (€) WITH BOXPLOT DATA
         const volumeSegments = ['<2M', '2-5M', '5-10M', '>10M'];
         const getVolumeSegment = (vol: number) => {
             if (vol < 2_000_000) return '<2M';
@@ -578,6 +578,18 @@ app.get('/api/stats/optimization', async (req, res) => {
             if (vol < 10_000_000) return '5-10M';
             return '>10M';
         };
+
+        // Helper function for percentile calculation
+        const percentile = (arr: number[], p: number) => {
+            if (arr.length === 0) return 0;
+            const sorted = [...arr].sort((a, b) => a - b);
+            const idx = (p / 100) * (sorted.length - 1);
+            const lower = Math.floor(idx);
+            const upper = Math.ceil(idx);
+            if (lower === upper) return sorted[lower];
+            return sorted[lower] + (sorted[upper] - sorted[lower]) * (idx - lower);
+        };
+
         const volumeMap = new Map<string, { returns: number[], wins: number, count: number }>();
         volumeSegments.forEach(s => volumeMap.set(s, { returns: [], wins: 0, count: 0 }));
 
@@ -591,11 +603,18 @@ app.get('/api/stats/optimization', async (req, res) => {
         }
         const volumeStats = volumeSegments.map(segment => {
             const data = volumeMap.get(segment)!;
+            const returns = data.returns;
             return {
                 segment,
-                avgReturn: data.count > 0 ? parseFloat((data.returns.reduce((a, b) => a + b, 0) / data.count).toFixed(2)) : 0,
+                avgReturn: data.count > 0 ? parseFloat((returns.reduce((a, b) => a + b, 0) / data.count).toFixed(2)) : 0,
                 winRate: data.count > 0 ? parseFloat(((data.wins / data.count) * 100).toFixed(1)) : 0,
-                count: data.count
+                count: data.count,
+                // Boxplot data
+                min: returns.length > 0 ? parseFloat(Math.min(...returns).toFixed(2)) : 0,
+                q1: parseFloat(percentile(returns, 25).toFixed(2)),
+                median: parseFloat(percentile(returns, 50).toFixed(2)),
+                q3: parseFloat(percentile(returns, 75).toFixed(2)),
+                max: returns.length > 0 ? parseFloat(Math.max(...returns).toFixed(2)) : 0
             };
         });
 
