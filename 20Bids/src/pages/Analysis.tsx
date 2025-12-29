@@ -787,17 +787,17 @@ export function AnalysisPage() {
                         {/* ROW 1: Charts (Performance Evolution 75% + Seasonality 25%) */}
                         <div className="grid grid-cols-1 md:grid-cols-[2.5fr_1fr] lg:grid-cols-[3fr_1fr] gap-6">
                             {/* Performance Evolution Chart - Portfolio Value Style */}
-                            <ChartCard title="" height={400}>
+                            <ChartCard title="" height={380}>
                                 {/* Header with Big Metric */}
-                                <div className="mb-6">
-                                    <p className="text-sm text-gray-400 mb-1">Portfolio Value</p>
-                                    <p className="text-4xl font-semibold text-white">
+                                <div className="mb-3">
+                                    <p className="text-sm text-gray-500 mb-1">Portfolio Value</p>
+                                    <p className="text-4xl font-semibold text-gray-900">
                                         {(() => {
                                             const total = equityCurve.reduce((acc, d) => acc + (d.return || 0), 0);
                                             return `${total >= 0 ? '+' : ''}${total.toFixed(2)}%`;
                                         })()}
                                     </p>
-                                    <p className="text-xs text-gray-500 mt-2">
+                                    <p className="text-xs text-gray-500 mt-1">
                                         {equityCurve.reduce((acc, d) => acc + (d.count || 0), 0)} trades • TP: {takeProfit}%
                                     </p>
                                 </div>
@@ -899,10 +899,10 @@ export function AnalysisPage() {
                                         <Legend
                                             verticalAlign="top"
                                             align="right"
-                                            height={36}
+                                            height={28}
                                             iconType="circle"
-                                            iconSize={10}
-                                            wrapperStyle={{ fontSize: '12px', paddingBottom: '10px' }}
+                                            iconSize={8}
+                                            wrapperStyle={{ fontSize: '11px', paddingBottom: '4px' }}
                                         />
                                         <Bar
                                             yAxisId="left"
@@ -913,7 +913,7 @@ export function AnalysisPage() {
                                             {equityCurve.map((entry, index) => (
                                                 <Cell
                                                     key={`cell-${index}`}
-                                                    fill={entry.return >= 0 ? '#3b82f6' : '#ef4444'}
+                                                    fill={entry.return >= 0 ? '#3b82f6' : '#bfdbfe'}
                                                 />
                                             ))}
                                         </Bar>
@@ -921,9 +921,9 @@ export function AnalysisPage() {
                                             yAxisId="right"
                                             type="monotone"
                                             dataKey="avgReturn"
-                                            stroke="#ec4899"
+                                            stroke="#f59e0b"
                                             strokeWidth={2}
-                                            dot={{ fill: '#ec4899', stroke: '#fff', strokeWidth: 2, r: 4 }}
+                                            dot={{ fill: '#f59e0b', stroke: '#fff', strokeWidth: 2, r: 3 }}
                                             name="Avg Return"
                                         />
                                     </ComposedChart>
@@ -952,65 +952,59 @@ export function AnalysisPage() {
                                         return (
                                             <div className="flex flex-col h-full">
                                                 {/* Title */}
-                                                <p className="text-sm text-gray-400 mb-2">Period Summary</p>
+                                                <p className="text-sm text-gray-500 mb-1">Period Summary</p>
 
                                                 {/* Big Total Return */}
-                                                <p className={`text-4xl font-semibold mb-6 ${totals.return >= 0 ? 'text-white' : 'text-red-400'}`}>
+                                                <p className={`text-4xl font-semibold mb-4 ${totals.return >= 0 ? 'text-gray-900' : 'text-red-500'}`}>
                                                     {totals.return >= 0 ? '+' : ''}{totals.return.toFixed(2)}%
                                                 </p>
 
                                                 {/* Metric Rows with INLINE Progress Bars */}
-                                                <div className="space-y-4 flex-1">
+                                                <div className="space-y-3">
                                                     {/* Hit TP */}
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-sm text-gray-300 w-24 shrink-0">Hit TP ({takeProfit}%)</span>
-                                                        <span className="text-sm font-semibold text-white w-16 shrink-0 text-right">
-                                                            {totals.hitTP} <span className="text-gray-400 font-normal">({tpPct.toFixed(0)}%)</span>
-                                                        </span>
-                                                        <div className="flex-1 h-2.5 bg-gray-700 rounded-full overflow-hidden">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm text-gray-600 w-24 shrink-0">Hit TP ({takeProfit}%)</span>
+                                                        <span className="text-sm text-gray-500 w-12 shrink-0 text-right">({tpPct.toFixed(0)}%)</span>
+                                                        <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
                                                             <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${tpPct}%` }} />
                                                         </div>
                                                     </div>
 
                                                     {/* Hit SL */}
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-sm text-gray-300 w-24 shrink-0">Hit SL ({stopLoss === 100 ? 'Off' : `-${stopLoss}%`})</span>
-                                                        <span className="text-sm font-semibold text-white w-16 shrink-0 text-right">
-                                                            {totals.hitSL} <span className="text-gray-400 font-normal">({slPct.toFixed(0)}%)</span>
-                                                        </span>
-                                                        <div className="flex-1 h-2.5 bg-gray-700 rounded-full overflow-hidden">
-                                                            <div className="h-full bg-red-500 rounded-full" style={{ width: `${slPct}%` }} />
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm text-gray-600 w-24 shrink-0">Hit SL ({stopLoss === 100 ? 'Off' : `-${stopLoss}%`})</span>
+                                                        <span className="text-sm text-gray-500 w-12 shrink-0 text-right">({slPct.toFixed(0)}%)</span>
+                                                        <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
+                                                            <div className="h-full bg-red-400 rounded-full" style={{ width: `${slPct}%` }} />
                                                         </div>
                                                     </div>
 
                                                     {/* Other */}
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-sm text-gray-300 w-24 shrink-0">Other</span>
-                                                        <span className="text-sm font-semibold text-white w-16 shrink-0 text-right">
-                                                            {totals.other} <span className="text-gray-400 font-normal">({otherPct.toFixed(0)}%)</span>
-                                                        </span>
-                                                        <div className="flex-1 h-2.5 bg-gray-700 rounded-full overflow-hidden">
-                                                            <div className="h-full bg-gray-500 rounded-full" style={{ width: `${otherPct}%` }} />
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm text-gray-600 w-24 shrink-0">Other</span>
+                                                        <span className="text-sm text-gray-500 w-12 shrink-0 text-right">({otherPct.toFixed(0)}%)</span>
+                                                        <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
+                                                            <div className="h-full bg-gray-400 rounded-full" style={{ width: `${otherPct}%` }} />
                                                         </div>
                                                     </div>
 
                                                     {/* Avg Return */}
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-sm text-gray-300 w-24 shrink-0">Avg Return</span>
-                                                        <span className={`text-sm font-semibold w-16 shrink-0 text-right ${avgReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm text-gray-600 w-24 shrink-0">Avg Return</span>
+                                                        <span className={`text-sm font-semibold w-12 shrink-0 text-right ${avgReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                                                             {avgReturn >= 0 ? '+' : ''}{avgReturn.toFixed(2)}%
                                                         </span>
-                                                        <div className="flex-1 h-2.5 bg-gray-700 rounded-full overflow-hidden">
+                                                        <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
                                                             <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(Math.abs(avgReturn) * 20, 100)}%` }} />
                                                         </div>
                                                     </div>
                                                 </div>
 
                                                 {/* Total Trades Footer */}
-                                                <div className="mt-6 pt-4 border-t border-gray-700">
+                                                <div className="mt-4 pt-3 border-t border-gray-200">
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-gray-400">Total Trades</span>
-                                                        <span className="text-lg font-bold text-white">{totals.count}</span>
+                                                        <span className="text-sm text-gray-500">Total Trades</span>
+                                                        <span className="text-lg font-bold text-gray-900">{totals.count}</span>
                                                     </div>
                                                 </div>
                                             </div>
