@@ -1076,12 +1076,12 @@ export function AnalysisPage() {
                                                         y: vals,
                                                         type: 'box',
                                                         name: bucket.name,
-                                                        marker: { color: 'rgba(59, 130, 246, 0.3)', line: { color: '#3b82f6', width: 1 }, size: 2 },
+                                                        marker: { color: 'rgba(59, 130, 246, 0.4)', line: { color: '#3b82f6', width: 1 }, size: 3 },
                                                         boxpoints: 'all',
                                                         jitter: 0.5,
                                                         pointpos: -1.8,
-                                                        fillcolor: 'rgba(59, 130, 246, 0.1)',
-                                                        line: { color: '#3b82f6' },
+                                                        fillcolor: '#ffffff', // White interior
+                                                        line: { color: '#3b82f6', width: 1.5 },
                                                         showlegend: false
                                                     });
                                                 }
@@ -1099,8 +1099,8 @@ export function AnalysisPage() {
                                                 type: 'scatter',
                                                 mode: 'lines+markers',
                                                 yaxis: 'y2', // Map to secondary y-axis
-                                                line: { color: '#6babeb', width: 2 }, // Matches left blueish tone but distinct
-                                                marker: { color: '#3b82f6', size: 6, symbol: 'circle' },
+                                                line: { color: '#f59e0b', width: 2 }, // Different color (Amber)
+                                                marker: { color: '#f59e0b', size: 6, symbol: 'circle', line: { color: 'white', width: 1 } },
                                                 hovertemplate: 'Hit Rate: %{y:.1f}%<extra></extra>'
                                             });
 
@@ -1108,36 +1108,51 @@ export function AnalysisPage() {
                                         })()}
                                         layout={{
                                             autosize: true,
-                                            margin: { l: 45, r: 45, t: 30, b: 100 }, // Increased bottom margin
+                                            margin: { l: 45, r: 45, t: 40, b: 60 },
                                             yaxis: {
-                                                title: { text: 'Return %', font: { size: 10, color: '#64748b' } },
-                                                autorange: true,
+                                                title: { text: 'Return %', font: { size: 10, color: '#64748b', family: '"Source Sans 3", sans-serif' } },
+                                                // Calculate dynamic max range to avoid outlier squashing
+                                                // We'll use a heuristic: e.g., max of (75th percentile + 3*IQR) across buckets, capped reasonable.
+                                                // Actually simple: 95th percentile of all data.
+                                                range: (() => {
+                                                    const allVals = (boxPlotData || []).flatMap(b => (b as any).values || []);
+                                                    if (allVals.length === 0) return undefined;
+                                                    allVals.sort((a, b) => a - b);
+                                                    const p98 = allVals[Math.floor(allVals.length * 0.98)] || 10;
+                                                    const maxVal = Math.max(...allVals);
+                                                    // Use the lesser of RealMax or P98*1.5 to clip huge outliers
+                                                    return [Math.min(...allVals, -5), Math.min(maxVal, Math.max(20, p98 * 1.5))];
+                                                })(),
                                                 zeroline: true,
                                                 zerolinecolor: '#e5e7eb',
                                                 gridcolor: '#f3f4f6',
-                                                tickfont: { size: 10, color: '#64748b' }
+                                                tickfont: { size: 10, color: '#64748b', family: '"Source Sans 3", sans-serif' }
                                             },
                                             yaxis2: {
-                                                title: { text: 'Hit Rate %', font: { size: 10, color: '#64748b' } }, // Gray axis
+                                                title: { text: 'Hit Rate %', font: { size: 10, color: '#9ca3af', family: '"Source Sans 3", sans-serif' } },
                                                 overlaying: 'y',
                                                 side: 'right',
-                                                range: [50, 105],
-                                                tickfont: { size: 10, color: '#64748b' }, // Gray ticks
-                                                showgrid: false
+                                                range: [0, 115], // Wider range so line doesn't hug top
+                                                tickfont: { size: 10, color: '#9ca3af', family: '"Source Sans 3", sans-serif' },
+                                                showgrid: false,
+                                                zeroline: false
                                             },
                                             xaxis: {
-                                                tickfont: { size: 10, color: '#64748b' },
+                                                tickfont: { size: 10, color: '#64748b', family: '"Source Sans 3", sans-serif' },
                                                 fixedrange: true,
-                                                tickangle: -45,
+                                                // tickangle: -45, // Remove tilt if not needed or keep it
                                                 type: 'category',
                                                 automargin: true,
-                                                showticklabels: true
+                                                showticklabels: true,
+                                                showline: true, // Visible X-Axis line
+                                                linecolor: '#d1d5db',
+                                                linewidth: 1
                                             },
                                             showlegend: true,
-                                            legend: { orientation: 'h', x: 0, y: 1.1, font: { size: 10 } },
-                                            paper_bgcolor: 'white', // White bg
-                                            plot_bgcolor: 'white',  // White bg
-                                            font: { family: 'Inter, sans-serif', size: 11, color: '#64748b' },
+                                            legend: { orientation: 'h', x: 0, y: 1.1, font: { size: 10, family: '"Source Sans 3", sans-serif' } },
+                                            paper_bgcolor: 'white',
+                                            plot_bgcolor: 'white',
+                                            font: { family: '"Source Sans 3", sans-serif', size: 11, color: '#64748b' },
                                             annotations: (boxPlotData || []).map((bucket) => {
                                                 const vals = (bucket as any).values || [];
                                                 const avg = vals.length > 0 ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : 0;
@@ -1146,11 +1161,13 @@ export function AnalysisPage() {
                                                     y: avg,
                                                     text: `${avg.toFixed(1)}%`,
                                                     showarrow: false,
-                                                    xanchor: 'left',
-                                                    xshift: 25,
-                                                    font: { size: 10, color: '#1f2937', weight: 'bold' },
-                                                    bgcolor: 'rgba(255, 255, 255, 0.7)',
-                                                    borderpad: 2
+                                                    xanchor: 'center', // Centered
+                                                    yanchor: 'bottom',
+                                                    yshift: 10, // Shift up slightly from the average point
+                                                    font: { size: 11, color: '#111827', weight: 'bold', family: '"Source Sans 3", sans-serif' },
+                                                    bgcolor: 'rgba(255, 255, 255, 0.85)',
+                                                    borderpad: 2,
+                                                    borderwidth: 0
                                                 };
                                             })
                                         }}
