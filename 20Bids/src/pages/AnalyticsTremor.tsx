@@ -847,19 +847,7 @@ export function AnalyticsTremorPage() {
                                             colors={['blue', 'violet', 'fuchsia']}
                                             valueFormatter={valueFormatter}
                                             yAxisWidth={60}
-                                            onValueChange={() => { }}
-                                            className="mt-6 hidden h-96 sm:block"
-                                        />
-                                        <LineChart
-                                            data={chartData}
-                                            index="date"
-                                            categories={['Cumulative', 'Daily Return', 'Drawdown']}
-                                            colors={['blue', 'violet', 'fuchsia']}
-                                            valueFormatter={valueFormatter}
-                                            showYAxis={false}
-                                            showLegend={false}
-                                            startEndOnly={true}
-                                            className="mt-6 h-72 sm:hidden"
+                                            className="mt-6 h-96"
                                         />
                                         <Table className="mt-8">
                                             <TableHead>
