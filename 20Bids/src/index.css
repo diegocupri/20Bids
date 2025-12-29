@@ -22,6 +22,12 @@
   --color-bloomberg-orange: var(--accent-primary);
   --color-bloomberg-blue: var(--accent-secondary);
   --color-terminal-green: #10b981;
+  
+  /* Tremor Typography - REQUIRED */
+  --text-tremor-label: 0.75rem;
+  --text-tremor-default: 0.875rem;
+  --text-tremor-title: 1.125rem;
+  --text-tremor-metric: 1.875rem;
 }
 
 @layer base {
