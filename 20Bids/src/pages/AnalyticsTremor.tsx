@@ -4,7 +4,6 @@ import { Sidebar } from '../components/Sidebar';
 // Tremor Components
 import {
     Card,
-    AreaChart,
     BarChart,
     LineChart,
     Title
@@ -762,47 +761,62 @@ export function AnalyticsTremorPage() {
                     <div className="space-y-6">
                         {/* ROW 1: Charts (Performance Evolution 75% + Seasonality 25%) */}
                         <div className="grid grid-cols-1 md:grid-cols-[2.5fr_1fr] lg:grid-cols-[3fr_1fr] gap-6">
-                            {/* Performance Evolution Chart - TREMOR */}
-                            <Card className="p-4">
-                                <div className="flex items-center justify-between mb-4">
-                                    <Title className="text-xs font-bold uppercase tracking-widest">
-                                        PERFORMANCE EVOLUTION
-                                        <span className="text-[10px] font-normal text-gray-400 ml-2">
-                                            (TP: {takeProfit}%)
-                                        </span>
-                                    </Title>
-                                </div>
-                                {isCumulative ? (
-                                    <AreaChart
-                                        className="h-72"
-                                        data={equityCurve.map(d => ({
-                                            date: d.date.slice(5),
-                                            Equity: parseFloat(d.equity.toFixed(2))
-                                        }))}
-                                        index="date"
-                                        categories={["Equity"]}
-                                        colors={["violet"]}
-                                        valueFormatter={(v) => `${v.toFixed(2)}%`}
-                                        showLegend={false}
-                                        showGridLines={true}
-                                        curveType="linear"
-                                    />
-                                ) : (
-                                    <BarChart
-                                        className="h-72"
-                                        data={equityCurve.map(d => ({
-                                            date: d.date.slice(5),
-                                            Return: parseFloat(d.return.toFixed(2))
-                                        }))}
-                                        index="date"
-                                        categories={["Return"]}
-                                        colors={["emerald"]}
-                                        valueFormatter={(v) => `${v.toFixed(2)}%`}
-                                        showLegend={true}
-                                        showGridLines={true}
-                                    />
-                                )}
-                            </Card>
+                            {/* Performance Evolution Chart - TREMOR Professional Style */}
+                            {(() => {
+                                const totalReturn = equityCurve.reduce((acc, d) => acc + (d.return || 0), 0);
+                                const totalTrades = equityCurve.reduce((acc, d) => acc + (d.count || 0), 0);
+                                const lastEquity = equityCurve.length > 0 ? equityCurve[equityCurve.length - 1]?.equity || 0 : 0;
+                                const isPositive = totalReturn >= 0;
+
+                                return (
+                                    <Card className="p-6">
+                                        <h3 className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
+                                            Performance Evolution
+                                        </h3>
+                                        <p className="mt-1 text-tremor-metric font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                                            {isCumulative ? `${lastEquity.toFixed(2)}%` : `${totalReturn.toFixed(2)}%`}
+                                        </p>
+                                        <p className="mt-1 text-tremor-default font-medium">
+                                            <span className={isPositive ? 'text-emerald-700 dark:text-emerald-500' : 'text-red-700 dark:text-red-500'}>
+                                                {isPositive ? '+' : ''}{totalReturn.toFixed(2)}%
+                                            </span>{' '}
+                                            <span className="font-normal text-tremor-content dark:text-dark-tremor-content">
+                                                from {totalTrades} trades (TP: {takeProfit}%)
+                                            </span>
+                                        </p>
+
+                                        {isCumulative ? (
+                                            <LineChart
+                                                data={equityCurve.map(d => ({
+                                                    date: d.date.slice(5),
+                                                    'Equity %': parseFloat(d.equity.toFixed(2))
+                                                }))}
+                                                index="date"
+                                                categories={['Equity %']}
+                                                colors={['violet']}
+                                                valueFormatter={(v) => `${v.toFixed(2)}%`}
+                                                yAxisWidth={60}
+                                                className="mt-6 h-72"
+                                                showLegend={false}
+                                            />
+                                        ) : (
+                                            <LineChart
+                                                data={equityCurve.map(d => ({
+                                                    date: d.date.slice(5),
+                                                    'Daily Return': parseFloat(d.return.toFixed(2)),
+                                                    'Cumulative': parseFloat(d.equity.toFixed(2))
+                                                }))}
+                                                index="date"
+                                                categories={['Daily Return', 'Cumulative']}
+                                                colors={['emerald', 'violet']}
+                                                valueFormatter={(v) => `${v.toFixed(2)}%`}
+                                                yAxisWidth={60}
+                                                className="mt-6 h-72"
+                                            />
+                                        )}
+                                    </Card>
+                                );
+                            })()}
 
                             {/* Summary Panel - Trade Breakdown for Selected Range */}
                             <ChartCard title="" height={350}>
