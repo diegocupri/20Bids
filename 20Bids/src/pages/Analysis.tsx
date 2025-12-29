@@ -959,61 +959,48 @@ export function AnalysisPage() {
                                                     {totals.return >= 0 ? '+' : ''}{totals.return.toFixed(2)}%
                                                 </p>
 
-                                                {/* Metric Rows with Progress Bars */}
-                                                <div className="space-y-5 flex-1">
+                                                {/* Metric Rows with INLINE Progress Bars */}
+                                                <div className="space-y-4 flex-1">
                                                     {/* Hit TP */}
-                                                    <div>
-                                                        <div className="flex justify-between items-center mb-2">
-                                                            <span className="text-sm text-white font-medium">Hit TP ({takeProfit}%)</span>
-                                                            <span className="text-sm">
-                                                                <span className="font-semibold text-white">{totals.hitTP}</span>
-                                                                <span className="text-gray-400 ml-1">({tpPct.toFixed(0)}%)</span>
-                                                            </span>
-                                                        </div>
-                                                        <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-sm text-gray-300 w-24 shrink-0">Hit TP ({takeProfit}%)</span>
+                                                        <span className="text-sm font-semibold text-white w-16 shrink-0 text-right">
+                                                            {totals.hitTP} <span className="text-gray-400 font-normal">({tpPct.toFixed(0)}%)</span>
+                                                        </span>
+                                                        <div className="flex-1 h-2.5 bg-gray-700 rounded-full overflow-hidden">
                                                             <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${tpPct}%` }} />
                                                         </div>
                                                     </div>
 
                                                     {/* Hit SL */}
-                                                    <div>
-                                                        <div className="flex justify-between items-center mb-2">
-                                                            <span className="text-sm text-white font-medium">Hit SL ({stopLoss === 100 ? 'Off' : `-${stopLoss}%`})</span>
-                                                            <span className="text-sm">
-                                                                <span className="font-semibold text-white">{totals.hitSL}</span>
-                                                                <span className="text-gray-400 ml-1">({slPct.toFixed(0)}%)</span>
-                                                            </span>
-                                                        </div>
-                                                        <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-sm text-gray-300 w-24 shrink-0">Hit SL ({stopLoss === 100 ? 'Off' : `-${stopLoss}%`})</span>
+                                                        <span className="text-sm font-semibold text-white w-16 shrink-0 text-right">
+                                                            {totals.hitSL} <span className="text-gray-400 font-normal">({slPct.toFixed(0)}%)</span>
+                                                        </span>
+                                                        <div className="flex-1 h-2.5 bg-gray-700 rounded-full overflow-hidden">
                                                             <div className="h-full bg-red-500 rounded-full" style={{ width: `${slPct}%` }} />
                                                         </div>
                                                     </div>
 
                                                     {/* Other */}
-                                                    <div>
-                                                        <div className="flex justify-between items-center mb-2">
-                                                            <span className="text-sm text-white font-medium">Other Outcomes</span>
-                                                            <span className="text-sm">
-                                                                <span className="font-semibold text-white">{totals.other}</span>
-                                                                <span className="text-gray-400 ml-1">({otherPct.toFixed(0)}%)</span>
-                                                            </span>
-                                                        </div>
-                                                        <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-sm text-gray-300 w-24 shrink-0">Other</span>
+                                                        <span className="text-sm font-semibold text-white w-16 shrink-0 text-right">
+                                                            {totals.other} <span className="text-gray-400 font-normal">({otherPct.toFixed(0)}%)</span>
+                                                        </span>
+                                                        <div className="flex-1 h-2.5 bg-gray-700 rounded-full overflow-hidden">
                                                             <div className="h-full bg-gray-500 rounded-full" style={{ width: `${otherPct}%` }} />
                                                         </div>
                                                     </div>
 
                                                     {/* Avg Return */}
-                                                    <div>
-                                                        <div className="flex justify-between items-center mb-2">
-                                                            <span className="text-sm text-white font-medium">Avg Return / Trade</span>
-                                                            <span className="text-sm">
-                                                                <span className={`font-semibold ${avgReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                                    {avgReturn >= 0 ? '+' : ''}{avgReturn.toFixed(2)}%
-                                                                </span>
-                                                            </span>
-                                                        </div>
-                                                        <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-sm text-gray-300 w-24 shrink-0">Avg Return</span>
+                                                        <span className={`text-sm font-semibold w-16 shrink-0 text-right ${avgReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                            {avgReturn >= 0 ? '+' : ''}{avgReturn.toFixed(2)}%
+                                                        </span>
+                                                        <div className="flex-1 h-2.5 bg-gray-700 rounded-full overflow-hidden">
                                                             <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(Math.abs(avgReturn) * 20, 100)}%` }} />
                                                         </div>
                                                     </div>
