@@ -1442,99 +1442,98 @@ export function AnalysisPage() {
                                 </div>
                             </ChartCard>
 
-                        </div>
+                            {/* RECOMMENDED SL PER TP - Table */}
+                            <ChartCard title="" height={420}>
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                        📊 RECOMMENDED STOP LOSS
+                                        <span className="text-[10px] font-normal text-gray-400">
+                                            (Optimal SL for each TP target)
+                                        </span>
+                                    </h3>
+                                </div>
+                                <div className="h-[350px] overflow-y-auto">
+                                    {optimizationData?.bubbleData?.length > 0 ? (() => {
+                                        const data = optimizationData.bubbleData;
+                                        const tpLevels = optimizationData.tpRange ||
+                                            ([...new Set(data.map((d: any) => d.tp))] as number[]).sort((a: number, b: number) => a - b);
 
-                        {/* RECOMMENDED SL PER TP - Table + Bar Chart */}
-                        <ChartCard title="" height={420} className="w-full mt-6">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                    📊 RECOMMENDED STOP LOSS
-                                    <span className="text-[10px] font-normal text-gray-400">
-                                        (Optimal SL for each TP target)
-                                    </span>
-                                </h3>
-                            </div>
-                            <div className="h-[350px] overflow-y-auto">
-                                {optimizationData?.bubbleData?.length > 0 ? (() => {
-                                    const data = optimizationData.bubbleData;
-                                    const tpLevels = optimizationData.tpRange ||
-                                        ([...new Set(data.map((d: any) => d.tp))] as number[]).sort((a: number, b: number) => a - b);
+                                        const recommendations: {
+                                            tp: number;
+                                            sl: number;
+                                            avgReturn: number;
+                                            winRate: number;
+                                            efficiency: number;
+                                        }[] = [];
 
-                                    const recommendations: {
-                                        tp: number;
-                                        sl: number;
-                                        avgReturn: number;
-                                        winRate: number;
-                                        efficiency: number;
-                                    }[] = [];
-
-                                    for (const tp of tpLevels) {
-                                        const tpData = data.filter((d: any) => d.tp === tp && d.sl <= maxRiskTolerance);
-                                        if (tpData.length > 0) {
-                                            const best = tpData.reduce((a: any, b: any) =>
-                                                a.efficiency > b.efficiency ? a : b
-                                            );
-                                            recommendations.push({
-                                                tp: best.tp,
-                                                sl: best.sl,
-                                                avgReturn: best.avgReturn || 0,
-                                                winRate: best.winRate || 0,
-                                                efficiency: best.efficiency || 0
-                                            });
+                                        for (const tp of tpLevels) {
+                                            const tpData = data.filter((d: any) => d.tp === tp && d.sl <= maxRiskTolerance);
+                                            if (tpData.length > 0) {
+                                                const best = tpData.reduce((a: any, b: any) =>
+                                                    a.efficiency > b.efficiency ? a : b
+                                                );
+                                                recommendations.push({
+                                                    tp: best.tp,
+                                                    sl: best.sl,
+                                                    avgReturn: best.avgReturn || 0,
+                                                    winRate: best.winRate || 0,
+                                                    efficiency: best.efficiency || 0
+                                                });
+                                            }
                                         }
-                                    }
 
-                                    if (recommendations.length === 0) {
-                                        return <div className="text-center text-gray-400 py-10">No data for selected risk level</div>;
-                                    }
+                                        if (recommendations.length === 0) {
+                                            return <div className="text-center text-gray-400 py-10">No data for selected risk level</div>;
+                                        }
 
-                                    return (
-                                        <table className="w-full text-xs">
-                                            <thead className="sticky top-0 bg-white">
-                                                <tr className="border-b border-gray-200 text-gray-500 uppercase text-[10px]">
-                                                    <th className="py-2 text-left font-medium">TP Target</th>
-                                                    <th className="py-2 text-center font-medium">Recommended SL</th>
-                                                    <th className="py-2 text-right font-medium">Avg Return</th>
-                                                    <th className="py-2 text-right font-medium">Win Rate</th>
-                                                    <th className="py-2 text-right font-medium">Efficiency</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {recommendations.map((rec, idx) => (
-                                                    <tr
-                                                        key={idx}
-                                                        className={`border-b border-gray-100 transition-colors ${rec.tp === targetTP ? 'bg-blue-50 font-semibold' : 'hover:bg-gray-50'}`}
-                                                    >
-                                                        <td className="py-2 text-left">
-                                                            {rec.tp === targetTP && <span className="mr-1">→</span>}
-                                                            {rec.tp}%
-                                                        </td>
-                                                        <td className="py-2 text-center">
-                                                            <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-[10px] font-medium">
-                                                                {rec.sl}%
-                                                            </span>
-                                                        </td>
-                                                        <td className={`py-2 text-right font-medium ${rec.avgReturn >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                                            {rec.avgReturn >= 0 ? '+' : ''}{rec.avgReturn.toFixed(2)}%
-                                                        </td>
-                                                        <td className="py-2 text-right text-gray-600">
-                                                            {rec.winRate}%
-                                                        </td>
-                                                        <td className="py-2 text-right text-amber-600 font-medium">
-                                                            {rec.efficiency.toFixed(1)}
-                                                        </td>
+                                        return (
+                                            <table className="w-full text-xs">
+                                                <thead className="sticky top-0 bg-white">
+                                                    <tr className="border-b border-gray-200 text-gray-500 uppercase text-[10px]">
+                                                        <th className="py-2 text-left font-medium">TP Target</th>
+                                                        <th className="py-2 text-center font-medium">Recommended SL</th>
+                                                        <th className="py-2 text-right font-medium">Avg Return</th>
+                                                        <th className="py-2 text-right font-medium">Win Rate</th>
+                                                        <th className="py-2 text-right font-medium">Efficiency</th>
                                                     </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    );
-                                })() : (
-                                    <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
-                                        <p>Loading recommendations...</p>
-                                    </div>
-                                )}
-                            </div>
-                        </ChartCard>
+                                                </thead>
+                                                <tbody>
+                                                    {recommendations.map((rec, idx) => (
+                                                        <tr
+                                                            key={idx}
+                                                            className={`border-b border-gray-100 transition-colors ${rec.tp === targetTP ? 'bg-blue-50 font-semibold' : 'hover:bg-gray-50'}`}
+                                                        >
+                                                            <td className="py-2 text-left">
+                                                                {rec.tp === targetTP && <span className="mr-1">→</span>}
+                                                                {rec.tp}%
+                                                            </td>
+                                                            <td className="py-2 text-center">
+                                                                <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-[10px] font-medium">
+                                                                    {rec.sl}%
+                                                                </span>
+                                                            </td>
+                                                            <td className={`py-2 text-right font-medium ${rec.avgReturn >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                                {rec.avgReturn >= 0 ? '+' : ''}{rec.avgReturn.toFixed(2)}%
+                                                            </td>
+                                                            <td className="py-2 text-right text-gray-600">
+                                                                {rec.winRate}%
+                                                            </td>
+                                                            <td className="py-2 text-right text-amber-600 font-medium">
+                                                                {rec.efficiency.toFixed(1)}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        );
+                                    })() : (
+                                        <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
+                                            <p>Loading recommendations...</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </ChartCard>
+                        </div>
 
                         {/* ========== NEW TRADING ANALYTICS SECTION ========== */}
                         <div className="mt-8 mb-4">
