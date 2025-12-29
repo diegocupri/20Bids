@@ -789,9 +789,9 @@ export function AnalysisPage() {
                             {/* Performance Evolution Chart - Portfolio Value Style */}
                             <ChartCard title="" height={380}>
                                 {/* Header with Big Metric */}
-                                <div className="mb-3">
+                                <div className="mb-3" style={{ fontFamily: '__Inter_f367f3, __Inter_Fallback_f367f3, sans-serif' }}>
                                     <p className="text-sm text-gray-500 mb-1">Portfolio Value</p>
-                                    <p className="text-4xl font-semibold text-gray-900">
+                                    <p className="text-3xl font-medium text-gray-900">
                                         {(() => {
                                             const total = equityCurve.reduce((acc, d) => acc + (d.return || 0), 0);
                                             return `${total >= 0 ? '+' : ''}${total.toFixed(2)}%`;
@@ -950,12 +950,12 @@ export function AnalysisPage() {
                                         const otherPct = total > 0 ? (totals.other / total) * 100 : 0;
 
                                         return (
-                                            <div className="flex flex-col h-full">
+                                            <div className="flex flex-col h-full" style={{ fontFamily: '__Inter_f367f3, __Inter_Fallback_f367f3, sans-serif' }}>
                                                 {/* Title */}
                                                 <p className="text-sm text-gray-500 mb-1">Period Summary</p>
 
                                                 {/* Big Total Return */}
-                                                <p className={`text-4xl font-semibold mb-4 ${totals.return >= 0 ? 'text-gray-900' : 'text-red-500'}`}>
+                                                <p className={`text-3xl font-medium mb-4 ${totals.return >= 0 ? 'text-gray-900' : 'text-red-500'}`}>
                                                     {totals.return >= 0 ? '+' : ''}{totals.return.toFixed(2)}%
                                                 </p>
 
