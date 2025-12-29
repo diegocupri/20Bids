@@ -756,7 +756,7 @@ export function AnalysisPage() {
                             {/* Performance Evolution Chart - Portfolio Value Style */}
                             <ChartCard title="" height={380}>
                                 {/* Header with Big Metric */}
-                                <div className="mb-3 pl-0" style={{ fontFamily: '__Inter_f367f3, __Inter_Fallback_f367f3, sans-serif' }}>
+                                <div className="mb-3 pl-0">
                                     <p className="text-sm text-gray-500 mb-1">Portfolio Value</p>
                                     <p className="text-3xl font-semibold">
                                         {(() => {
@@ -774,7 +774,7 @@ export function AnalysisPage() {
                                 </div>
                                 <ResponsiveContainer width="100%" height="75%">
                                     <ComposedChart data={equityCurve} margin={{ left: -24, right: 0, top: 10, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={1} vertical={false} />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" opacity={1} vertical={false} />
                                         <XAxis
                                             dataKey="date"
                                             stroke="#6b7280"
@@ -783,11 +783,13 @@ export function AnalysisPage() {
                                             minTickGap={50}
                                             axisLine={false}
                                             tickLine={false}
+                                            fontFamily='"Source Sans 3", sans-serif'
                                         />
                                         <YAxis
                                             yAxisId="left"
-                                            stroke="#6b7280"
+                                            stroke="#9ca3af" // Gray for left axis
                                             fontSize={11}
+                                            fontFamily='"Source Sans 3", sans-serif'
                                             domain={[
                                                 (_: number) => {
                                                     const maxLeft = Math.max(...equityCurve.map(d => d.return), 0);
@@ -824,51 +826,34 @@ export function AnalysisPage() {
                                             orientation="right"
                                             stroke="#9ca3af" // Gray for right axis
                                             fontSize={11}
+                                            fontFamily='"Source Sans 3", sans-serif'
                                             tickFormatter={(val) => val.toFixed(1)}
                                             domain={[
                                                 (_: number) => {
-                                                    // Right Axis Logic - FLATTEN LINE
-                                                    const maxLeft = Math.max(...equityCurve.map(d => d.return), 0);
-                                                    const minLeft = Math.min(...equityCurve.map(d => d.return), 0);
-
-                                                    // Real data bounds
+                                                    // Right Axis Logic - FLATTEN LINE & SYNC ZERO
                                                     const realMaxRight = Math.max(...equityCurve.map((d: any) => d.avgReturn || 0), 0);
                                                     const realMinRight = Math.min(...equityCurve.map((d: any) => d.avgReturn || 0), 0);
-
-                                                    // Expand bounds to flatten line (e.g., 3x logic range)
                                                     const span = realMaxRight - realMinRight || 0.1;
-                                                    const padding = span * 3; // Large padding
-                                                    const maxRight = realMaxRight + padding;
-                                                    const minRight = realMinRight - padding;
+                                                    const padding = span * 3; // Large padding to flatten
 
+                                                    // Sync Zero with Left Axis
+                                                    const maxLeft = Math.max(...equityCurve.map(d => d.return), 0);
+                                                    const minLeft = Math.min(...equityCurve.map(d => d.return), 0);
                                                     const rangeLeft = maxLeft - minLeft || 1;
-
                                                     const zeroPosLeft = Math.abs(minLeft) / rangeLeft;
 
-                                                    // Shift minRight to align zero based on left axis zero position
-                                                    // This assumes the left axis is the primary for zero alignment.
+                                                    const maxRight = realMaxRight + padding;
                                                     const newMin = - (zeroPosLeft * maxRight) / (1 - zeroPosLeft);
-                                                    return Math.min(newMin, minRight);
+                                                    return Math.min(newMin, realMinRight - padding);
                                                 },
-                                                // Function for max to ensure symmetry/padding?
                                                 (_: number) => {
-                                                    // We need the max to be consistent with the min calculation above?
-                                                    // Recharts domain can be [min, max].
-                                                    // If we return a function for min, we return a value. 
-                                                    // 'auto' for max might not respect our padding.
-
-                                                    // Simplification: Let's assume the previous block handles the "Left" sync.
-                                                    // Here we just want "Large Range" + "Sync".
-                                                    // It's tricky to do both in one pass without external state.
-                                                    // But we can approximate.
-
-                                                    // Let's just return 'auto' and hope the min adjustment is enough?
-                                                    // No, 'auto' will clip to data max. We likely need to force a larger max.
-
-                                                    return 'auto';
+                                                    // Explicit Max to ensure padding is respected
+                                                    const realMaxRight = Math.max(...equityCurve.map((d: any) => d.avgReturn || 0), 0);
+                                                    const realMinRight = Math.min(...equityCurve.map((d: any) => d.avgReturn || 0), 0);
+                                                    const span = realMaxRight - realMinRight || 0.1;
+                                                    const padding = span * 3;
+                                                    return realMaxRight + padding;
                                                 }
-                                                // Actually, let's keep it simple. The User wants "avg return curve flat".
-                                                // We can just multiply the max/min by a literal factor if we perform the calculation.
                                             ]}
                                             axisLine={false}
                                             tickLine={false}
@@ -882,7 +867,7 @@ export function AnalysisPage() {
                                                 borderRadius: '12px',
                                                 boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
                                                 padding: '12px 16px',
-                                                fontFamily: '"Source Sans 3", system-ui, sans-serif',
+                                                fontFamily: '"Source Sans 3", sans-serif',
                                             }}
                                             content={({ active, payload, label }) => {
                                                 if (!active || !payload || !payload.length) return null;
@@ -1896,7 +1881,7 @@ export function AnalysisPage() {
                                         axisLine={false}
                                         tickLine={false}
                                     />
-                                    <YAxis stroke="#94a3b8" fontSize={10} axisLine={false} tickLine={false} />
+                                    <YAxis stroke="#94a3b8" fontSize={10} axisLine={false} tickLine={false} fontFamily='"Source Sans 3", sans-serif' />
                                     <Tooltip
                                         cursor={{ fill: '#f3f4f6', opacity: 0.5 }}
                                         contentStyle={{
@@ -1905,7 +1890,7 @@ export function AnalysisPage() {
                                             borderRadius: '6px',
                                             boxShadow: 'none',
                                             color: '#1f2937',
-                                            fontFamily: '"Source Sans 3", system-ui, sans-serif',
+                                            fontFamily: '"Source Sans 3", sans-serif',
                                             fontSize: '12px'
                                         }}
                                     />
@@ -1959,16 +1944,16 @@ function TerminalMetric({
     const colorClass = trend === 'up' ? 'text-emerald-500' : trend === 'down' ? 'text-rose-500' : 'text-gray-400';
 
     return (
-        <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm flex flex-col justify-between h-32 hover:border-gray-200 transition-colors" title={tooltip}>
-            <span className="text-sm font-medium text-gray-500 font-sans tracking-wide">
+        <div className="bg-white rounded-xl p-4 border border-gray-200 flex flex-col justify-between hover:border-gray-300 transition-colors h-24" title={tooltip}>
+            <span className="text-xs font-medium text-gray-500 font-sans tracking-wide uppercase">
                 {label}
             </span>
-            <div className="flex items-end gap-3 mt-2">
-                <span className="text-3xl font-bold text-gray-900 tracking-tight font-sans">
+            <div className="flex items-end gap-2 mt-1">
+                <span className="text-2xl font-semibold text-gray-900 tracking-tight font-sans">
                     {value}
                 </span>
                 {subValue && (
-                    <span className={`text-xs font-bold mb-1.5 ${colorClass} bg-opacity-10 px-1.5 py-0.5 rounded`}>
+                    <span className={`text-[10px] font-semibold mb-1 ${colorClass} bg-opacity-10 px-1 py-0.5 rounded`}>
                         {subValue}
                     </span>
                 )}
