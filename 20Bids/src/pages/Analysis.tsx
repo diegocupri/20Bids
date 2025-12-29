@@ -4,7 +4,7 @@ import { Sidebar } from '../components/Sidebar';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     AreaChart, Area, ComposedChart, Line, Legend, LabelList, Cell,
-    ScatterChart, Scatter, LineChart
+    ScatterChart, Scatter, LineChart, ReferenceLine
 } from 'recharts';
 import { cn } from '../lib/utils';
 import { fetchAnalysis } from '../api/client';
@@ -1442,110 +1442,6 @@ export function AnalysisPage() {
                                 </div>
                             </ChartCard>
 
-                            {/* TOP PICKS: Best TP/SL Combinations */}
-                            <ChartCard title="" height={280} className="w-full">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                        🎯 TOP PICKS
-                                        <span className="text-[10px] font-normal text-gray-400">
-                                            (Best TP/SL Combinations)
-                                        </span>
-                                    </h3>
-                                </div>
-                                <div className="grid grid-cols-3 gap-4 h-full">
-                                    {optimizationData?.bubbleData?.length > 0 ? (() => {
-                                        const filteredData = optimizationData.bubbleData.filter((d: any) => d.sl <= maxRiskTolerance);
-                                        if (filteredData.length === 0) return <div className="col-span-3 text-center text-gray-400 py-10">No data for selected risk level</div>;
-
-                                        // Find best efficiency (return per unit of risk)
-                                        const bestEfficiency = filteredData.reduce((a: any, b: any) =>
-                                            a.efficiency > b.efficiency ? a : b
-                                        );
-
-                                        // Find highest return
-                                        const highestReturn = filteredData.reduce((a: any, b: any) =>
-                                            a.totalReturn > b.totalReturn ? a : b
-                                        );
-
-                                        // Find safest bet (highest win rate)
-                                        const safestBet = filteredData.reduce((a: any, b: any) =>
-                                            a.winRate > b.winRate ? a : b
-                                        );
-
-                                        const cards = [
-                                            {
-                                                title: "Best Efficiency",
-                                                emoji: "🏆",
-                                                description: "Highest return per unit of risk",
-                                                data: bestEfficiency,
-                                                color: "from-amber-50 to-orange-50",
-                                                border: "border-amber-200",
-                                                accent: "text-amber-600",
-                                                badge: "bg-amber-100 text-amber-700"
-                                            },
-                                            {
-                                                title: "Highest Return",
-                                                emoji: "💰",
-                                                description: "Maximum total return",
-                                                data: highestReturn,
-                                                color: "from-emerald-50 to-green-50",
-                                                border: "border-emerald-200",
-                                                accent: "text-emerald-600",
-                                                badge: "bg-emerald-100 text-emerald-700"
-                                            },
-                                            {
-                                                title: "Safest Bet",
-                                                emoji: "🛡️",
-                                                description: "Best win rate",
-                                                data: safestBet,
-                                                color: "from-blue-50 to-indigo-50",
-                                                border: "border-blue-200",
-                                                accent: "text-blue-600",
-                                                badge: "bg-blue-100 text-blue-700"
-                                            }
-                                        ];
-
-                                        return cards.map((card, idx) => (
-                                            <div key={idx} className={`bg-gradient-to-br ${card.color} ${card.border} border rounded-xl p-4 flex flex-col justify-between`}>
-                                                <div>
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <span className="text-2xl">{card.emoji}</span>
-                                                        <span className={`text-sm font-bold ${card.accent}`}>{card.title}</span>
-                                                    </div>
-                                                    <p className="text-[10px] text-gray-500 mb-3">{card.description}</p>
-                                                </div>
-
-                                                <div className="space-y-2">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-xs text-gray-600">Take Profit</span>
-                                                        <span className={`text-sm font-bold ${card.accent}`}>{card.data.tp}%</span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-xs text-gray-600">Stop Loss</span>
-                                                        <span className={`text-sm font-bold ${card.accent}`}>{card.data.sl}%</span>
-                                                    </div>
-                                                    <div className="border-t border-gray-200 pt-2 mt-2">
-                                                        <div className="flex justify-between items-center text-xs">
-                                                            <span className="text-gray-500">Return</span>
-                                                            <span className={`font-semibold ${card.data.totalReturn >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                                                {card.data.totalReturn >= 0 ? '+' : ''}{card.data.totalReturn}%
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex justify-between items-center text-xs mt-1">
-                                                            <span className="text-gray-500">Win Rate</span>
-                                                            <span className="font-semibold text-gray-700">{card.data.winRate}%</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ));
-                                    })() : (
-                                        <div className="col-span-3 flex flex-col items-center justify-center h-full text-gray-400 text-sm">
-                                            <p>Loading recommendations...</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </ChartCard>
                         </div>
 
                         {/* RECOMMENDED SL PER TP - Table + Bar Chart */}
@@ -1558,7 +1454,7 @@ export function AnalysisPage() {
                                     </span>
                                 </h3>
                             </div>
-                            <div className="grid grid-cols-2 gap-4 h-[350px]">
+                            <div className="h-[350px] overflow-y-auto">
                                 {optimizationData?.bubbleData?.length > 0 ? (() => {
                                     const data = optimizationData.bubbleData;
                                     const tpLevels = optimizationData.tpRange ||
@@ -1589,98 +1485,51 @@ export function AnalysisPage() {
                                     }
 
                                     if (recommendations.length === 0) {
-                                        return <div className="col-span-2 text-center text-gray-400 py-10">No data for selected risk level</div>;
+                                        return <div className="text-center text-gray-400 py-10">No data for selected risk level</div>;
                                     }
 
                                     return (
-                                        <>
-                                            {/* Table */}
-                                            <div className="overflow-y-auto pr-2">
-                                                <table className="w-full text-xs">
-                                                    <thead className="sticky top-0 bg-white">
-                                                        <tr className="border-b border-gray-200 text-gray-500 uppercase text-[10px]">
-                                                            <th className="py-2 text-left font-medium">TP Target</th>
-                                                            <th className="py-2 text-center font-medium">SL</th>
-                                                            <th className="py-2 text-right font-medium">Return</th>
-                                                            <th className="py-2 text-right font-medium">Win Rate</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {recommendations.map((rec, idx) => (
-                                                            <tr
-                                                                key={idx}
-                                                                className={`border-b border-gray-100 transition-colors ${rec.tp === targetTP ? 'bg-blue-50 font-semibold' : 'hover:bg-gray-50'}`}
-                                                            >
-                                                                <td className="py-2 text-left">
-                                                                    {rec.tp === targetTP && <span className="mr-1">→</span>}
-                                                                    {rec.tp}%
-                                                                </td>
-                                                                <td className="py-2 text-center">
-                                                                    <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-[10px] font-medium">
-                                                                        {rec.sl}%
-                                                                    </span>
-                                                                </td>
-                                                                <td className={`py-2 text-right font-medium ${rec.avgReturn >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                                                    {rec.avgReturn >= 0 ? '+' : ''}{rec.avgReturn.toFixed(2)}%
-                                                                </td>
-                                                                <td className="py-2 text-right text-gray-600">
-                                                                    {rec.winRate}%
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-
-                                            {/* Bar Chart */}
-                                            <div className="h-full">
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <BarChart data={recommendations} layout="vertical" margin={{ top: 10, right: 30, bottom: 10, left: 40 }}>
-                                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={true} vertical={false} />
-                                                        <XAxis
-                                                            type="number"
-                                                            tick={{ fontSize: 10 }}
-                                                            label={{ value: 'Stop Loss %', position: 'bottom', offset: 0, style: { fontSize: 10, fill: '#6b7280' } }}
-                                                        />
-                                                        <YAxis
-                                                            type="category"
-                                                            dataKey="tp"
-                                                            tick={{ fontSize: 10 }}
-                                                            tickFormatter={(v) => `${v}%`}
-                                                            width={40}
-                                                        />
-                                                        <Tooltip
-                                                            content={({ active, payload }) => {
-                                                                if (active && payload && payload.length) {
-                                                                    const d = payload[0].payload;
-                                                                    return (
-                                                                        <div className="bg-white p-2 rounded-lg shadow-lg border border-gray-200 text-xs">
-                                                                            <p className="font-bold">TP: {d.tp}%</p>
-                                                                            <p>Recommended SL: {d.sl}%</p>
-                                                                            <p>Avg Return: {d.avgReturn?.toFixed(2)}%</p>
-                                                                            <p>Win Rate: {d.winRate}%</p>
-                                                                        </div>
-                                                                    );
-                                                                }
-                                                                return null;
-                                                            }}
-                                                        />
-                                                        <Bar dataKey="sl" radius={[0, 4, 4, 0]}>
-                                                            {recommendations.map((entry, index) => (
-                                                                <Cell
-                                                                    key={`cell-${index}`}
-                                                                    fill={entry.tp === targetTP ? '#3b82f6' : '#94a3b8'}
-                                                                    fillOpacity={entry.tp === targetTP ? 1 : 0.6}
-                                                                />
-                                                            ))}
-                                                        </Bar>
-                                                    </BarChart>
-                                                </ResponsiveContainer>
-                                            </div>
-                                        </>
+                                        <table className="w-full text-xs">
+                                            <thead className="sticky top-0 bg-white">
+                                                <tr className="border-b border-gray-200 text-gray-500 uppercase text-[10px]">
+                                                    <th className="py-2 text-left font-medium">TP Target</th>
+                                                    <th className="py-2 text-center font-medium">Recommended SL</th>
+                                                    <th className="py-2 text-right font-medium">Avg Return</th>
+                                                    <th className="py-2 text-right font-medium">Win Rate</th>
+                                                    <th className="py-2 text-right font-medium">Efficiency</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {recommendations.map((rec, idx) => (
+                                                    <tr
+                                                        key={idx}
+                                                        className={`border-b border-gray-100 transition-colors ${rec.tp === targetTP ? 'bg-blue-50 font-semibold' : 'hover:bg-gray-50'}`}
+                                                    >
+                                                        <td className="py-2 text-left">
+                                                            {rec.tp === targetTP && <span className="mr-1">→</span>}
+                                                            {rec.tp}%
+                                                        </td>
+                                                        <td className="py-2 text-center">
+                                                            <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-[10px] font-medium">
+                                                                {rec.sl}%
+                                                            </span>
+                                                        </td>
+                                                        <td className={`py-2 text-right font-medium ${rec.avgReturn >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                            {rec.avgReturn >= 0 ? '+' : ''}{rec.avgReturn.toFixed(2)}%
+                                                        </td>
+                                                        <td className="py-2 text-right text-gray-600">
+                                                            {rec.winRate}%
+                                                        </td>
+                                                        <td className="py-2 text-right text-amber-600 font-medium">
+                                                            {rec.efficiency.toFixed(1)}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     );
                                 })() : (
-                                    <div className="col-span-2 flex flex-col items-center justify-center h-full text-gray-400 text-sm">
+                                    <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
                                         <p>Loading recommendations...</p>
                                     </div>
                                 )}
@@ -1694,52 +1543,7 @@ export function AnalysisPage() {
                             </h2>
                         </div>
 
-                        {/* CHART 1: TP/SL Optimizer Card */}
-                        <ChartCard title="" height={200} className="w-full mb-6">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                    🎯 TP/SL OPTIMIZER
-                                    <span className="text-[10px] font-normal text-gray-400">
-                                        (Quick recommendation for your TP)
-                                    </span>
-                                </h3>
-                            </div>
-                            <div className="flex items-center gap-8">
-                                {optimizationData?.bubbleData?.length > 0 ? (() => {
-                                    const filteredData = optimizationData.bubbleData.filter((d: any) => d.tp === targetTP && d.sl <= maxRiskTolerance);
-                                    if (filteredData.length === 0) {
-                                        return <div className="text-gray-400 text-sm">No data for TP {targetTP}%</div>;
-                                    }
-                                    const best = filteredData.reduce((a: any, b: any) => a.efficiency > b.efficiency ? a : b);
-                                    return (
-                                        <div className="flex items-center gap-8 w-full">
-                                            <div className="text-center px-6 py-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-                                                <div className="text-3xl font-bold text-blue-600">{best.sl}%</div>
-                                                <div className="text-xs text-gray-500 mt-1">Recommended SL</div>
-                                            </div>
-                                            <div className="grid grid-cols-3 gap-6 flex-1">
-                                                <div className="text-center">
-                                                    <div className={`text-xl font-bold ${best.totalReturn >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                                        {best.totalReturn >= 0 ? '+' : ''}{best.avgReturn?.toFixed(2)}%
-                                                    </div>
-                                                    <div className="text-[10px] text-gray-500">Avg Return/Trade</div>
-                                                </div>
-                                                <div className="text-center">
-                                                    <div className="text-xl font-bold text-gray-700">{best.winRate}%</div>
-                                                    <div className="text-[10px] text-gray-500">Win Rate</div>
-                                                </div>
-                                                <div className="text-center">
-                                                    <div className="text-xl font-bold text-amber-600">{best.efficiency?.toFixed(1)}</div>
-                                                    <div className="text-[10px] text-gray-500">Efficiency</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })() : <div className="text-gray-400 text-sm">Loading...</div>}
-                            </div>
-                        </ChartCard>
-
-                        {/* CHART 2: Efficiency Curve */}
+                        {/* CHART: Efficiency Curve with optimal point line */}
                         <ChartCard title="" height={320} className="w-full mb-6">
                             <div className="flex items-center justify-between mb-3">
                                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
@@ -1765,6 +1569,9 @@ export function AnalysisPage() {
                                         return <div className="text-center text-gray-400 py-10">No data for TP {targetTP}%</div>;
                                     }
 
+                                    // Find optimal point (max efficiency)
+                                    const maxEfficiency = Math.max(...curveData.map((d: any) => d.efficiency));
+                                    const optimalPoint = curveData.find((d: any) => d.efficiency === maxEfficiency);
 
                                     return (
                                         <ResponsiveContainer width="100%" height="100%">
@@ -1776,6 +1583,16 @@ export function AnalysisPage() {
                                                     label={{ value: 'Stop Loss %', position: 'bottom', offset: 10, style: { fontSize: 11, fill: '#6b7280' } }}
                                                 />
                                                 <YAxis tick={{ fontSize: 10 }} />
+                                                {/* Vertical line at optimal SL */}
+                                                {optimalPoint && (
+                                                    <ReferenceLine
+                                                        x={optimalPoint.sl}
+                                                        stroke="#ef4444"
+                                                        strokeDasharray="5 5"
+                                                        strokeWidth={2}
+                                                        label={{ value: `Optimal: ${optimalPoint.sl}%`, position: 'top', fill: '#ef4444', fontSize: 10 }}
+                                                    />
+                                                )}
                                                 <Tooltip content={({ active, payload }) => {
                                                     if (active && payload && payload.length) {
                                                         const d = payload[0].payload;
@@ -1800,167 +1617,89 @@ export function AnalysisPage() {
                             </div>
                         </ChartCard>
 
-                        {/* CHART 3: Volume Scatter (by segment) */}
-                        <ChartCard title="" height={320} className="w-full mb-6">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                    💰 VOLUME SEGMENT ANALYSIS
-                                    <span className="text-[10px] font-normal text-gray-400">
-                                        (Performance by trading volume)
-                                    </span>
-                                </h3>
-                            </div>
-                            <div className="w-full h-[260px]">
-                                {optimizationData?.volumeStats?.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={optimizationData.volumeStats} margin={{ top: 20, right: 30, bottom: 30, left: 40 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                            <XAxis dataKey="segment" tick={{ fontSize: 10 }} />
-                                            <YAxis tick={{ fontSize: 10 }} />
-                                            <Tooltip content={({ active, payload }) => {
-                                                if (active && payload && payload.length) {
-                                                    const d = payload[0].payload;
-                                                    return (
-                                                        <div className="bg-white p-2 rounded-lg shadow-lg border border-gray-200 text-xs">
-                                                            <p className="font-bold">Volume: {d.segment}</p>
-                                                            <p>Avg Return: {d.avgReturn}%</p>
-                                                            <p>Win Rate: {d.winRate}%</p>
-                                                            <p>Trades: {d.count}</p>
-                                                        </div>
-                                                    );
-                                                }
-                                                return null;
-                                            }} />
-                                            <Bar dataKey="avgReturn" name="Avg Return %" radius={[4, 4, 0, 0]}>
-                                                {optimizationData.volumeStats.map((entry: any, index: number) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.avgReturn >= 0 ? '#10b981' : '#ef4444'} />
-                                                ))}
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                ) : <div className="text-center text-gray-400 py-10">Loading volume data...</div>}
-                            </div>
-                        </ChartCard>
+                        {/* VOLUME ANALYSIS SECTION - Side by side */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                            {/* Volume Segment Analysis */}
+                            <ChartCard title="" height={320}>
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                        💰 VOLUME SEGMENT ANALYSIS
+                                        <span className="text-[10px] font-normal text-gray-400">
+                                            (Performance by trading volume)
+                                        </span>
+                                    </h3>
+                                </div>
+                                <div className="w-full h-[260px]">
+                                    {optimizationData?.volumeStats?.length > 0 ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={optimizationData.volumeStats} margin={{ top: 20, right: 30, bottom: 30, left: 40 }}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                                <XAxis dataKey="segment" tick={{ fontSize: 10 }} />
+                                                <YAxis tick={{ fontSize: 10 }} />
+                                                <Tooltip content={({ active, payload }) => {
+                                                    if (active && payload && payload.length) {
+                                                        const d = payload[0].payload;
+                                                        return (
+                                                            <div className="bg-white p-2 rounded-lg shadow-lg border border-gray-200 text-xs">
+                                                                <p className="font-bold">Volume: {d.segment}</p>
+                                                                <p>Avg Return: {d.avgReturn}%</p>
+                                                                <p>Win Rate: {d.winRate}%</p>
+                                                                <p>Trades: {d.count}</p>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                }} />
+                                                <Bar dataKey="avgReturn" name="Avg Return %" radius={[4, 4, 0, 0]}>
+                                                    {optimizationData.volumeStats.map((entry: any, index: number) => (
+                                                        <Cell key={`cell-${index}`} fill={entry.avgReturn >= 0 ? '#10b981' : '#ef4444'} />
+                                                    ))}
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    ) : <div className="text-center text-gray-400 py-10">Loading volume data...</div>}
+                                </div>
+                            </ChartCard>
 
-                        {/* CHART 4: Sector Performance */}
-                        <ChartCard title="" height={320} className="w-full mb-6">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                    🏭 SECTOR PERFORMANCE
-                                    <span className="text-[10px] font-normal text-gray-400">
-                                        (Which sectors work best?)
-                                    </span>
-                                </h3>
-                            </div>
-                            <div className="w-full h-[260px]">
-                                {optimizationData?.sectorStats?.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={optimizationData.sectorStats.slice(0, 10)} layout="vertical" margin={{ top: 10, right: 30, bottom: 10, left: 80 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={true} vertical={false} />
-                                            <XAxis type="number" tick={{ fontSize: 10 }} />
-                                            <YAxis type="category" dataKey="sector" tick={{ fontSize: 9 }} width={75} />
-                                            <Tooltip content={({ active, payload }) => {
-                                                if (active && payload && payload.length) {
-                                                    const d = payload[0].payload;
-                                                    return (
-                                                        <div className="bg-white p-2 rounded-lg shadow-lg border border-gray-200 text-xs">
-                                                            <p className="font-bold">{d.sector}</p>
-                                                            <p>Avg Return: {d.avgReturn}%</p>
-                                                            <p>Win Rate: {d.winRate}%</p>
-                                                            <p>Trades: {d.count}</p>
-                                                        </div>
-                                                    );
-                                                }
-                                                return null;
-                                            }} />
-                                            <Bar dataKey="avgReturn" name="Avg Return %" radius={[0, 4, 4, 0]}>
-                                                {optimizationData.sectorStats.slice(0, 10).map((entry: any, index: number) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.avgReturn >= 0 ? '#10b981' : '#ef4444'} />
-                                                ))}
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                ) : <div className="text-center text-gray-400 py-10">Loading sector data...</div>}
-                            </div>
-                        </ChartCard>
-
-                        {/* CHART 5: RSI Zones */}
-                        <ChartCard title="" height={320} className="w-full mb-6">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                    📉 RSI ZONES
-                                    <span className="text-[10px] font-normal text-gray-400">
-                                        (Oversold vs Overbought performance)
-                                    </span>
-                                </h3>
-                            </div>
-                            <div className="w-full h-[260px]">
-                                {optimizationData?.rsiStats?.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <ScatterChart margin={{ top: 20, right: 30, bottom: 30, left: 40 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                            <XAxis type="number" dataKey="rsi" name="RSI" domain={[0, 100]} tick={{ fontSize: 10 }}
-                                                label={{ value: 'RSI at Entry', position: 'bottom', offset: 10, style: { fontSize: 11, fill: '#6b7280' } }} />
-                                            <YAxis type="number" dataKey="mvso" name="MVSO" tick={{ fontSize: 10 }}
-                                                label={{ value: 'Max Upside %', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#6b7280' } }} />
-                                            <Tooltip content={({ active, payload }) => {
-                                                if (active && payload && payload.length) {
-                                                    const d = payload[0].payload;
-                                                    return (
-                                                        <div className="bg-white p-2 rounded-lg shadow-lg border border-gray-200 text-xs">
-                                                            <p className="font-bold">RSI: {d.rsi}</p>
-                                                            <p>Max Upside: {d.mvso}%</p>
-                                                            <p>Max Drawdown: {d.maxDD}%</p>
-                                                        </div>
-                                                    );
-                                                }
-                                                return null;
-                                            }} />
-                                            <Scatter data={optimizationData.rsiStats.slice(0, 200)} fill="#3b82f6" fillOpacity={0.5} />
-                                        </ScatterChart>
-                                    </ResponsiveContainer>
-                                ) : <div className="text-center text-gray-400 py-10">Loading RSI data...</div>}
-                            </div>
-                        </ChartCard>
-
-                        {/* CHART 6: Relative Volume Impact */}
-                        <ChartCard title="" height={320} className="w-full mb-6">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                    ⚡ RELATIVE VOLUME IMPACT
-                                    <span className="text-[10px] font-normal text-gray-400">
-                                        (Does high relative volume = better performance?)
-                                    </span>
-                                </h3>
-                            </div>
-                            <div className="w-full h-[260px]">
-                                {optimizationData?.relVolStats?.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <ScatterChart margin={{ top: 20, right: 30, bottom: 30, left: 40 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                            <XAxis type="number" dataKey="relativeVol" name="Relative Vol" domain={[0, 'auto']} tick={{ fontSize: 10 }}
-                                                label={{ value: 'Relative Volume', position: 'bottom', offset: 10, style: { fontSize: 11, fill: '#6b7280' } }} />
-                                            <YAxis type="number" dataKey="mvso" name="MVSO" tick={{ fontSize: 10 }}
-                                                label={{ value: 'Max Upside %', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#6b7280' } }} />
-                                            <Tooltip content={({ active, payload }) => {
-                                                if (active && payload && payload.length) {
-                                                    const d = payload[0].payload;
-                                                    return (
-                                                        <div className="bg-white p-2 rounded-lg shadow-lg border border-gray-200 text-xs">
-                                                            <p className="font-bold">Rel Vol: {d.relativeVol}x</p>
-                                                            <p>Max Upside: {d.mvso}%</p>
-                                                            <p>Sector: {d.sector}</p>
-                                                        </div>
-                                                    );
-                                                }
-                                                return null;
-                                            }} />
-                                            <Scatter data={optimizationData.relVolStats.slice(0, 200)} fill="#f59e0b" fillOpacity={0.5} />
-                                        </ScatterChart>
-                                    </ResponsiveContainer>
-                                ) : <div className="text-center text-gray-400 py-10">Loading relative volume data...</div>}
-                            </div>
-                        </ChartCard>
+                            {/* Relative Volume Impact */}
+                            <ChartCard title="" height={320}>
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                        ⚡ RELATIVE VOLUME IMPACT
+                                        <span className="text-[10px] font-normal text-gray-400">
+                                            (High relative volume = better performance?)
+                                        </span>
+                                    </h3>
+                                </div>
+                                <div className="w-full h-[260px]">
+                                    {optimizationData?.relVolStats?.length > 0 ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ScatterChart margin={{ top: 20, right: 30, bottom: 30, left: 40 }}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                                <XAxis type="number" dataKey="relativeVol" name="Relative Vol" domain={[0, 'auto']} tick={{ fontSize: 10 }}
+                                                    label={{ value: 'Relative Volume', position: 'bottom', offset: 10, style: { fontSize: 11, fill: '#6b7280' } }} />
+                                                <YAxis type="number" dataKey="mvso" name="MVSO" tick={{ fontSize: 10 }}
+                                                    label={{ value: 'Max Upside %', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#6b7280' } }} />
+                                                <Tooltip content={({ active, payload }) => {
+                                                    if (active && payload && payload.length) {
+                                                        const d = payload[0].payload;
+                                                        return (
+                                                            <div className="bg-white p-2 rounded-lg shadow-lg border border-gray-200 text-xs">
+                                                                <p className="font-bold">Rel Vol: {d.relativeVol}x</p>
+                                                                <p>Max Upside: {d.mvso}%</p>
+                                                                <p>Sector: {d.sector}</p>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                }} />
+                                                <Scatter data={optimizationData.relVolStats.slice(0, 200)} fill="#f59e0b" fillOpacity={0.5} />
+                                            </ScatterChart>
+                                        </ResponsiveContainer>
+                                    ) : <div className="text-center text-gray-400 py-10">Loading relative volume data...</div>}
+                                </div>
+                            </ChartCard>
+                        </div>
 
                         {/* ========== END NEW TRADING ANALYTICS SECTION ========== */}
 
