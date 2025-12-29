@@ -609,7 +609,9 @@ app.get('/api/stats/optimization', async (req, res) => {
                 avgReturn: data.count > 0 ? parseFloat((returns.reduce((a, b) => a + b, 0) / data.count).toFixed(2)) : 0,
                 winRate: data.count > 0 ? parseFloat(((data.wins / data.count) * 100).toFixed(1)) : 0,
                 count: data.count,
-                // Boxplot data
+                // Boxplot raw data for Plotly
+                returns: returns,
+                // Pre-calculated stats for tooltip
                 min: returns.length > 0 ? parseFloat(Math.min(...returns).toFixed(2)) : 0,
                 q1: parseFloat(percentile(returns, 25).toFixed(2)),
                 median: parseFloat(percentile(returns, 50).toFixed(2)),

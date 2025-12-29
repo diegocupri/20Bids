@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import Plot from 'react-plotly.js';
+import ReactECharts from 'echarts-for-react';
 import { Sidebar } from '../components/Sidebar';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -1618,7 +1619,7 @@ export function AnalysisPage() {
 
                         {/* VOLUME ANALYSIS SECTION - Side by side */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                            {/* Volume Segment Analysis - BOXPLOT */}
+                            {/* Volume Segment Analysis - ECHARTS BOXPLOT */}
                             <ChartCard title="" height={320}>
                                 <div className="flex items-center justify-between mb-3">
                                     <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
@@ -1630,46 +1631,59 @@ export function AnalysisPage() {
                                 </div>
                                 <div className="w-full h-[260px]">
                                     {optimizationData?.volumeStats?.length > 0 ? (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <ComposedChart data={optimizationData.volumeStats} margin={{ top: 20, right: 30, bottom: 30, left: 40 }}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                                <XAxis dataKey="segment" tick={{ fontSize: 10 }} />
-                                                <YAxis tick={{ fontSize: 10 }} domain={['auto', 'auto']} label={{ value: 'Return %', angle: -90, position: 'insideLeft', style: { fontSize: 10, fill: '#6b7280' } }} />
-                                                <Tooltip content={({ active, payload }) => {
-                                                    if (active && payload && payload.length) {
-                                                        const d = payload[0].payload;
-                                                        return (
-                                                            <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200 text-xs">
-                                                                <p className="font-bold text-sm mb-2">Volume: {d.segment}</p>
-                                                                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                                                                    <span className="text-gray-500">Max:</span><span className="font-medium">{d.max}%</span>
-                                                                    <span className="text-gray-500">Q3 (75%):</span><span className="font-medium">{d.q3}%</span>
-                                                                    <span className="text-gray-500">Median:</span><span className="font-bold text-blue-600">{d.median}%</span>
-                                                                    <span className="text-gray-500">Q1 (25%):</span><span className="font-medium">{d.q1}%</span>
-                                                                    <span className="text-gray-500">Min:</span><span className="font-medium">{d.min}%</span>
-                                                                </div>
-                                                                <div className="mt-2 pt-2 border-t border-gray-200">
-                                                                    <span className="text-gray-500">Avg Return:</span> <span className={`font-bold ${d.avgReturn >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{d.avgReturn}%</span>
-                                                                    <br />
-                                                                    <span className="text-gray-500">Win Rate:</span> <span className="font-medium">{d.winRate}%</span>
-                                                                    <br />
-                                                                    <span className="text-gray-500">Trades:</span> <span className="font-medium">{d.count}</span>
-                                                                </div>
+                                        <ReactECharts
+                                            option={{
+                                                tooltip: {
+                                                    trigger: 'item',
+                                                    formatter: (params: any) => {
+                                                        const stat = optimizationData.volumeStats[params.dataIndex];
+                                                        return `
+                                                            <div style="font-size:12px">
+                                                                <b>${stat.segment}</b><br/>
+                                                                Max: ${stat.max}%<br/>
+                                                                Q3: ${stat.q3}%<br/>
+                                                                Median: <b style="color:#3b82f6">${stat.median}%</b><br/>
+                                                                Q1: ${stat.q1}%<br/>
+                                                                Min: ${stat.min}%<br/>
+                                                                <hr style="margin:4px 0"/>
+                                                                Avg: <span style="color:${stat.avgReturn >= 0 ? '#10b981' : '#ef4444'}">${stat.avgReturn}%</span><br/>
+                                                                Win Rate: ${stat.winRate}%<br/>
+                                                                Trades: ${stat.count}
                                                             </div>
-                                                        );
+                                                        `;
                                                     }
-                                                    return null;
-                                                }} />
-                                                {/* Whisker lines (min to max) */}
-                                                <Bar dataKey="max" stackId="whisker" fill="transparent" />
-                                                {/* IQR Box (Q1 to Q3) */}
-                                                <Bar dataKey="q3" stackId="box" fill="#3b82f6" fillOpacity={0.3} stroke="#3b82f6" strokeWidth={1}>
-                                                    <LabelList dataKey="median" position="center" formatter={(v: any) => v != null ? `${v}%` : ''} style={{ fontSize: 9, fill: '#1e40af', fontWeight: 'bold' }} />
-                                                </Bar>
-                                                {/* Median line */}
-                                                <Line type="step" dataKey="median" stroke="#1e40af" strokeWidth={2} dot={{ r: 4, fill: '#1e40af' }} name="Median" />
-                                            </ComposedChart>
-                                        </ResponsiveContainer>
+                                                },
+                                                grid: { left: 50, right: 20, top: 20, bottom: 40 },
+                                                xAxis: {
+                                                    type: 'category',
+                                                    data: optimizationData.volumeStats.map((s: any) => s.segment),
+                                                    axisLabel: { fontSize: 10, color: '#6b7280' }
+                                                },
+                                                yAxis: {
+                                                    type: 'value',
+                                                    name: 'Return %',
+                                                    nameTextStyle: { fontSize: 10, color: '#6b7280' },
+                                                    axisLabel: { fontSize: 10, color: '#6b7280' },
+                                                    splitLine: { lineStyle: { color: '#f0f0f0' } }
+                                                },
+                                                series: [{
+                                                    type: 'boxplot',
+                                                    data: optimizationData.volumeStats.map((s: any) => [
+                                                        s.min, s.q1, s.median, s.q3, s.max
+                                                    ]),
+                                                    itemStyle: {
+                                                        color: '#3b82f6',
+                                                        borderColor: '#1e40af',
+                                                        borderWidth: 1.5
+                                                    },
+                                                    emphasis: {
+                                                        itemStyle: { borderWidth: 2, shadowBlur: 5 }
+                                                    }
+                                                }]
+                                            }}
+                                            style={{ width: '100%', height: '100%' }}
+                                            opts={{ renderer: 'canvas' }}
+                                        />
                                     ) : <div className="text-center text-gray-400 py-10">Loading volume data...</div>}
                                 </div>
                             </ChartCard>
