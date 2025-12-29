@@ -945,11 +945,13 @@ export function AnalysisPage() {
                                             iconSize={8}
                                             wrapperStyle={{ fontSize: '11px', paddingBottom: '4px' }}
                                         />
+                                        <ReferenceLine y={0} yAxisId="left" stroke="#e5e7eb" strokeWidth={1} />
                                         <Bar
                                             yAxisId="left"
                                             dataKey="return"
                                             radius={[4, 4, 0, 0]}
                                             name="Total Return"
+                                            fill="#3b82f6" // Default color for Legend
                                         >
                                             {equityCurve.map((entry, index) => (
                                                 <Cell
@@ -999,25 +1001,31 @@ export function AnalysisPage() {
                                                 <table className="w-full text-sm">
                                                     <tbody>
                                                         <tr className="border-b border-border-primary/40">
-                                                            <td className="py-3 text-text-secondary flex items-center gap-2">
-                                                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                                                Hit TP ({takeProfit}%)
+                                                            <td className="py-3 text-text-secondary">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                                                    Hit TP ({takeProfit}%)
+                                                                </div>
                                                             </td>
                                                             <td className="py-3 text-right font-medium text-text-primary">{totals.hitTP}</td>
                                                             <td className="py-3 text-right text-text-secondary w-16">({tpPct.toFixed(0)}%)</td>
                                                         </tr>
                                                         <tr className="border-b border-border-primary/40">
-                                                            <td className="py-3 text-text-secondary flex items-center gap-2">
-                                                                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-                                                                Hit SL ({stopLoss === 100 ? 'Off' : `-${stopLoss}%`})
+                                                            <td className="py-3 text-text-secondary">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                                                                    Hit SL ({stopLoss === 100 ? 'Off' : `-${stopLoss}%`})
+                                                                </div>
                                                             </td>
                                                             <td className="py-3 text-right font-medium text-text-primary">{totals.hitSL}</td>
                                                             <td className="py-3 text-right text-text-secondary w-16">({slPct.toFixed(0)}%)</td>
                                                         </tr>
                                                         <tr className="border-b border-border-primary/40">
-                                                            <td className="py-3 text-text-secondary flex items-center gap-2">
-                                                                <span className="w-2 h-2 rounded-full bg-gray-400"></span>
-                                                                Other
+                                                            <td className="py-3 text-text-secondary">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                                                                    Other
+                                                                </div>
                                                             </td>
                                                             <td className="py-3 text-right font-medium text-text-primary">{totals.other}</td>
                                                             <td className="py-3 text-right text-text-secondary w-16">({otherPct.toFixed(0)}%)</td>
