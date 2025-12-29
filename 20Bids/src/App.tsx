@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { UploadPage } from './components/UploadPage';
 import { AnalysisPage } from './pages/Analysis';
+import { AnalyticsTremorPage } from './pages/AnalyticsTremor';
 
 import { GraphsPage } from './pages/GraphsPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -17,6 +18,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<AuthenticatedLayout><Dashboard /></AuthenticatedLayout>} />
           <Route path="/analysis" element={<AuthenticatedLayout><AnalysisPage /></AuthenticatedLayout>} />
+          <Route path="/analytics-tremor" element={<AuthenticatedLayout><AnalyticsTremorPage /></AuthenticatedLayout>} />
           <Route path="/graphs" element={<AuthenticatedLayout><GraphsPage /></AuthenticatedLayout>} />
           <Route path="/upload" element={<AuthenticatedLayout><UploadPage /></AuthenticatedLayout>} />
         </Routes>
