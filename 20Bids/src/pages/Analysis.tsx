@@ -3,7 +3,7 @@ import Plot from 'react-plotly.js';
 import { Sidebar } from '../components/Sidebar';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    ComposedChart, Line, Legend,
+    ComposedChart, Line, Legend, Cell,
     ScatterChart, Scatter, LineChart, ReferenceLine
 } from 'recharts';
 import { cn } from '../lib/utils';
@@ -896,20 +896,34 @@ export function AnalysisPage() {
                                                 );
                                             }}
                                         />
+                                        <Legend
+                                            verticalAlign="top"
+                                            align="right"
+                                            height={36}
+                                            iconType="circle"
+                                            iconSize={10}
+                                            wrapperStyle={{ fontSize: '12px', paddingBottom: '10px' }}
+                                        />
                                         <Bar
                                             yAxisId="left"
                                             dataKey="return"
                                             radius={[4, 4, 0, 0]}
                                             name="Total Return"
-                                            fill="#3b82f6"
-                                        />
+                                        >
+                                            {equityCurve.map((entry, index) => (
+                                                <Cell
+                                                    key={`cell-${index}`}
+                                                    fill={entry.return >= 0 ? '#3b82f6' : '#ef4444'}
+                                                />
+                                            ))}
+                                        </Bar>
                                         <Line
                                             yAxisId="right"
                                             type="monotone"
                                             dataKey="avgReturn"
-                                            stroke="#8b5cf6"
+                                            stroke="#ec4899"
                                             strokeWidth={2}
-                                            dot={{ fill: '#8b5cf6', stroke: '#fff', strokeWidth: 2, r: 4 }}
+                                            dot={{ fill: '#ec4899', stroke: '#fff', strokeWidth: 2, r: 4 }}
                                             name="Avg Return"
                                         />
                                     </ComposedChart>
