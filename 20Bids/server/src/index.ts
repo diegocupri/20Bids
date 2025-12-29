@@ -590,33 +590,34 @@ app.get('/api/stats/optimization', async (req, res) => {
             return sorted[lower] + (sorted[upper] - sorted[lower]) * (idx - lower);
         };
 
-        const volumeMap = new Map<string, { returns: number[], wins: number, count: number }>();
-        volumeSegments.forEach(s => volumeMap.set(s, { returns: [], wins: 0, count: 0 }));
+        const volumeMap = new Map<string, { values: number[], wins: number, count: number }>();
+        volumeSegments.forEach(s => volumeMap.set(s, { values: [], wins: 0, count: 0 }));
 
         for (const rec of validRecs) {
             const segment = getVolumeSegment(rec.volume);
             const v = volumeMap.get(segment)!;
-            const tradeReturn = rec.mvso >= 5 ? 5 : (rec.maxDD >= 2 ? -2 : 0);
-            v.returns.push(tradeReturn);
-            if (tradeReturn > 0) v.wins++;
+            // Use REAL MVSO value for boxplot distribution
+            v.values.push(parseFloat(rec.mvso.toFixed(2)));
+            if (rec.mvso >= 5) v.wins++;
             v.count++;
         }
         const volumeStats = volumeSegments.map(segment => {
             const data = volumeMap.get(segment)!;
-            const returns = data.returns;
+            const values = data.values;
+            const avgReturn = data.count > 0 ? values.reduce((a, b) => a + b, 0) / data.count : 0;
             return {
                 segment,
-                avgReturn: data.count > 0 ? parseFloat((returns.reduce((a, b) => a + b, 0) / data.count).toFixed(2)) : 0,
+                avgReturn: parseFloat(avgReturn.toFixed(2)),
                 winRate: data.count > 0 ? parseFloat(((data.wins / data.count) * 100).toFixed(1)) : 0,
                 count: data.count,
                 // Boxplot raw data for Plotly
-                returns: returns,
+                values: values,
                 // Pre-calculated stats for tooltip
-                min: returns.length > 0 ? parseFloat(Math.min(...returns).toFixed(2)) : 0,
-                q1: parseFloat(percentile(returns, 25).toFixed(2)),
-                median: parseFloat(percentile(returns, 50).toFixed(2)),
-                q3: parseFloat(percentile(returns, 75).toFixed(2)),
-                max: returns.length > 0 ? parseFloat(Math.max(...returns).toFixed(2)) : 0
+                min: values.length > 0 ? parseFloat(Math.min(...values).toFixed(2)) : 0,
+                q1: parseFloat(percentile(values, 25).toFixed(2)),
+                median: parseFloat(percentile(values, 50).toFixed(2)),
+                q3: parseFloat(percentile(values, 75).toFixed(2)),
+                max: values.length > 0 ? parseFloat(Math.max(...values).toFixed(2)) : 0
             };
         });
 

@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import Plot from 'react-plotly.js';
-import ReactECharts from 'echarts-for-react';
 import { Sidebar } from '../components/Sidebar';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -1619,70 +1618,60 @@ export function AnalysisPage() {
 
                         {/* VOLUME ANALYSIS SECTION - Side by side */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                            {/* Volume Segment Analysis - ECHARTS BOXPLOT */}
+                            {/* Volume Segment Analysis - PLOTLY BOXPLOT (same as PROBABILITY EFFICIENCY) */}
                             <ChartCard title="" height={320}>
                                 <div className="flex items-center justify-between mb-3">
                                     <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
                                         💰 VOLUME SEGMENT ANALYSIS
                                         <span className="text-[10px] font-normal text-gray-400">
-                                            (Return distribution by volume)
+                                            (MVSO distribution by volume)
                                         </span>
                                     </h3>
                                 </div>
                                 <div className="w-full h-[260px]">
                                     {optimizationData?.volumeStats?.length > 0 ? (
-                                        <ReactECharts
-                                            option={{
-                                                tooltip: {
-                                                    trigger: 'item',
-                                                    formatter: (params: any) => {
-                                                        const stat = optimizationData.volumeStats[params.dataIndex];
-                                                        return `
-                                                            <div style="font-size:12px">
-                                                                <b>${stat.segment}</b><br/>
-                                                                Max: ${stat.max}%<br/>
-                                                                Q3: ${stat.q3}%<br/>
-                                                                Median: <b style="color:#3b82f6">${stat.median}%</b><br/>
-                                                                Q1: ${stat.q1}%<br/>
-                                                                Min: ${stat.min}%<br/>
-                                                                <hr style="margin:4px 0"/>
-                                                                Avg: <span style="color:${stat.avgReturn >= 0 ? '#10b981' : '#ef4444'}">${stat.avgReturn}%</span><br/>
-                                                                Win Rate: ${stat.winRate}%<br/>
-                                                                Trades: ${stat.count}
-                                                            </div>
-                                                        `;
-                                                    }
+                                        <Plot
+                                            data={optimizationData.volumeStats.map((stat: any) => ({
+                                                y: stat.values || [],
+                                                type: 'box',
+                                                name: stat.segment,
+                                                marker: { color: 'rgba(59, 130, 246, 0.3)', line: { color: '#3b82f6', width: 1 }, size: 2 },
+                                                boxpoints: 'all',
+                                                jitter: 0.5,
+                                                pointpos: -1.8,
+                                                fillcolor: 'rgba(59, 130, 246, 0.1)',
+                                                line: { color: '#3b82f6' },
+                                                showlegend: false
+                                            }))}
+                                            layout={{
+                                                autosize: true,
+                                                margin: { l: 50, r: 20, t: 20, b: 60 },
+                                                yaxis: {
+                                                    title: { text: 'MVSO %', font: { size: 10, color: '#64748b' } },
+                                                    zeroline: true,
+                                                    zerolinecolor: '#e5e7eb',
+                                                    gridcolor: '#f3f4f6',
+                                                    tickfont: { size: 10, color: '#64748b' }
                                                 },
-                                                grid: { left: 50, right: 20, top: 20, bottom: 40 },
-                                                xAxis: {
+                                                xaxis: {
+                                                    tickfont: { size: 10, color: '#64748b' },
                                                     type: 'category',
-                                                    data: optimizationData.volumeStats.map((s: any) => s.segment),
-                                                    axisLabel: { fontSize: 10, color: '#6b7280' }
+                                                    automargin: true
                                                 },
-                                                yAxis: {
-                                                    type: 'value',
-                                                    name: 'Return %',
-                                                    nameTextStyle: { fontSize: 10, color: '#6b7280' },
-                                                    axisLabel: { fontSize: 10, color: '#6b7280' },
-                                                    splitLine: { lineStyle: { color: '#f0f0f0' } }
-                                                },
-                                                series: [{
-                                                    type: 'boxplot',
-                                                    data: optimizationData.volumeStats.map((s: any) => [
-                                                        s.min, s.q1, s.median, s.q3, s.max
-                                                    ]),
-                                                    itemStyle: {
-                                                        color: '#3b82f6',
-                                                        borderColor: '#1e40af',
-                                                        borderWidth: 1.5
-                                                    },
-                                                    emphasis: {
-                                                        itemStyle: { borderWidth: 2, shadowBlur: 5 }
-                                                    }
-                                                }]
+                                                showlegend: false,
+                                                paper_bgcolor: 'transparent',
+                                                plot_bgcolor: 'transparent',
+                                                font: { family: 'Inter, sans-serif', size: 11, color: '#64748b' },
+                                                annotations: optimizationData.volumeStats.map((stat: any) => ({
+                                                    x: stat.segment,
+                                                    y: stat.max + 2,
+                                                    text: `n=${stat.count}`,
+                                                    showarrow: false,
+                                                    font: { size: 9, color: '#9ca3af' }
+                                                }))
                                             }}
+                                            config={{ displayModeBar: false, responsive: true }}
                                             style={{ width: '100%', height: '100%' }}
-                                            opts={{ renderer: 'canvas' }}
                                         />
                                     ) : <div className="text-center text-gray-400 py-10">Loading volume data...</div>}
                                 </div>
