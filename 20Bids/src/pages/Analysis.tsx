@@ -791,7 +791,7 @@ export function AnalysisPage() {
                                 {/* Header with Big Metric */}
                                 <div className="mb-3" style={{ fontFamily: '__Inter_f367f3, __Inter_Fallback_f367f3, sans-serif' }}>
                                     <p className="text-sm text-gray-500 mb-1">Portfolio Value</p>
-                                    <p className="text-3xl font-medium text-gray-900">
+                                    <p className="font-semibold text-gray-900" style={{ fontSize: '26px' }}>
                                         {(() => {
                                             const total = equityCurve.reduce((acc, d) => acc + (d.return || 0), 0);
                                             return `${total >= 0 ? '+' : ''}${total.toFixed(2)}%`;
@@ -817,7 +817,29 @@ export function AnalysisPage() {
                                             yAxisId="left"
                                             stroke="#6b7280"
                                             fontSize={11}
-                                            domain={['auto', 'auto']}
+                                            domain={[
+                                                (_: number) => {
+                                                    const maxLeft = Math.max(...equityCurve.map(d => d.return), 0);
+                                                    const minLeft = Math.min(...equityCurve.map(d => d.return), 0);
+                                                    const maxRight = Math.max(...equityCurve.map((d: any) => d.avgReturn || 0), 0);
+                                                    const minRight = Math.min(...equityCurve.map((d: any) => d.avgReturn || 0), 0);
+
+                                                    // Calculate 0-point position (0 to 1) for both
+                                                    const rangeLeft = maxLeft - minLeft || 1;
+                                                    const rangeRight = maxRight - minRight || 1;
+
+                                                    const zeroPosLeft = Math.abs(minLeft) / rangeLeft;
+                                                    const zeroPosRight = Math.abs(minRight) / rangeRight;
+
+                                                    // Target zero position is the higher of the two (needs more negative space)
+                                                    const targetZero = Math.max(zeroPosLeft, zeroPosRight, 0.1); // min 10% from bottom
+
+                                                    // Adjust minLeft to match targetZero
+                                                    const newMin = - (targetZero * maxLeft) / (1 - targetZero);
+                                                    return Math.min(newMin, minLeft);
+                                                },
+                                                'auto'
+                                            ]}
                                             axisLine={false}
                                             tickLine={false}
                                             unit="%"
@@ -825,9 +847,28 @@ export function AnalysisPage() {
                                         <YAxis
                                             yAxisId="right"
                                             orientation="right"
-                                            stroke="#8b5cf6"
+                                            stroke="#9ca3af"
                                             fontSize={11}
-                                            domain={[0, 5]}
+                                            domain={[
+                                                (_: number) => {
+                                                    const maxLeft = Math.max(...equityCurve.map(d => d.return), 0);
+                                                    const minLeft = Math.min(...equityCurve.map(d => d.return), 0);
+                                                    const maxRight = Math.max(...equityCurve.map((d: any) => d.avgReturn || 0), 0);
+                                                    const minRight = Math.min(...equityCurve.map((d: any) => d.avgReturn || 0), 0);
+
+                                                    const rangeLeft = maxLeft - minLeft || 1;
+                                                    const rangeRight = maxRight - minRight || 1;
+                                                    const zeroPosLeft = Math.abs(minLeft) / rangeLeft;
+                                                    const zeroPosRight = Math.abs(minRight) / rangeRight;
+
+                                                    const targetZero = Math.max(zeroPosLeft, zeroPosRight, 0.1);
+
+                                                    // Adjust minRight 
+                                                    const newMin = - (targetZero * maxRight) / (1 - targetZero);
+                                                    return Math.min(newMin, minRight);
+                                                },
+                                                'auto'
+                                            ]}
                                             axisLine={false}
                                             tickLine={false}
                                             unit="%"
@@ -921,9 +962,9 @@ export function AnalysisPage() {
                                             yAxisId="right"
                                             type="monotone"
                                             dataKey="avgReturn"
-                                            stroke="#f59e0b"
+                                            stroke="#8b5cf6"
                                             strokeWidth={2}
-                                            dot={{ fill: '#f59e0b', stroke: '#fff', strokeWidth: 2, r: 3 }}
+                                            dot={{ fill: '#8b5cf6', stroke: '#fff', strokeWidth: 2, r: 3 }}
                                             name="Avg Return"
                                         />
                                     </ComposedChart>
@@ -952,40 +993,44 @@ export function AnalysisPage() {
                                         return (
                                             <div className="flex flex-col h-full">
                                                 {/* Title */}
-                                                <p className="text-sm text-text-secondary mb-2">Period Summary</p>
-
-                                                {/* Big Total Return */}
-                                                <p className={`text-3xl font-medium mb-6 ${totals.return >= 0 ? 'text-text-primary' : 'text-rose-500'}`}>
-                                                    {totals.return >= 0 ? '+' : ''}{totals.return.toFixed(2)}%
-                                                </p>
+                                                <p className="text-sm text-text-secondary mb-4">Period Summary</p>
 
                                                 {/* Simple Table */}
                                                 <table className="w-full text-sm">
                                                     <tbody>
                                                         <tr className="border-b border-border-primary/40">
-                                                            <td className="py-3 text-text-secondary">Hit TP ({takeProfit}%)</td>
+                                                            <td className="py-3 text-text-secondary flex items-center gap-2">
+                                                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                                                Hit TP ({takeProfit}%)
+                                                            </td>
                                                             <td className="py-3 text-right font-medium text-text-primary">{totals.hitTP}</td>
                                                             <td className="py-3 text-right text-text-secondary w-16">({tpPct.toFixed(0)}%)</td>
                                                         </tr>
                                                         <tr className="border-b border-border-primary/40">
-                                                            <td className="py-3 text-text-secondary">Hit SL ({stopLoss === 100 ? 'Off' : `-${stopLoss}%`})</td>
+                                                            <td className="py-3 text-text-secondary flex items-center gap-2">
+                                                                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                                                                Hit SL ({stopLoss === 100 ? 'Off' : `-${stopLoss}%`})
+                                                            </td>
                                                             <td className="py-3 text-right font-medium text-text-primary">{totals.hitSL}</td>
                                                             <td className="py-3 text-right text-text-secondary w-16">({slPct.toFixed(0)}%)</td>
                                                         </tr>
                                                         <tr className="border-b border-border-primary/40">
-                                                            <td className="py-3 text-text-secondary">Other</td>
+                                                            <td className="py-3 text-text-secondary flex items-center gap-2">
+                                                                <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                                                                Other
+                                                            </td>
                                                             <td className="py-3 text-right font-medium text-text-primary">{totals.other}</td>
                                                             <td className="py-3 text-right text-text-secondary w-16">({otherPct.toFixed(0)}%)</td>
                                                         </tr>
                                                         <tr className="border-b border-border-primary/40">
-                                                            <td className="py-3 text-text-secondary">Avg Return</td>
+                                                            <td className="py-3 text-text-secondary pl-4">Avg Return</td>
                                                             <td colSpan={2} className={`py-3 text-right font-medium ${avgReturn >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                                                                 {avgReturn >= 0 ? '+' : ''}{avgReturn.toFixed(2)}%
                                                             </td>
                                                         </tr>
                                                         <tr>
-                                                            <td className="py-3 text-text-secondary font-medium">Total Trades</td>
-                                                            <td colSpan={2} className="py-3 text-right font-bold text-text-primary text-lg">{totals.count}</td>
+                                                            <td className="py-3 text-text-secondary font-medium pl-4">Total Trades</td>
+                                                            <td colSpan={2} className="py-3 text-right font-medium text-text-primary">{totals.count}</td>
                                                         </tr>
                                                     </tbody>
                                                 </table>
@@ -1054,8 +1099,8 @@ export function AnalysisPage() {
                                                 type: 'scatter',
                                                 mode: 'lines+markers',
                                                 yaxis: 'y2', // Map to secondary y-axis
-                                                line: { color: '#f59e0b', width: 2, dash: 'dot' }, // Amber dashed line
-                                                marker: { color: '#d97706', size: 6, symbol: 'circle' },
+                                                line: { color: '#6babeb', width: 2 }, // Matches left blueish tone but distinct
+                                                marker: { color: '#3b82f6', size: 6, symbol: 'circle' },
                                                 hovertemplate: 'Hit Rate: %{y:.1f}%<extra></extra>'
                                             });
 
@@ -1063,7 +1108,7 @@ export function AnalysisPage() {
                                         })()}
                                         layout={{
                                             autosize: true,
-                                            margin: { l: 40, r: 40, t: 30, b: 80 },
+                                            margin: { l: 45, r: 45, t: 30, b: 100 }, // Increased bottom margin
                                             yaxis: {
                                                 title: { text: 'Return %', font: { size: 10, color: '#64748b' } },
                                                 autorange: true,
@@ -1073,25 +1118,25 @@ export function AnalysisPage() {
                                                 tickfont: { size: 10, color: '#64748b' }
                                             },
                                             yaxis2: {
-                                                title: { text: 'Hit Rate %', font: { size: 10, color: '#d97706' } },
+                                                title: { text: 'Hit Rate %', font: { size: 10, color: '#64748b' } }, // Gray axis
                                                 overlaying: 'y',
                                                 side: 'right',
-                                                range: [50, 105], // Scaled 50-100%
-                                                tickfont: { size: 10, color: '#d97706' },
+                                                range: [50, 105],
+                                                tickfont: { size: 10, color: '#64748b' }, // Gray ticks
                                                 showgrid: false
                                             },
                                             xaxis: {
                                                 tickfont: { size: 10, color: '#64748b' },
                                                 fixedrange: true,
-                                                tickangle: -45, // Angled labels if crowded
-                                                type: 'category', // Force category
+                                                tickangle: -45,
+                                                type: 'category',
                                                 automargin: true,
                                                 showticklabels: true
                                             },
                                             showlegend: true,
                                             legend: { orientation: 'h', x: 0, y: 1.1, font: { size: 10 } },
-                                            paper_bgcolor: 'transparent',
-                                            plot_bgcolor: 'transparent',
+                                            paper_bgcolor: 'white', // White bg
+                                            plot_bgcolor: 'white',  // White bg
                                             font: { family: 'Inter, sans-serif', size: 11, color: '#64748b' },
                                             annotations: (boxPlotData || []).map((bucket) => {
                                                 const vals = (bucket as any).values || [];
@@ -1101,8 +1146,11 @@ export function AnalysisPage() {
                                                     y: avg,
                                                     text: `${avg.toFixed(1)}%`,
                                                     showarrow: false,
-                                                    font: { size: 10, color: avg >= 0 ? '#10b981' : '#ef4444', family: 'Inter' },
-                                                    yshift: 15
+                                                    xanchor: 'left',
+                                                    xshift: 25,
+                                                    font: { size: 10, color: '#1f2937', weight: 'bold' },
+                                                    bgcolor: 'rgba(255, 255, 255, 0.7)',
+                                                    borderpad: 2
                                                 };
                                             })
                                         }}
