@@ -3,7 +3,7 @@ import Plot from 'react-plotly.js';
 import { Sidebar } from '../components/Sidebar';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    AreaChart, Area, ComposedChart, Line, Legend, LabelList, Cell,
+    ComposedChart, Line, Legend,
     ScatterChart, Scatter, LineChart, ReferenceLine
 } from 'recharts';
 import { cn } from '../lib/utils';
@@ -33,18 +33,19 @@ interface AnalysisData {
     debugVersion?: string;
 }
 
-const CustomizedLabel = (props: any) => {
-    const { x, y, value } = props;
-    if (!value && value !== 0) return null;
-    return (
-        <g>
-            <rect x={x - 18} y={y - 20} width={36} height={16} fill="white" rx={4} stroke="#e5e5e5" strokeWidth={1} />
-            <text x={x} y={y - 9} fill="#059669" textAnchor="middle" dominantBaseline="middle" fontSize={10} fontWeight="bold">
-                {Number(value).toFixed(2)}%
-            </text>
-        </g>
-    );
-};
+// CustomizedLabel - commented out, not currently used
+// const CustomizedLabel = (props: any) => {
+//     const { x, y, value } = props;
+//     if (!value && value !== 0) return null;
+//     return (
+//         <g>
+//             <rect x={x - 18} y={y - 20} width={36} height={16} fill="white" rx={4} stroke="#e5e5e5" strokeWidth={1} />
+//             <text x={x} y={y - 9} fill="#059669" textAnchor="middle" dominantBaseline="middle" fontSize={10} fontWeight="bold">
+//                 {Number(value).toFixed(2)}%
+//             </text>
+//         </g>
+//     );
+// };
 
 type TimeRange = '1W' | '1M' | '3M' | 'YTD' | '1Y' | 'ALL';
 
@@ -500,7 +501,7 @@ export function AnalysisPage() {
 
     // Theme Colors
     let chartColor = '#8b5cf6';
-    const safeColor = '#10b981';
+    // const safeColor = '#10b981'; // Not used currently
 
     if (isTerminal) {
         chartColor = '#fbbf24';
@@ -785,144 +786,133 @@ export function AnalysisPage() {
                     <div className="space-y-6">
                         {/* ROW 1: Charts (Performance Evolution 75% + Seasonality 25%) */}
                         <div className="grid grid-cols-1 md:grid-cols-[2.5fr_1fr] lg:grid-cols-[3fr_1fr] gap-6">
-                            {/* Performance Evolution Chart */}
-                            <ChartCard title="" height={350}>
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 font-sans">
-                                        PERFORMANCE EVOLUTION
-                                        <span className="text-[10px] font-normal text-text-secondary/70">
-                                            (TP: {takeProfit}%)
-                                        </span>
-                                    </h3>
+                            {/* Performance Evolution Chart - Portfolio Value Style */}
+                            <ChartCard title="" height={400}>
+                                {/* Header with Big Metric */}
+                                <div className="mb-6">
+                                    <p className="text-sm text-gray-400 mb-1">Portfolio Value</p>
+                                    <p className="text-4xl font-semibold text-white">
+                                        {(() => {
+                                            const total = equityCurve.reduce((acc, d) => acc + (d.return || 0), 0);
+                                            return `${total >= 0 ? '+' : ''}${total.toFixed(2)}%`;
+                                        })()}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-2">
+                                        {equityCurve.reduce((acc, d) => acc + (d.count || 0), 0)} trades • TP: {takeProfit}%
+                                    </p>
                                 </div>
-                                <ResponsiveContainer width="100%" height="85%">
-                                    {isCumulative ? (
-                                        <AreaChart data={equityCurve}>
-                                            <defs>
-                                                <linearGradient id="colorEquity" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor={chartColor} stopOpacity={0.3} />
-                                                    <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
-                                            <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(5)} minTickGap={50} axisLine={false} tickLine={false} />
-                                            <YAxis stroke="#94a3b8" fontSize={11} domain={['auto', 'auto']} axisLine={false} tickLine={false} unit="%" />
-                                            <Tooltip
-                                                contentStyle={{
-                                                    backgroundColor: 'rgba(255,255,255,0.95)',
-                                                    border: '1px solid #e5e7eb',
-                                                    borderRadius: '6px',
-                                                    boxShadow: 'none',
-                                                    color: '#1f2937',
-                                                    fontFamily: '"Source Sans 3", system-ui, sans-serif',
-                                                    fontSize: '12px'
-                                                }}
-                                                formatter={(value: number) => [`${value.toFixed(2)}%`, 'Equity']}
-                                            />
-                                            <Area
-                                                type="linear"
-                                                dataKey="equity"
-                                                stroke={chartColor}
-                                                fillOpacity={1}
-                                                fill="url(#colorEquity)"
-                                                strokeWidth={2}
-                                            />
-                                        </AreaChart>
-                                    ) : (
-                                        <ComposedChart data={equityCurve}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
-                                            <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => val.slice(5)} minTickGap={50} axisLine={false} tickLine={false} />
-                                            <YAxis yAxisId="left" stroke={chartColor} fontSize={11} domain={['auto', 'auto']} axisLine={false} tickLine={false} unit="%" />
-                                            <YAxis yAxisId="right" orientation="right" stroke={safeColor} fontSize={11} domain={[0, 5]} axisLine={false} tickLine={false} unit="%" />
-                                            <Tooltip
-                                                content={({ active, payload, label }) => {
-                                                    if (!active || !payload || !payload.length) return null;
-                                                    const data = payload[0]?.payload;
-                                                    return (
-                                                        <div style={{
-                                                            backgroundColor: 'rgba(255,255,255,0.98)',
-                                                            border: '1px solid #e5e7eb',
-                                                            borderRadius: '8px',
-                                                            padding: '10px 14px',
-                                                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                                                            fontFamily: '"Source Sans 3", system-ui, sans-serif',
-                                                            fontSize: '12px',
-                                                            minWidth: '160px'
-                                                        }}>
-                                                            <div style={{ fontWeight: 600, marginBottom: '8px', color: '#1f2937', borderBottom: '1px solid #e5e7eb', paddingBottom: '6px' }}>
-                                                                {label}
-                                                            </div>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                                                <span style={{ color: '#64748b' }}>Total Return:</span>
-                                                                <span style={{ fontWeight: 600, color: data?.return >= 0 ? '#22c55e' : '#ef4444' }}>{data?.return?.toFixed(2)}%</span>
-                                                            </div>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                                                <span style={{ color: '#64748b' }}>Avg Return:</span>
-                                                                <span style={{ fontWeight: 500 }}>{data?.avgReturn?.toFixed(2)}%</span>
-                                                            </div>
-                                                            <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '8px', paddingTop: '8px' }}>
-                                                                <div style={{ fontSize: '10px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '6px' }}>Breakdown ({data?.count || 0} trades)</div>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                                                                    <span style={{ color: '#22c55e' }}>✓ Hit TP ({takeProfit}%):</span>
-                                                                    <span style={{ fontWeight: 600 }}>{data?.hitTP || 0}</span>
-                                                                </div>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                                                                    <span style={{ color: '#ef4444' }}>✗ Hit SL ({stopLoss === 100 ? 'Off' : `-${stopLoss}%`}):</span>
-                                                                    <span style={{ fontWeight: 600 }}>{data?.hitSL || 0}</span>
-                                                                </div>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                                    <span style={{ color: '#64748b' }}>○ Other:</span>
-                                                                    <span style={{ fontWeight: 600 }}>{data?.other || 0}</span>
-                                                                </div>
-                                                            </div>
+                                <ResponsiveContainer width="100%" height="75%">
+                                    <ComposedChart data={equityCurve}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} vertical={false} />
+                                        <XAxis
+                                            dataKey="date"
+                                            stroke="#6b7280"
+                                            fontSize={11}
+                                            tickFormatter={(val) => val.slice(5)}
+                                            minTickGap={50}
+                                            axisLine={false}
+                                            tickLine={false}
+                                        />
+                                        <YAxis
+                                            yAxisId="left"
+                                            stroke="#6b7280"
+                                            fontSize={11}
+                                            domain={['auto', 'auto']}
+                                            axisLine={false}
+                                            tickLine={false}
+                                            unit="%"
+                                        />
+                                        <YAxis
+                                            yAxisId="right"
+                                            orientation="right"
+                                            stroke="#8b5cf6"
+                                            fontSize={11}
+                                            domain={[0, 5]}
+                                            axisLine={false}
+                                            tickLine={false}
+                                            unit="%"
+                                        />
+                                        <Tooltip
+                                            cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
+                                            contentStyle={{
+                                                backgroundColor: '#ffffff',
+                                                border: 'none',
+                                                borderRadius: '12px',
+                                                boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                                                padding: '12px 16px',
+                                                fontFamily: '"Source Sans 3", system-ui, sans-serif',
+                                            }}
+                                            content={({ active, payload, label }) => {
+                                                if (!active || !payload || !payload.length) return null;
+                                                const data = payload[0]?.payload;
+                                                return (
+                                                    <div style={{
+                                                        backgroundColor: '#ffffff',
+                                                        borderRadius: '12px',
+                                                        padding: '12px 16px',
+                                                        boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                                                        minWidth: '140px'
+                                                    }}>
+                                                        <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: '8px', fontSize: '14px' }}>
+                                                            {label}
                                                         </div>
-                                                    );
-                                                }}
-                                            />
-                                            <Legend
-                                                verticalAlign="top"
-                                                align="left"
-                                                height={36}
-                                                iconType="circle"
-                                                iconSize={8}
-                                                wrapperStyle={{ fontSize: '11px', paddingLeft: '0px' }}
-                                            />
-                                            <Bar
-                                                yAxisId="left"
-                                                dataKey="return"
-                                                radius={[2, 2, 0, 0]}
-                                                name="Total Return"
-                                            >
-                                                {equityCurve.map((entry, index) => (
-                                                    <Cell
-                                                        key={`cell-${index}`}
-                                                        fill={entry.return >= 0 ? '#059669' : '#f59e0b'}
-                                                    />
-                                                ))}
-                                                <LabelList dataKey="return" position="top" formatter={(val: any) => `${Number(val).toFixed(1)}%`} style={{ fontSize: '10px', fill: '#64748b' }} />
-                                            </Bar>
-                                            <Line
-                                                yAxisId="right"
-                                                type="monotone"
-                                                dataKey="avgReturn"
-                                                stroke="#6366f1"
-                                                strokeWidth={2}
-                                                dot={({ cx, cy, payload }: any) => (
-                                                    <circle
-                                                        cx={cx}
-                                                        cy={cy}
-                                                        r={4}
-                                                        fill={payload.avgReturn >= 0 ? '#22c55e' : '#ef4444'}
-                                                        stroke="white"
-                                                        strokeWidth={1}
-                                                    />
-                                                )}
-                                                name="Avg Return"
-                                            >
-                                                <LabelList dataKey="avgReturn" content={<CustomizedLabel />} />
-                                            </Line>
-                                        </ComposedChart>
-                                    )}
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <span style={{
+                                                                width: '8px',
+                                                                height: '8px',
+                                                                borderRadius: '50%',
+                                                                backgroundColor: '#3b82f6',
+                                                                display: 'inline-block'
+                                                            }} />
+                                                            <span style={{ color: '#6b7280', fontSize: '13px' }}>Return</span>
+                                                            <span style={{
+                                                                fontWeight: 600,
+                                                                color: '#1f2937',
+                                                                marginLeft: 'auto',
+                                                                fontSize: '14px'
+                                                            }}>
+                                                                {data?.return?.toFixed(2)}%
+                                                            </span>
+                                                        </div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                                                            <span style={{
+                                                                width: '8px',
+                                                                height: '8px',
+                                                                borderRadius: '50%',
+                                                                backgroundColor: '#8b5cf6',
+                                                                display: 'inline-block'
+                                                            }} />
+                                                            <span style={{ color: '#6b7280', fontSize: '13px' }}>Avg Return</span>
+                                                            <span style={{
+                                                                fontWeight: 600,
+                                                                color: '#1f2937',
+                                                                marginLeft: 'auto',
+                                                                fontSize: '14px'
+                                                            }}>
+                                                                {data?.avgReturn?.toFixed(2)}%
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }}
+                                        />
+                                        <Bar
+                                            yAxisId="left"
+                                            dataKey="return"
+                                            radius={[4, 4, 0, 0]}
+                                            name="Total Return"
+                                            fill="#3b82f6"
+                                        />
+                                        <Line
+                                            yAxisId="right"
+                                            type="monotone"
+                                            dataKey="avgReturn"
+                                            stroke="#8b5cf6"
+                                            strokeWidth={2}
+                                            dot={{ fill: '#8b5cf6', stroke: '#fff', strokeWidth: 2, r: 4 }}
+                                            name="Avg Return"
+                                        />
+                                    </ComposedChart>
                                 </ResponsiveContainer>
                             </ChartCard>
 
