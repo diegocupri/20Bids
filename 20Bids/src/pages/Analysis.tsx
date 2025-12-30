@@ -2,13 +2,13 @@ import { useState, useEffect, useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { Sidebar } from '../components/Sidebar';
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     ComposedChart, Line, Legend, Cell,
     LineChart, ReferenceLine
 } from 'recharts';
 import { cn } from '../lib/utils';
 import { fetchAnalysis } from '../api/client';
-import { startOfYear, subWeeks, subMonths, isAfter, startOfWeek, startOfMonth, format } from 'date-fns';
+import { startOfYear, subWeeks, subMonths, isAfter } from 'date-fns';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { Calendar, TrendingUp, TrendingDown, BarChart2, DollarSign, Percent } from 'lucide-react';
@@ -107,7 +107,6 @@ export function AnalysisPage() {
         return 0;
     });
     const [isCumulative, setIsCumulative] = useState(false);
-    const [periodGranularity, setPeriodGranularity] = useState<'days' | 'weeks' | 'months'>('days');
 
     const [debouncedTakeProfit, setDebouncedTakeProfit] = useState<number>(takeProfit);
     const [debouncedStopLoss, setDebouncedStopLoss] = useState<number>(stopLoss);
@@ -470,20 +469,7 @@ export function AnalysisPage() {
 
     const { riskMetrics, equityCurve, boxPlotData } = filteredMetrics;
     const isTerminal = theme === 'terminal';
-    const isTradingView = theme === 'tradingview';
-    const isPolar = theme === 'polar';
-
-    // Theme Colors
-    let chartColor = '#8b5cf6';
-    // const safeColor = '#10b981'; // Not used currently
-
-    if (isTerminal) {
-        chartColor = '#fbbf24';
-    } else if (isTradingView) {
-        chartColor = '#2962ff';
-    } else if (isPolar) {
-        chartColor = '#2563eb';
-    }
+    // Deleted chartColor logic entirely logic as it was unused
 
     // Best Day Calculation (Moved to useMemo)
 
