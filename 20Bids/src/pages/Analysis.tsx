@@ -113,7 +113,7 @@ export function AnalysisPage() {
     const [debouncedMinVolume, setDebouncedMinVolume] = useState<number>(minVolume);
     const [debouncedMinPrice, setDebouncedMinPrice] = useState<number>(minPrice);
     const [debouncedMinProb, setDebouncedMinProb] = useState<number>(minProb);
-    const [mvsoThreshold, setMvsoThreshold] = useState<number>(0.5); // New MVSO Threshold Filter
+    const [mvsoThreshold] = useState<number>(0.5); // New MVSO Threshold Filter (Fixed)
     const [maxRiskTolerance, setMaxRiskTolerance] = useState<number>(12); // Max SL% user is willing to accept
     const [targetTP, setTargetTP] = useState<number>(5); // User's target Take Profit for SL calculator
 
@@ -398,7 +398,7 @@ export function AnalysisPage() {
             }
 
             // Use raw or clamped return based on toggle
-            const ret = d.return;
+            const ret = d.rawReturn ?? d.return;
 
             const bucket = probBuckets.find(b => prob >= b.min && prob < b.max);
             if (bucket) {
@@ -523,8 +523,8 @@ export function AnalysisPage() {
                 <div className="p-6 space-y-6 bg-bg-primary">
 
                     {/* Unified Header & Filter Toolbar */}
-                    <div className="flex flex-col gap-5 pb-6 border-b border-border-primary/50">
-                        {/* ROW 1: Title & Date (Simpler, Smaller) */}
+                    {/* ROW 1: Title & Date (Simpler, Smaller) - SCROLLS AWAY */}
+                    <div className="pb-4 border-b border-border-primary/50">
                         <div className="flex items-center justify-between">
                             <h1 className="text-lg font-bold text-text-primary uppercase tracking-wider flex items-center gap-2">
                                 <span className={cn("inline-block w-2 h-2 rounded-full", isTerminal ? "bg-amber-400 animate-pulse" : "bg-accent-primary")}></span>
@@ -534,8 +534,10 @@ export function AnalysisPage() {
                                 {new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                             </div>
                         </div>
+                    </div>
 
-                        {/* RIGHT: Unified Control Bar */}
+                    {/* RIGHT: Unified Control Bar - STICKY */}
+                    <div className="sticky top-0 z-50 bg-bg-primary/95 backdrop-blur pt-2 pb-4 border-b border-border-primary/50 -mt-2 mb-4">
                         <div className="flex flex-wrap xl:flex-nowrap items-center gap-4 w-full">
 
                             {/* Group 1: Time Range */}
@@ -676,23 +678,6 @@ export function AnalysisPage() {
                                         placeholder="0"
                                         onChange={(e) => setMinProb(parseInt(e.target.value) || 0)}
                                         className="w-9 bg-transparent border-0 text-text-primary text-sm font-black font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
-                                    />
-                                    <span className="text-[10px] text-text-secondary opacity-50">%</span>
-                                </div>
-
-                                <div className="w-px h-5 bg-border-primary/30"></div>
-
-                                {/* MVSO Filter (Amber for distinction) */}
-                                <div className="flex items-center gap-1.5 px-2 py-1 hover:bg-white/5 rounded transition-colors group">
-                                    <span className="text-xs font-bold font-sans text-amber-500 group-hover:text-amber-400">MVSO</span>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        step="0.1"
-                                        value={mvsoThreshold}
-                                        placeholder="0.5"
-                                        onChange={(e) => setMvsoThreshold(parseFloat(e.target.value) || 0)}
-                                        className="w-10 bg-transparent border-0 text-text-primary text-sm font-black font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
                                     />
                                     <span className="text-[10px] text-text-secondary opacity-50">%</span>
                                 </div>
@@ -1043,8 +1028,8 @@ export function AnalysisPage() {
                         </div>
 
                         {/* PROBABILITY EFFICIENCY (Box Plot) */}
-                        <ChartCard title="" height={350} className="w-full">
-                            <div className="flex gap-4" style={{ height: 380 }}>
+                        <ChartCard title="" height={500} className="w-full">
+                            <div className="flex gap-4" style={{ height: 500 }}>
                                 <div style={{ flex: '1 1 50%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                                     <div className="flex items-center justify-between mb-2 px-2 pt-2">
                                         <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2 font-sans">
