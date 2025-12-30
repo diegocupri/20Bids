@@ -1058,7 +1058,15 @@ export function AnalysisPage() {
                                                             pointpos: -1.8,
                                                             fillcolor: '#ffffff', // White interior
                                                             line: { color: '#3b82f6', width: 1.5 },
-                                                            showlegend: false
+                                                            showlegend: false,
+                                                            hovertemplate:
+                                                                '<b>%{x}</b><br>' +
+                                                                '<span style="color:#3b82f6">●</span> Median: <b>%{median:.2f}%</b><br>' +
+                                                                '<span style="color:#3b82f6; opacity: 0.7">●</span> Q3: %{q3:.2f}%<br>' +
+                                                                '<span style="color:#3b82f6; opacity: 0.7">●</span> Q1: %{q1:.2f}%<br>' +
+                                                                '<span style="color:#9ca3af">●</span> Max: %{max:.2f}%<br>' +
+                                                                '<span style="color:#9ca3af">●</span> Min: %{min:.2f}%' +
+                                                                '<extra></extra>'
                                                         });
                                                     }
                                                 });
@@ -1077,12 +1085,21 @@ export function AnalysisPage() {
                                                     yaxis: 'y2', // Map to secondary y-axis
                                                     line: { color: '#f59e0b', width: 2 }, // Different color (Amber)
                                                     marker: { color: '#f59e0b', size: 6, symbol: 'circle', line: { color: 'white', width: 1 } },
-                                                    hovertemplate: 'Hit Rate: %{y:.1f}%<extra></extra>'
+                                                    hovertemplate:
+                                                        '<b>%{x}</b><br>' +
+                                                        '<span style="color:#f59e0b">●</span> Hit Rate: <b>%{y:.1f}%</b>' +
+                                                        '<extra></extra>'
                                                 });
 
                                                 return traces;
                                             })()}
                                             layout={{
+                                                hoverlabel: {
+                                                    bgcolor: '#ffffff',
+                                                    bordercolor: '#e5e7eb',
+                                                    font: { family: '"Source Sans 3", sans-serif', size: 12, color: '#1f2937' },
+                                                    align: 'left'
+                                                },
                                                 autosize: true,
                                                 margin: { l: 45, r: 45, t: 40, b: 70 }, // Adjusted bottom margin
                                                 yaxis: {
