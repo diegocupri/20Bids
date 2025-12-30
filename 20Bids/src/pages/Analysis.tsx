@@ -455,35 +455,7 @@ export function AnalysisPage() {
 
     }, [data, timeRange, takeProfit, customStartDate, customEndDate, mvsoThreshold]);
 
-    // Top Periods Calculation (Moved before conditional return)
-    const topPeriods = useMemo(() => {
-        const equity = filteredMetrics?.equityCurve;
-        if (!equity) return { days: [], weeks: [], months: [] };
 
-        // Top Days
-        const days = [...equity].map(d => ({ date: d.date, return: d.return })).sort((a, b) => b.return - a.return).slice(0, 5);
-
-        // Aggregate Weeks & Months
-        const weekMap: Record<string, number> = {};
-        const monthMap: Record<string, number> = {};
-
-        equity.forEach(d => {
-            const date = new Date(d.date);
-            const weekKey = format(startOfWeek(date), 'yyyy-MM-dd'); // Week of...
-            const monthKey = format(startOfMonth(date), 'yyyy-MM');
-
-            weekMap[weekKey] = (weekMap[weekKey] || 0) + d.return;
-            monthMap[monthKey] = (monthMap[monthKey] || 0) + d.return;
-        });
-
-        const weeks = Object.entries(weekMap).map(([date, ret]) => ({ date, return: ret }))
-            .sort((a, b) => b.return - a.return).slice(0, 5);
-
-        const months = Object.entries(monthMap).map(([date, ret]) => ({ date, return: ret }))
-            .sort((a, b) => b.return - a.return).slice(0, 5);
-
-        return { days, weeks, months };
-    }, [filteredMetrics]);
 
     if (isLoading || !filteredMetrics) {
         return (
@@ -496,7 +468,7 @@ export function AnalysisPage() {
         );
     }
 
-    const { riskMetrics, equityCurve, distribution, topTickers, topSectors, boxPlotData } = filteredMetrics;
+    const { riskMetrics, equityCurve, boxPlotData } = filteredMetrics;
     const isTerminal = theme === 'terminal';
     const isTradingView = theme === 'tradingview';
     const isPolar = theme === 'polar';
@@ -1345,8 +1317,8 @@ export function AnalysisPage() {
 
                                         return (
                                             <table className="w-full text-xs">
-                                                <thead className="sticky top-0 bg-white shadow-sm z-10">
-                                                    <tr className="border-b border-gray-200 text-gray-500 uppercase text-[10px] bg-gray-50/50">
+                                                <thead className="sticky top-0 bg-white z-10">
+                                                    <tr className="border-b border-border-primary/50 text-gray-500 uppercase text-[10px]">
                                                         <th className="py-2 pl-2 text-left font-medium">TP Target</th>
                                                         <th className="py-2 text-center font-medium">Recommended SL</th>
                                                         <th className="py-2 text-right font-medium">Avg Return</th>
@@ -1395,180 +1367,6 @@ export function AnalysisPage() {
 
 
                         {/* ========== NEW TRADING ANALYTICS SECTION ========== */}
-                        <div className="mt-8 mb-4">
-                            <h2 className="text-lg font-bold text-gray-700 border-b border-gray-200 pb-2">
-                                📊 Advanced Trading Analytics
-                            </h2>
-                        </div>
-
-
-
-
-                        {/* ROW 2: Tables (Top Tickers + Top Periods + Sectors) */}
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            {/* Top Tickers Leaderboard */}
-                            <ChartCard title="" height={280}>
-                                <div className="flex items-center justify-between mb-3">
-                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
-                                        TOP TICKERS PERFORMANCE
-                                    </h3>
-                                </div>
-                                <div className="overflow-y-auto h-full pr-1">
-                                    <table className="w-full text-xs text-left text-text-secondary font-sans border-separate border-spacing-y-1">
-                                        <thead>
-                                            <tr className="border-b border-border-primary text-[10px] uppercase">
-                                                <th className="pb-2 font-medium pl-2">Rank</th>
-                                                <th className="pb-2 font-medium">Ticker</th>
-                                                <th className="pb-2 font-medium text-right pr-2">Avg Return</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {topTickers.slice(0, 10).map((ticker, idx) => (
-                                                <tr key={idx} className="bg-bg-tertiary/20 hover:bg-bg-tertiary/40 transition-colors rounded-md">
-                                                    <td className="py-2 pl-2 font-mono text-text-secondary/70 max-w-[40px]">#{idx + 1}</td>
-                                                    <td className="py-2 font-bold text-text-primary">{ticker.name}</td>
-                                                    <td className={cn(
-                                                        "py-2 pr-2 text-right font-bold",
-                                                        ticker.avgMvso > 0 ? "text-emerald-500" : "text-rose-500"
-                                                    )}>
-                                                        {ticker.avgMvso > 0 ? '+' : ''}{ticker.avgMvso.toFixed(2)}%
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </ChartCard>
-
-                            {/* Top Periods Table */}
-                            <ChartCard title="" height={280}>
-                                <div className="flex items-center justify-between mb-3">
-                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
-                                        TOP PERIODS
-                                    </h3>
-                                    <div className="flex bg-bg-tertiary/30 rounded-md p-0.5 border border-border-primary">
-                                        {(['days', 'weeks', 'months'] as const).map((period) => (
-                                            <button
-                                                key={period}
-                                                onClick={() => setPeriodGranularity(period)}
-                                                className={cn(
-                                                    "px-2 py-1 text-[10px] font-medium rounded transition-all capitalize font-sans",
-                                                    periodGranularity === period
-                                                        ? "bg-accent-primary text-white shadow-sm"
-                                                        : "text-text-secondary hover:text-text-primary"
-                                                )}
-                                            >
-                                                {period}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className="overflow-y-auto h-full pr-1">
-                                    <table className="w-full text-xs text-left text-text-secondary font-sans">
-                                        <thead>
-                                            <tr className="border-b border-border-primary/50 text-[10px] uppercase">
-                                                <th className="py-2 font-medium">
-                                                    {periodGranularity === 'days' ? 'Date' : periodGranularity === 'weeks' ? 'Week Of' : 'Month'}
-                                                </th>
-                                                <th className="py-2 font-medium text-right">Return</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {topPeriods[periodGranularity].map((d, i) => (
-                                                <tr key={i} className="border-b border-border-primary/20 last:border-0 hover:bg-bg-tertiary/10">
-                                                    <td className="py-2 font-sans">{d.date}</td>
-                                                    <td className={cn(
-                                                        "py-2 text-right font-bold font-sans",
-                                                        d.return >= 0 ? "text-emerald-500" : "text-rose-500"
-                                                    )}>
-                                                        {d.return >= 0 ? '+' : ''}{d.return.toFixed(2)}%
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </ChartCard>
-
-                            {/* Top Sectors Leaderboard */}
-                            <ChartCard title="" height={280}>
-                                <div className="flex items-center justify-between mb-3">
-                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
-                                        OUTPERFORMING SECTORS
-                                    </h3>
-                                </div>
-                                <div className="overflow-y-auto h-full pr-1">
-                                    <table className="w-full text-xs text-left text-text-secondary font-sans">
-                                        <thead>
-                                            <tr className="border-b border-border-primary text-[10px] uppercase">
-                                                <th className="pb-2 font-medium">Sector</th>
-                                                <th className="pb-2 font-medium text-right">Avg %</th>
-                                                <th className="pb-2 font-medium text-right">Freq %</th>
-                                                <th className="pb-2 font-medium text-right">WR %</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {(() => {
-                                                const totalCount = topSectors.reduce((sum, s) => sum + s.count, 0);
-                                                return topSectors.map((sector, idx) => (
-                                                    <tr key={idx} className="border-b border-border-primary/50 hover:bg-bg-tertiary/10 transition-colors">
-                                                        <td className="py-2 text-text-primary truncate max-w-[100px] font-sans">{sector.name}</td>
-                                                        <td className={cn("py-2 text-right font-sans", sector.avgMvso > 0 ? "text-emerald-500" : "text-rose-500")}>
-                                                            {sector.avgMvso.toFixed(1)}%
-                                                        </td>
-                                                        <td className="py-2 text-right font-sans text-text-secondary">
-                                                            {totalCount > 0 ? ((sector.count / totalCount) * 100).toFixed(1) : 0}%
-                                                        </td>
-                                                        <td className="py-2 text-right font-sans">{sector.winRate}%</td>
-                                                    </tr>
-                                                ));
-                                            })()}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </ChartCard>
-                        </div>
-
-                        {/* ROW 3: Expectancy Distribution (Full Width) */}
-                        <ChartCard title="" height={280}>
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest font-sans">
-                                    EXPECTANCY DISTRIBUTION
-                                </h3>
-                            </div>
-                            <ResponsiveContainer width="100%" height="90%">
-                                <BarChart data={distribution} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" opacity={0.5} vertical={false} />
-                                    <XAxis
-                                        dataKey="name"
-                                        stroke="#94a3b8"
-                                        fontSize={10}
-                                        tickFormatter={(v) => v.replace('%', '')}
-                                        axisLine={false}
-                                        tickLine={false}
-                                    />
-                                    <YAxis stroke="#94a3b8" fontSize={10} axisLine={false} tickLine={false} fontFamily='"Source Sans 3", sans-serif' />
-                                    <Tooltip
-                                        cursor={{ fill: '#f3f4f6', opacity: 0.5 }}
-                                        contentStyle={{
-                                            backgroundColor: 'rgba(255,255,255,0.95)',
-                                            border: '1px solid #e5e7eb',
-                                            borderRadius: '6px',
-                                            boxShadow: 'none',
-                                            color: '#1f2937',
-                                            fontFamily: '"Source Sans 3", sans-serif',
-                                            fontSize: '12px'
-                                        }}
-                                    />
-                                    <Bar
-                                        dataKey="count"
-                                        fill={chartColor}
-                                        radius={[4, 4, 0, 0]}
-                                        fillOpacity={0.8}
-                                    />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </ChartCard>
                     </div>
                 </div >
             </div >

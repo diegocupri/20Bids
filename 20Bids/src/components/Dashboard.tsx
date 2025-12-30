@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Sidebar } from './Sidebar';
 import { RecommendationsTable } from './RecommendationsTable';
@@ -9,6 +10,7 @@ import { fetchDates } from '../api/client';
 
 export function Dashboard() {
     const { user, updateUser } = useAuth();
+    const location = useLocation();
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
     const [calculatorData, setCalculatorData] = useState<{ ticker: string, price: number, sector: string } | null>(null);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -40,8 +42,14 @@ export function Dashboard() {
             try {
                 const dates = await fetchDates();
                 if (dates.length > 0) {
-                    // Dates are assumed sorted desc from backend
-                    setSelectedDate(dates[0]);
+                    // Check for navigation state first
+                    const stateDate = (location.state as any)?.selectedDate;
+                    if (stateDate) {
+                        setSelectedDate(new Date(stateDate)); // Ensure it's a Date object
+                    } else {
+                        // Dates are assumed sorted desc from backend
+                        setSelectedDate(dates[0]);
+                    }
                 }
             } catch (err) {
                 console.error("Failed to load dates for defaults", err);

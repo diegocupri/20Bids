@@ -30,11 +30,9 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
     const [isProfileOpen, setIsProfileOpen] = useState(false);
 
     useEffect(() => {
-        if (!isAnalysis) {
-            fetchDates().then(setDates);
-        }
+        fetchDates().then(setDates);
         fetchMvsoHistory().then(setMvsoHistory);
-    }, [isAnalysis]);
+    }, []);
 
     const getAccuracy = (date: Date) => {
         // ... same logic ...
@@ -165,78 +163,83 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
             </div>
 
             {/* History List */}
-            {!isAnalysis && (
-                <div className="flex-1 overflow-y-auto px-4 py-0">
-                    <div className="px-4 mb-2 text-xs font-semibold text-text-secondary uppercase tracking-wider sticky top-0 bg-bg-primary py-2 z-10 border-b border-border-primary/30">
-                        History (30 Days)
-                    </div>
-                    <div className="space-y-1">
-                        {dates.map((date, index, arr) => {
-                            const stats = getAccuracy(date);
-                            const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString();
+            <div className="flex-1 overflow-y-auto px-4 py-0">
+                <div className="px-4 mb-2 text-xs font-semibold text-text-secondary uppercase tracking-wider sticky top-0 bg-bg-primary py-2 z-10 border-b border-border-primary/30">
+                    History (30 Days)
+                </div>
+                <div className="space-y-1">
+                    {dates.map((date, index, arr) => {
+                        const stats = getAccuracy(date);
+                        const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString();
 
-                            // Calculate week separator
-                            const currentWeek = format(date, 'w');
-                            const prevDate = index > 0 ? arr[index - 1] : null;
-                            const prevWeek = prevDate ? format(prevDate, 'w') : null;
-                            const showSeparator = prevWeek && currentWeek !== prevWeek;
+                        // Calculate week separator
+                        const currentWeek = format(date, 'w');
+                        const prevDate = index > 0 ? arr[index - 1] : null;
+                        const prevWeek = prevDate ? format(prevDate, 'w') : null;
+                        const showSeparator = prevWeek && currentWeek !== prevWeek;
 
-                            return (
-                                <div key={date.toISOString()}>
-                                    {showSeparator && (
-                                        <div className="flex items-center gap-2 my-3 px-2">
-                                            <div className="h-px bg-border-primary/40 flex-1"></div>
-                                            <span className="text-[10px] uppercase font-bold text-text-secondary/50 tracking-widest">
-                                                Week {currentWeek}
+                        return (
+                            <div key={date.toISOString()}>
+                                {showSeparator && (
+                                    <div className="flex items-center gap-2 my-3 px-2">
+                                        <div className="h-px bg-border-primary/40 flex-1"></div>
+                                        <span className="text-[10px] uppercase font-bold text-text-secondary/50 tracking-widest">
+                                            Week {currentWeek}
+                                        </span>
+                                        <div className="h-px bg-border-primary/40 flex-1"></div>
+                                    </div>
+                                )}
+                                <button
+                                    onClick={() => {
+                                        if (isAnalysis) {
+                                            navigate('/', { state: { selectedDate: date } });
+                                        } else {
+                                            onDateSelect?.(date);
+                                        }
+                                    }}
+                                    className={cn(
+                                        "w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm transition-all duration-200 border border-transparent",
+                                        isSelected
+                                            ? "bg-white dark:bg-zinc-800 border-border-primary/50 shadow-sm text-text-primary font-medium"
+                                            : "text-text-secondary hover:bg-bg-secondary hover:text-text-primary"
+                                    )}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        {/* Pulsing green dot for current day (LIVE) */}
+                                        {format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && (
+                                            <span className="relative flex h-2 w-2">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                                             </span>
-                                            <div className="h-px bg-border-primary/40 flex-1"></div>
+                                        )}
+                                        <span>{format(date, 'MMM dd')}</span>
+                                        {isWeekend(date) && (
+                                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-bg-secondary text-text-secondary border border-border-primary/50">
+                                                W
+                                            </span>
+                                        )}
+                                    </div>
+                                    {stats && (
+                                        <div className="flex items-center gap-2">
+                                            <span className={cn(
+                                                "text-xs font-bold tabular-nums",
+                                                stats.accuracy >= 80 ? "text-emerald-600" :
+                                                    stats.accuracy >= 50 ? "text-amber-600" : "text-rose-600"
+                                            )}>
+                                                {stats.accuracy}%
+                                            </span>
                                         </div>
                                     )}
-                                    <button
-                                        onClick={() => onDateSelect?.(date)}
-                                        className={cn(
-                                            "w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm transition-all duration-200 border border-transparent",
-                                            isSelected
-                                                ? "bg-white dark:bg-zinc-800 border-border-primary/50 shadow-sm text-text-primary font-medium"
-                                                : "text-text-secondary hover:bg-bg-secondary hover:text-text-primary"
-                                        )}
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            {/* Pulsing green dot for current day (LIVE) */}
-                                            {format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && (
-                                                <span className="relative flex h-2 w-2">
-                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                                </span>
-                                            )}
-                                            <span>{format(date, 'MMM dd')}</span>
-                                            {isWeekend(date) && (
-                                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-bg-secondary text-text-secondary border border-border-primary/50">
-                                                    W
-                                                </span>
-                                            )}
-                                        </div>
-                                        {stats && (
-                                            <div className="flex items-center gap-2">
-                                                <span className={cn(
-                                                    "text-xs font-bold tabular-nums",
-                                                    stats.accuracy >= 80 ? "text-emerald-600" :
-                                                        stats.accuracy >= 50 ? "text-amber-600" : "text-rose-600"
-                                                )}>
-                                                    {stats.accuracy}%
-                                                </span>
-                                            </div>
-                                        )}
-                                    </button>
-                                </div>
-                            );
-                        })}
-                    </div>
+                                </button>
+                            </div>
+                        );
+                    })}
                 </div>
-            )}
+            </div>
+
 
             {/* User Profile Section */}
-            <div className="p-6 border-t border-border-primary/50 space-y-4 bg-bg-primary">
+            < div className="p-6 border-t border-border-primary/50 space-y-4 bg-bg-primary" >
                 {/* Theme Selector moved to Profile Modal - removing here if requested or keeping as shortcut? 
                      User said: "La elección del tema de colores esté en los 3 puntitos de la derecha de la cuenta también" 
                      So I should probably remove it from here to declutter, or keep it inside the menu. 
@@ -244,7 +247,7 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                      I'll keep it simple and move it fully to the menu/modal as per cleaner design.
                  */}
 
-                <div className="relative">
+                < div className="relative" >
                     <button
                         onClick={() => setShowUserMenu(!showUserMenu)}
                         className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-bg-secondary transition-colors text-left border border-transparent hover:border-border-primary/50"
@@ -265,36 +268,38 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                         <MoreHorizontal className="h-4 w-4 text-text-secondary" />
                     </button>
 
-                    {showUserMenu && (
-                        <>
-                            <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
-                            <div className="absolute bottom-full left-0 mb-2 w-full bg-bg-primary border border-border-primary/50 rounded-xl shadow-lg p-1.5 z-50 animate-in fade-in zoom-in-95 duration-200">
-                                <button
-                                    onClick={() => { setShowUserMenu(false); setIsProfileOpen(true); }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-text-secondary hover:bg-bg-secondary hover:text-text-primary transition-colors"
-                                >
-                                    <User className="h-4 w-4" /> Profile & Theme
-                                </button>
-                                <button
-                                    onClick={() => navigate('/upload')}
-                                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-text-secondary hover:bg-bg-secondary hover:text-text-primary transition-colors"
-                                >
-                                    <Settings className="h-4 w-4" /> Upload Data
-                                </button>
-                                <div className="h-px bg-border-primary/50 my-1" />
-                                <button
-                                    onClick={logout}
-                                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-colors"
-                                >
-                                    <LogOut className="h-4 w-4" /> Log Out
-                                </button>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
+                    {
+                        showUserMenu && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
+                                <div className="absolute bottom-full left-0 mb-2 w-full bg-bg-primary border border-border-primary/50 rounded-xl shadow-lg p-1.5 z-50 animate-in fade-in zoom-in-95 duration-200">
+                                    <button
+                                        onClick={() => { setShowUserMenu(false); setIsProfileOpen(true); }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-text-secondary hover:bg-bg-secondary hover:text-text-primary transition-colors"
+                                    >
+                                        <User className="h-4 w-4" /> Profile & Theme
+                                    </button>
+                                    <button
+                                        onClick={() => navigate('/upload')}
+                                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-text-secondary hover:bg-bg-secondary hover:text-text-primary transition-colors"
+                                    >
+                                        <Settings className="h-4 w-4" /> Upload Data
+                                    </button>
+                                    <div className="h-px bg-border-primary/50 my-1" />
+                                    <button
+                                        onClick={logout}
+                                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-colors"
+                                    >
+                                        <LogOut className="h-4 w-4" /> Log Out
+                                    </button>
+                                </div>
+                            </>
+                        )
+                    }
+                </div >
+            </div >
 
             <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
-        </div>
+        </div >
     );
 }
