@@ -4,9 +4,6 @@ import { format } from 'date-fns';
 
 dotenv.config();
 
-const API_KEY = process.env.POLYGON_API_KEY;
-const BASE_URL = 'https://api.polygon.io';
-
 // Cache for 10:20 AM reference prices: { "AAPL": 150.20, ... }
 let referencePrices: Record<string, number> = {};
 let referenceDate: string = ''; // To clear cache on new day
@@ -31,7 +28,11 @@ function isMarketOpen() {
     return time >= 930 && time < 1530;
 }
 
+const BASE_URL = 'https://api.polygon.io';
+
 export async function getReferencePrice(ticker: string, dateStr: string): Promise<number | null> {
+    const API_KEY = process.env.POLYGON_API_KEY;
+    if (!API_KEY) return null;
     // If we already have a reference for this ticker today, return it
     if (referenceDate === dateStr && referencePrices[ticker]) {
         return referencePrices[ticker];
@@ -61,7 +62,7 @@ export async function getReferencePrice(ticker: string, dateStr: string): Promis
             params: {
                 apiKey: API_KEY,
                 sort: 'asc',
-                limit: 5000
+                limit: 50000 // Increased limit to ensure we get the day
             }
         });
 
@@ -95,6 +96,9 @@ export async function getIntradayStats(ticker: string, dateStr: string): Promise
     mvso1120: { refPrice: number, highPost: number, lowBeforePeak: number } | null,
     mvso1220: { refPrice: number, highPost: number, lowBeforePeak: number } | null
 } | null> {
+    const API_KEY = process.env.POLYGON_API_KEY;
+    if (!API_KEY) return null;
+
     // Fetch 1-minute bars for the entire day
     try {
         const url = `${BASE_URL}/v2/aggs/ticker/${ticker}/range/1/minute/${dateStr}/${dateStr}`;
@@ -103,7 +107,7 @@ export async function getIntradayStats(ticker: string, dateStr: string): Promise
             params: {
                 apiKey: API_KEY,
                 sort: 'asc',
-                limit: 5000
+                limit: 50000
             }
         });
 
@@ -127,7 +131,8 @@ export async function getIntradayStats(ticker: string, dateStr: string): Promise
                 let highBarIndex = -1;
 
                 // 1. Find the Peak High and its timestamp/index
-                for (let i = refBarIndex; i < bars.length; i++) {
+                // START SCAN FROM NEXT BAR (refBarIndex + 1) because we enter at Close of refBar.
+                for (let i = refBarIndex + 1; i < bars.length; i++) {
                     const b = bars[i];
                     const bDate = new Date(b.t);
                     const bET = new Date(bDate.toLocaleString("en-US", { timeZone: "America/New_York" }));
@@ -141,14 +146,33 @@ export async function getIntradayStats(ticker: string, dateStr: string): Promise
                 const highPost = maxHighAfter === -Infinity ? refPrice : maxHighAfter;
 
                 // 2. Find Lowest Low between Entry and Peak High
+                // WE ALSO START SCAN FROM NEXT BAR
                 let minLowBeforePeak = Infinity;
+
                 if (highBarIndex !== -1) {
-                    for (let j = refBarIndex; j <= highBarIndex; j++) {
+                    // Iterate from refBarIndex + 1 up to highBarIndex
+                    for (let j = refBarIndex + 1; j <= highBarIndex; j++) {
                         if (bars[j].l < minLowBeforePeak) {
                             minLowBeforePeak = bars[j].l;
                         }
                     }
                 }
+
+                // If highBarIndex is -1 (no higher high found), we still might want "minLow" for the rest of the day?
+                // But the logic is "Low Before Peak". If no Peak > Entry, then "Peak" is Entry (refPrice).
+                // If Peak == refPrice, then "Low Before Peak" range is empty (start > end)?
+                // In that case, minLowBeforePeak remains Infinity, which falls back to refPrice below.
+
+                // Correction: If maxHighAfter <= refPrice, then we effectively have NO profit. 
+                // In that case highPost = refPrice. 
+                // And highBarIndex might be -1 if loop didn't find anything higher.
+                // If highBarIndex is -1, loop doesn't run. minLowBeforePeak = Infinity. 
+                // Fallback -> refPrice. This implies 0 drawdown, which is wrong if price tanked.
+
+                // Ideally, if no profit, we want MaxDD to be the lowest point of the session?
+                // But sticking to "Low Before Peak" as strictly MAE_on_MFE path.
+                // If MFE is 0, MAE is effectively undefined or just the session low?
+                // Let's stick to the existing logic structure but fixing the loop bounds.
 
                 // If we didn't find a valid peak or range, fallback to refPrice
                 const lowBeforePeak = minLowBeforePeak === Infinity ? refPrice : minLowBeforePeak;
@@ -179,6 +203,7 @@ export async function getIntradayStats(ticker: string, dateStr: string): Promise
 let tickerDetailsCache: Record<string, { sector: string, name: string }> = {};
 
 export async function fetchTickerDetails(ticker: string) {
+    const API_KEY = process.env.POLYGON_API_KEY;
     if (!API_KEY) return null;
     if (tickerDetailsCache[ticker]) return tickerDetailsCache[ticker];
 
@@ -202,6 +227,7 @@ export async function fetchTickerDetails(ticker: string) {
 }
 
 export async function fetchGroupedDaily(date: string) {
+    const API_KEY = process.env.POLYGON_API_KEY;
     if (!API_KEY) return null;
 
     // /v2/aggs/grouped/locale/us/market/stocks/{date}
@@ -220,6 +246,7 @@ export async function fetchGroupedDaily(date: string) {
 }
 
 export async function fetchDailyStats(ticker: string, date: string) {
+    const API_KEY = process.env.POLYGON_API_KEY;
     if (!API_KEY) return null;
 
     // /v1/open-close/{stocksTicker}/{date}
@@ -240,6 +267,7 @@ export async function fetchDailyStats(ticker: string, date: string) {
 }
 
 export async function fetchRealTimePrices(tickers: string[]) {
+    const API_KEY = process.env.POLYGON_API_KEY;
     if (!API_KEY) return {};
 
     // 1. Check Market Hours
@@ -426,6 +454,7 @@ export async function fetchMarketIndices() {
 }
 
 export async function fetchTickerNews(ticker: string, limit: number = 20) {
+    const API_KEY = process.env.POLYGON_API_KEY;
     if (!API_KEY) return [];
 
     // /v2/reference/news?ticker={ticker}

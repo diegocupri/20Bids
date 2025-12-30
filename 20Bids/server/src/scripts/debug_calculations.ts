@@ -2,6 +2,10 @@ import { getIntradayStats } from '../services/polygon';
 import axios from 'axios';
 import dotenv from 'dotenv';
 
+import path from 'path';
+
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+// Also try local .env if above fails (standard config)
 dotenv.config();
 
 const API_KEY = process.env.POLYGON_API_KEY;
