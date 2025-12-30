@@ -62,7 +62,7 @@ export function AnalysisPage() {
     const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
     const [customStartDate, customEndDate] = dateRange;
     const [useClamped, setUseClamped] = useState(false); // Toggle for clamped data in Box Plot
-    const [boxPlotSort, setBoxPlotSort] = useState<{ key: string, asc: boolean }>({ key: 'name', asc: true });
+
 
     // Optimization Heatmap state
     const [optimizationData, setOptimizationData] = useState<any>(null);
@@ -1062,8 +1062,8 @@ export function AnalysisPage() {
                                 </button>
                             </div>
                             <div className="flex gap-4" style={{ height: 380 }}>
-                                {/* Box Plot Chart */}
-                                <div style={{ flex: '1 1 70%', minWidth: 0 }}>
+                                /* Box Plot Chart */
+                                <div style={{ flex: '1 1 60%', minWidth: 0 }}>
                                     <Plot
                                         data={(() => {
                                             const traces: any[] = [];
@@ -1176,70 +1176,74 @@ export function AnalysisPage() {
                                         useResizeHandler={true}
                                     />
                                 </div>
-                                {/* Summary Table - Sortable */}
-                                <div style={{ flex: '0 0 220px', height: '100%' }} className="overflow-y-auto flex flex-col">
-                                    <table className="w-full text-xs font-sans">
-                                        <thead className="sticky top-0 bg-white">
-                                            <tr className="border-b border-gray-200">
-                                                <th
-                                                    className="text-left py-2 text-gray-500 font-medium cursor-pointer hover:text-gray-700"
-                                                    onClick={() => setBoxPlotSort(s => ({ key: 'name', asc: s.key === 'name' ? !s.asc : true }))}
-                                                >
-                                                    Range {boxPlotSort.key === 'name' && (boxPlotSort.asc ? '↑' : '↓')}
-                                                </th>
-                                                <th
-                                                    className="text-right py-2 text-gray-500 font-medium cursor-pointer hover:text-gray-700"
-                                                    onClick={() => setBoxPlotSort(s => ({ key: 'count', asc: s.key === 'count' ? !s.asc : false }))}
-                                                >
-                                                    N {boxPlotSort.key === 'count' && (boxPlotSort.asc ? '↑' : '↓')}
-                                                </th>
-                                                <th
-                                                    className="text-right py-2 text-gray-500 font-medium cursor-pointer hover:text-gray-700"
-                                                    onClick={() => setBoxPlotSort(s => ({ key: 'avg', asc: s.key === 'avg' ? !s.asc : false }))}
-                                                >
-                                                    Avg {boxPlotSort.key === 'avg' && (boxPlotSort.asc ? '↑' : '↓')}
-                                                </th>
-                                                <th
-                                                    className="text-right py-2 text-gray-500 font-medium cursor-pointer hover:text-gray-700"
-                                                    onClick={() => setBoxPlotSort(s => ({ key: 'wr', asc: s.key === 'wr' ? !s.asc : false }))}
-                                                >
-                                                    WR {boxPlotSort.key === 'wr' && (boxPlotSort.asc ? '↑' : '↓')}
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {(boxPlotData || [])
-                                                .map((bucket, idx) => {
-                                                    const vals = (bucket as any).values || [];
-                                                    const count = vals.length;
-                                                    const avg = count > 0 ? vals.reduce((a: number, b: number) => a + b, 0) / count : 0;
-                                                    const wins = vals.filter((v: number) => v > 0).length;
-                                                    const wr = count > 0 ? (wins / count) * 100 : 0;
-                                                    return { name: bucket.name, count, avg, wr, idx };
-                                                })
-                                                .sort((a, b) => {
-                                                    const key = boxPlotSort.key as keyof typeof a;
-                                                    const aVal = a[key];
-                                                    const bVal = b[key];
-                                                    if (typeof aVal === 'string' && typeof bVal === 'string') {
-                                                        return boxPlotSort.asc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-                                                    }
-                                                    return boxPlotSort.asc ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
-                                                })
-                                                .map((row) => (
-                                                    <tr key={row.idx} className="border-b border-gray-100 hover:bg-gray-50">
-                                                        <td className="py-2 font-medium text-gray-700">{row.name}</td>
-                                                        <td className="py-2 text-right text-gray-600">{row.count}</td>
-                                                        <td className={`py-2 text-right font-mono ${row.avg >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                                                            {row.avg.toFixed(2)}%
-                                                        </td>
-                                                        <td className={`py-2 text-right font-mono ${row.wr >= 75 ? 'text-emerald-600' : row.wr >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>
-                                                            {row.wr.toFixed(0)}%
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                        </tbody>
-                                    </table>
+                                {/* Efficiency Curve (Moved from below) */}
+                                <div style={{ flex: '1 1 40%', height: '100%' }} className="flex flex-col pl-4 border-l border-gray-100">
+                                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 font-sans text-center">
+                                        EFFICIENCY CURVE <span className="font-normal normal-case">(Optimal SL for TP {targetTP}%)</span>
+                                    </h4>
+                                    <div className="flex-1 w-full min-h-0">
+                                        {optimizationData?.bubbleData?.length > 0 ? (() => {
+                                            const curveData = optimizationData.bubbleData
+                                                .filter((d: any) => d.tp === targetTP && d.sl <= maxRiskTolerance)
+                                                .map((d: any) => ({
+                                                    sl: d.sl,
+                                                    efficiency: d.efficiency,
+                                                    winRate: d.winRate,
+                                                    avgReturn: d.avgReturn
+                                                }))
+                                                .sort((a: any, b: any) => a.sl - b.sl);
+
+                                            if (curveData.length === 0) {
+                                                return <div className="text-center text-gray-400 py-10">No data for TP {targetTP}%</div>;
+                                            }
+
+                                            // Find optimal point (max efficiency)
+                                            const maxEfficiency = Math.max(...curveData.map((d: any) => d.efficiency));
+                                            const optimalPoint = curveData.find((d: any) => d.efficiency === maxEfficiency);
+
+                                            return (
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <LineChart data={curveData} margin={{ top: 10, right: 10, bottom: 20, left: 0 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                                        <XAxis
+                                                            dataKey="sl"
+                                                            tick={{ fontSize: 10, fontFamily: '"Source Sans 3", sans-serif' }}
+                                                            label={{ value: 'Stop Loss %', position: 'bottom', offset: 5, style: { fontSize: 10, fill: '#6b7280', fontFamily: '"Source Sans 3", sans-serif' } }}
+                                                            axisLine={false}
+                                                            tickLine={false}
+                                                        />
+                                                        <YAxis tick={{ fontSize: 10, fontFamily: '"Source Sans 3", sans-serif' }} width={30} axisLine={false} tickLine={false} />
+                                                        {optimalPoint && (
+                                                            <ReferenceLine
+                                                                x={optimalPoint.sl}
+                                                                stroke="#ef4444"
+                                                                strokeDasharray="5 5"
+                                                                strokeWidth={2}
+                                                                label={{ value: `Opt: ${optimalPoint.sl}%`, position: 'top', fill: '#ef4444', fontSize: 10, fontFamily: '"Source Sans 3", sans-serif' }}
+                                                            />
+                                                        )}
+                                                        <Tooltip content={({ active, payload }) => {
+                                                            if (active && payload && payload.length) {
+                                                                const d = payload[0].payload;
+                                                                return (
+                                                                    <div className="bg-white p-2 rounded-lg shadow-lg border border-gray-200 text-xs font-sans">
+                                                                        <p className="font-bold text-gray-700">SL: {d.sl}%</p>
+                                                                        <p className="text-blue-600">Efficiency: {d.efficiency?.toFixed(1)}</p>
+                                                                        <p className="text-emerald-600">Win Rate: {d.winRate}%</p>
+                                                                        <p className="text-gray-500">Avg Ret: {d.avgReturn?.toFixed(2)}%</p>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            return null;
+                                                        }} />
+                                                        <Legend wrapperStyle={{ fontSize: '10px', fontFamily: '"Source Sans 3", sans-serif' }} />
+                                                        <Line type="monotone" dataKey="efficiency" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} name="Eff" activeDot={{ r: 5 }} />
+                                                        <Line type="monotone" dataKey="winRate" stroke="#10b981" strokeWidth={1} strokeDasharray="5 5" dot={false} name="WR%" />
+                                                    </LineChart>
+                                                </ResponsiveContainer>
+                                            );
+                                        })() : <div className="text-center text-gray-400 py-10">Loading...</div>}
+                                    </div>
                                 </div>
                             </div>
                         </ChartCard>
@@ -1578,79 +1582,7 @@ export function AnalysisPage() {
                             </h2>
                         </div>
 
-                        {/* CHART: Efficiency Curve with optimal point line */}
-                        <ChartCard title="" height={320} className="w-full mb-6">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                    📈 EFFICIENCY CURVE
-                                    <span className="text-[10px] font-normal text-gray-400">
-                                        (Find the optimal SL for TP {targetTP}%)
-                                    </span>
-                                </h3>
-                            </div>
-                            <div className="w-full h-[260px]">
-                                {optimizationData?.bubbleData?.length > 0 ? (() => {
-                                    const curveData = optimizationData.bubbleData
-                                        .filter((d: any) => d.tp === targetTP && d.sl <= maxRiskTolerance)
-                                        .map((d: any) => ({
-                                            sl: d.sl,
-                                            efficiency: d.efficiency,
-                                            winRate: d.winRate,
-                                            avgReturn: d.avgReturn
-                                        }))
-                                        .sort((a: any, b: any) => a.sl - b.sl);
 
-                                    if (curveData.length === 0) {
-                                        return <div className="text-center text-gray-400 py-10">No data for TP {targetTP}%</div>;
-                                    }
-
-                                    // Find optimal point (max efficiency)
-                                    const maxEfficiency = Math.max(...curveData.map((d: any) => d.efficiency));
-                                    const optimalPoint = curveData.find((d: any) => d.efficiency === maxEfficiency);
-
-                                    return (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <LineChart data={curveData} margin={{ top: 20, right: 30, bottom: 30, left: 40 }}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                                <XAxis
-                                                    dataKey="sl"
-                                                    tick={{ fontSize: 10 }}
-                                                    label={{ value: 'Stop Loss %', position: 'bottom', offset: 10, style: { fontSize: 11, fill: '#6b7280' } }}
-                                                />
-                                                <YAxis tick={{ fontSize: 10 }} />
-                                                {/* Vertical line at optimal SL */}
-                                                {optimalPoint && (
-                                                    <ReferenceLine
-                                                        x={optimalPoint.sl}
-                                                        stroke="#ef4444"
-                                                        strokeDasharray="5 5"
-                                                        strokeWidth={2}
-                                                        label={{ value: `Optimal: ${optimalPoint.sl}%`, position: 'top', fill: '#ef4444', fontSize: 10 }}
-                                                    />
-                                                )}
-                                                <Tooltip content={({ active, payload }) => {
-                                                    if (active && payload && payload.length) {
-                                                        const d = payload[0].payload;
-                                                        return (
-                                                            <div className="bg-white p-2 rounded-lg shadow-lg border border-gray-200 text-xs">
-                                                                <p className="font-bold">SL: {d.sl}%</p>
-                                                                <p>Efficiency: {d.efficiency?.toFixed(1)}</p>
-                                                                <p>Win Rate: {d.winRate}%</p>
-                                                                <p>Avg Return: {d.avgReturn?.toFixed(2)}%</p>
-                                                            </div>
-                                                        );
-                                                    }
-                                                    return null;
-                                                }} />
-                                                <Legend />
-                                                <Line type="monotone" dataKey="efficiency" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} name="Efficiency" />
-                                                <Line type="monotone" dataKey="winRate" stroke="#10b981" strokeWidth={1} strokeDasharray="5 5" dot={false} name="Win Rate" />
-                                            </LineChart>
-                                        </ResponsiveContainer>
-                                    );
-                                })() : <div className="text-center text-gray-400 py-10">Loading...</div>}
-                            </div>
-                        </ChartCard>
 
                         {/* VOLUME ANALYSIS SECTION - Side by side */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
