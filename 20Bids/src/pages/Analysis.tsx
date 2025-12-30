@@ -1084,7 +1084,7 @@ export function AnalysisPage() {
                                             })()}
                                             layout={{
                                                 autosize: true,
-                                                margin: { l: 45, r: 45, t: 40, b: 110 }, // Increased bottom margin for X-axis labels
+                                                margin: { l: 45, r: 45, t: 40, b: 70 }, // Adjusted bottom margin
                                                 yaxis: {
                                                     title: { text: 'Return %', font: { size: 10, color: '#64748b', family: '"Source Sans 3", sans-serif' } },
                                                     // Calculate dynamic max range to avoid outlier squashing
@@ -1158,13 +1158,13 @@ export function AnalysisPage() {
                                 <div style={{ flex: '1 1 50%', height: '100%' }} className="flex flex-col pl-4 border-l border-gray-100">
                                     <div className="flex items-center justify-between mb-2 px-2 pt-2">
                                         <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2 font-sans">
-                                            Efficiency Curve <span className="font-normal text-[10px] text-gray-400 normal-case">(Optimal SL @ TP {targetTP}%)</span>
+                                            Efficiency Curve <span className="font-normal text-[10px] text-gray-400 normal-case">(Optimal SL @ TP {takeProfit}%)</span>
                                         </h3>
                                     </div>
                                     <div className="flex-1 w-full min-h-0">
                                         {optimizationData?.bubbleData?.length > 0 ? (() => {
                                             const curveData = optimizationData.bubbleData
-                                                .filter((d: any) => d.tp === targetTP && d.sl <= maxRiskTolerance)
+                                                .filter((d: any) => d.tp === takeProfit && d.sl <= maxRiskTolerance)
                                                 .map((d: any) => ({
                                                     sl: d.sl,
                                                     efficiency: d.efficiency,
@@ -1174,7 +1174,7 @@ export function AnalysisPage() {
                                                 .sort((a: any, b: any) => a.sl - b.sl);
 
                                             if (curveData.length === 0) {
-                                                return <div className="text-center text-gray-400 py-10">No data for TP {targetTP}%</div>;
+                                                return <div className="text-center text-gray-400 py-10">No data for TP {takeProfit}%</div>;
                                             }
 
                                             // Find optimal point (max efficiency)
@@ -1183,7 +1183,7 @@ export function AnalysisPage() {
 
                                             return (
                                                 <ResponsiveContainer width="100%" height="100%">
-                                                    <LineChart data={curveData} margin={{ top: 10, right: 10, bottom: 20, left: 0 }}>
+                                                    <LineChart data={curveData} margin={{ top: 20, right: 30, bottom: 20, left: 10 }}>
                                                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                                         <XAxis
                                                             dataKey="sl"
@@ -1192,7 +1192,14 @@ export function AnalysisPage() {
                                                             axisLine={false}
                                                             tickLine={false}
                                                         />
-                                                        <YAxis tick={{ fontSize: 10, fontFamily: '"Source Sans 3", sans-serif' }} width={30} axisLine={false} tickLine={false} />
+                                                        <YAxis
+                                                            tick={{ fontSize: 10, fontFamily: '"Source Sans 3", sans-serif' }}
+                                                            width={30}
+                                                            axisLine={false}
+                                                            tickLine={false}
+                                                            domain={['auto', 'auto']}
+                                                            padding={{ top: 20, bottom: 20 }}
+                                                        />
                                                         {optimalPoint && (
                                                             <ReferenceLine
                                                                 x={optimalPoint.sl}
