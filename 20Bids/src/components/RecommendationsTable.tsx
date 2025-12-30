@@ -19,13 +19,15 @@ interface RecommendationsTableProps {
     onDataLoaded?: (data: any[]) => void;
     mvsoThreshold: number;
     onMvsoThresholdChange: (value: number) => void;
+    stopLossThreshold: number;
+    onStopLossThresholdChange: (value: number) => void;
 }
 
 // ... (TAG_COLORS)
 
 type SortKey = 'symbol' | 'price' | 'refPrice1020' | 'change' | 'volume' | 'rsi' | 'relativeVol' | 'type' | 'probabilityValue' | 'sector' | 'open' | 'mvso' | 'lowBeforePeak';
 
-export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, mvsoThreshold, onMvsoThresholdChange }: RecommendationsTableProps) {
+export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, mvsoThreshold, onMvsoThresholdChange, stopLossThreshold, onStopLossThresholdChange }: RecommendationsTableProps) {
     const [recommendations, setRecommendations] = useState<any[]>([]);
     const [prices, setPrices] = useState<Record<string, { price: number, change: number, refPrice1020?: number, volume?: number, sector?: string, open?: number, high?: number }>>({});
     const [indices, setIndices] = useState<any[]>([]);
@@ -341,6 +343,21 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                 />
                             </div>
                         </div>
+
+                        {/* Stop Loss Threshold Input */}
+                        <div className="flex items-center gap-2 group">
+                            <div className="flex items-center bg-bg-secondary rounded-lg px-2 py-1 transition-all group-hover:bg-bg-tertiary">
+                                <label className="text-[10px] font-bold text-text-primary mr-2">SL %</label>
+                                <input
+                                    type="number"
+                                    step="0.5"
+                                    value={stopLossThreshold}
+                                    onChange={(e) => onStopLossThresholdChange(parseFloat(e.target.value) || 0)}
+                                    placeholder="5"
+                                    className="w-12 bg-transparent text-xs font-bold text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -522,29 +539,29 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                     </td>
 
                                     {/* Vol */}
-                                    <td className="py-3 text-right font-mono text-xs text-text-secondary">
+                                    <td className="py-3 text-right font-sans text-xs text-text-secondary tabular-nums">
                                         {formattedVol}
                                     </td>
 
                                     {/* Open */}
-                                    <td className="py-3 text-right font-mono text-xs text-text-secondary">
+                                    <td className="py-3 text-right font-sans text-xs text-text-secondary tabular-nums">
                                         {openPrice ? `$${openPrice.toFixed(2)}` : '-'}
                                     </td>
 
                                     {/* 10:20 Ref */}
-                                    <td className="py-3 text-right font-mono text-xs text-text-secondary">
+                                    <td className="py-3 text-right font-sans text-xs text-text-secondary tabular-nums">
                                         {refPrice ? `$${refPrice.toFixed(2)}` : '-'}
                                     </td>
 
                                     {/* Price RT */}
-                                    <td className="py-3 text-right font-mono text-xs font-medium text-text-primary">
+                                    <td className="py-3 text-right font-sans text-xs font-medium text-text-primary tabular-nums">
                                         {livePrice.toFixed(2)}
                                     </td>
 
                                     {/* % Chg 10:20 */}
                                     <td className="py-3 text-right">
                                         <div className={cn(
-                                            "font-mono font-bold text-xs",
+                                            "font-sans font-bold text-xs tabular-nums",
                                             liveChange >= 0 ? "text-emerald-600" : "text-rose-600"
                                         )}>
                                             {liveChange >= 0 ? '+' : ''}{liveChange.toFixed(2)}%
@@ -562,22 +579,28 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                         </div>
                                     </td>
 
-                                    {/* Max DD */}
+                                    {/* Max DD - Gray by default, Red if exceeds Stop Loss */}
                                     <td className="py-3 text-center">
-                                        <div className={cn(
-                                            "font-mono font-bold text-sm",
-                                            ((rec.lowBeforePeak && refPrice) ? ((rec.lowBeforePeak - refPrice) / refPrice) * 100 : 0) < 0 ? "text-rose-500" : "text-text-secondary"
-                                        )}>
-                                            {rec.lowBeforePeak && refPrice
-                                                ? `${(((rec.lowBeforePeak - refPrice) / refPrice) * 100).toFixed(2)}%`
-                                                : '-'}
-                                        </div>
+                                        {(() => {
+                                            const maxDD = (rec.lowBeforePeak && refPrice)
+                                                ? ((rec.lowBeforePeak - refPrice) / refPrice) * 100
+                                                : null;
+                                            const exceedsSL = maxDD !== null && Math.abs(maxDD) > stopLossThreshold;
+                                            return (
+                                                <div className={cn(
+                                                    "font-sans text-xs tabular-nums",
+                                                    exceedsSL ? "text-rose-500 font-bold" : "text-text-secondary"
+                                                )}>
+                                                    {maxDD !== null ? `${maxDD.toFixed(2)}%` : '-'}
+                                                </div>
+                                            );
+                                        })()}
                                     </td>
 
                                     {showExtraHours && (
                                         <>
                                             {/* Ref 11:20 */}
-                                            <td className="px-3 py-3 whitespace-nowrap text-right font-mono text-xs text-text-secondary">
+                                            <td className="px-3 py-3 whitespace-nowrap text-right font-sans text-xs text-text-secondary tabular-nums">
                                                 {rec.refPrice1120 ? `$${rec.refPrice1120.toFixed(2)}` : '-'}
                                             </td>
 
@@ -600,7 +623,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                             </td>
 
                                             {/* Ref 12:20 */}
-                                            <td className="px-3 py-3 whitespace-nowrap text-right font-mono text-xs text-text-secondary">
+                                            <td className="px-3 py-3 whitespace-nowrap text-right font-sans text-xs text-text-secondary tabular-nums">
                                                 {rec.refPrice1220 ? `$${rec.refPrice1220.toFixed(2)}` : '-'}
                                             </td>
 

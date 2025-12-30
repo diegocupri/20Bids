@@ -17,6 +17,10 @@ export function Dashboard() {
     const [isLoading, setIsLoading] = useState(false);
     const [recommendations, setRecommendations] = useState<any[]>([]);
     const [mvsoThreshold, setMvsoThreshold] = useState<number>(0.5);
+    const [stopLossThreshold, setStopLossThreshold] = useState<number>(() => {
+        const saved = localStorage.getItem('stopLossThreshold');
+        return saved ? parseFloat(saved) : 5; // Default 5%
+    });
 
     // Load initial settings
     useEffect(() => {
@@ -34,6 +38,12 @@ export function Dashboard() {
             // Debounce could be good here, but for now direct update is fine for a infrequent action
             updateUser({ settings: { ...user.settings, mvsoThreshold: val } });
         }
+    };
+
+    // Stop Loss Threshold Handler
+    const handleStopLossChange = (val: number) => {
+        setStopLossThreshold(val);
+        localStorage.setItem('stopLossThreshold', val.toString());
     };
 
     // Initial Date Load
@@ -95,6 +105,8 @@ export function Dashboard() {
                         onDataLoaded={handleDataLoaded}
                         mvsoThreshold={mvsoThreshold}
                         onMvsoThresholdChange={handleThresholdChange}
+                        stopLossThreshold={stopLossThreshold}
+                        onStopLossThresholdChange={handleStopLossChange}
                     />
                 )}
             </div>
