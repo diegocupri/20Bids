@@ -61,7 +61,7 @@ export function AnalysisPage() {
     const [timeRange, setTimeRange] = useState<TimeRange>('ALL');
     const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
     const [customStartDate, customEndDate] = dateRange;
-    const [useClamped, setUseClamped] = useState(false); // Toggle for clamped data in Box Plot
+
 
 
     // Optimization Heatmap state
@@ -398,7 +398,7 @@ export function AnalysisPage() {
             }
 
             // Use raw or clamped return based on toggle
-            const ret = useClamped ? d.return : (d.rawReturn ?? d.return);
+            const ret = d.return;
 
             const bucket = probBuckets.find(b => prob >= b.min && prob < b.max);
             if (bucket) {
@@ -451,7 +451,7 @@ export function AnalysisPage() {
             }
         }
 
-    }, [data, timeRange, takeProfit, customStartDate, customEndDate, useClamped, mvsoThreshold]);
+    }, [data, timeRange, takeProfit, customStartDate, customEndDate, mvsoThreshold]);
 
     // Top Periods Calculation (Moved before conditional return)
     const topPeriods = useMemo(() => {
@@ -1044,138 +1044,130 @@ export function AnalysisPage() {
 
                         {/* PROBABILITY EFFICIENCY (Box Plot) */}
                         <ChartCard title="" height={350} className="w-full">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 font-sans">
-                                    PROBABILITY EFFICIENCY
-                                    <span className="text-[10px] font-normal text-text-secondary/70">
-                                        (Return Distribution by Prob %)
-                                    </span>
-                                </h3>
-                                <button
-                                    onClick={() => setUseClamped(!useClamped)}
-                                    className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${useClamped
-                                        ? 'bg-emerald-500 text-white'
-                                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                                        }`}
-                                >
-                                    {useClamped ? 'TP/SL APPLIED' : 'RAW RETURNS'}
-                                </button>
-                            </div>
                             <div className="flex gap-4" style={{ height: 380 }}>
+                                <div style={{ flex: '1 1 50%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                                    <div className="flex items-center justify-between mb-2 px-2 pt-2">
+                                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2 font-sans">
+                                            Probability Efficiency
+                                            <span className="text-[10px] font-normal text-gray-400 normal-case">
+                                                (Return Distribution by Prob %)
+                                            </span>
+                                        </h3>
+                                    </div>
+                                    <div style={{ flex: 1, minHeight: 0 }}>
+                                        <Plot
+                                            data={(() => {
+                                                const traces: any[] = [];
 
-                                <div style={{ flex: '1 1 50%', minWidth: 0 }}>
-                                    <Plot
-                                        data={(() => {
-                                            const traces: any[] = [];
+                                                // 1. Box Traces (One per bucket, all same color/group)
+                                                (boxPlotData || []).forEach((bucket) => {
+                                                    const vals = (bucket as any).values || [];
+                                                    if (vals.length > 0) {
+                                                        traces.push({
+                                                            y: vals,
+                                                            type: 'box',
+                                                            name: bucket.name,
+                                                            marker: { color: 'rgba(59, 130, 246, 0.4)', line: { color: '#3b82f6', width: 1 }, size: 3 },
+                                                            boxpoints: 'all',
+                                                            jitter: 0.5,
+                                                            pointpos: -1.8,
+                                                            fillcolor: '#ffffff', // White interior
+                                                            line: { color: '#3b82f6', width: 1.5 },
+                                                            showlegend: false
+                                                        });
+                                                    }
+                                                });
 
-                                            // 1. Box Traces (One per bucket, all same color/group)
-                                            (boxPlotData || []).forEach((bucket) => {
-                                                const vals = (bucket as any).values || [];
-                                                if (vals.length > 0) {
-                                                    traces.push({
-                                                        y: vals,
-                                                        type: 'box',
-                                                        name: bucket.name,
-                                                        marker: { color: 'rgba(59, 130, 246, 0.4)', line: { color: '#3b82f6', width: 1 }, size: 3 },
-                                                        boxpoints: 'all',
-                                                        jitter: 0.5,
-                                                        pointpos: -1.8,
-                                                        fillcolor: '#ffffff', // White interior
-                                                        line: { color: '#3b82f6', width: 1.5 },
-                                                        showlegend: false
-                                                    });
-                                                }
-                                            });
+                                                // 2. Line Trace (Hit Rate %) - Overlay
+                                                // Collect x (bucket names) and y (hit rates)
+                                                const xValues = (boxPlotData || []).map(b => b.name);
+                                                const yValues = (boxPlotData || []).map(b => (b as any).hitRate || 0);
 
-                                            // 2. Line Trace (Hit Rate %) - Overlay
-                                            // Collect x (bucket names) and y (hit rates)
-                                            const xValues = (boxPlotData || []).map(b => b.name);
-                                            const yValues = (boxPlotData || []).map(b => (b as any).hitRate || 0);
+                                                traces.push({
+                                                    x: xValues,
+                                                    y: yValues,
+                                                    name: `MVSO > ${mvsoThreshold}% Rate`,
+                                                    type: 'scatter',
+                                                    mode: 'lines+markers',
+                                                    yaxis: 'y2', // Map to secondary y-axis
+                                                    line: { color: '#f59e0b', width: 2 }, // Different color (Amber)
+                                                    marker: { color: '#f59e0b', size: 6, symbol: 'circle', line: { color: 'white', width: 1 } },
+                                                    hovertemplate: 'Hit Rate: %{y:.1f}%<extra></extra>'
+                                                });
 
-                                            traces.push({
-                                                x: xValues,
-                                                y: yValues,
-                                                name: `MVSO > ${mvsoThreshold}% Rate`,
-                                                type: 'scatter',
-                                                mode: 'lines+markers',
-                                                yaxis: 'y2', // Map to secondary y-axis
-                                                line: { color: '#f59e0b', width: 2 }, // Different color (Amber)
-                                                marker: { color: '#f59e0b', size: 6, symbol: 'circle', line: { color: 'white', width: 1 } },
-                                                hovertemplate: 'Hit Rate: %{y:.1f}%<extra></extra>'
-                                            });
-
-                                            return traces;
-                                        })()}
-                                        layout={{
-                                            autosize: true,
-                                            margin: { l: 45, r: 45, t: 40, b: 80 }, // Increased bottom margin for X-axis labels
-                                            yaxis: {
-                                                title: { text: 'Return %', font: { size: 10, color: '#64748b', family: '"Source Sans 3", sans-serif' } },
-                                                // Calculate dynamic max range to avoid outlier squashing
-                                                // We'll use a heuristic: e.g., max of (75th percentile + 3*IQR) across buckets, capped reasonable.
-                                                // Actually simple: 95th percentile of all data.
-                                                range: (() => {
-                                                    const allVals = (boxPlotData || []).flatMap(b => (b as any).values || []);
-                                                    if (allVals.length === 0) return undefined;
-                                                    allVals.sort((a, b) => a - b);
-                                                    const p98 = allVals[Math.floor(allVals.length * 0.98)] || 10;
-                                                    const maxVal = Math.max(...allVals);
-                                                    // Use the lesser of RealMax or P98*1.5 to clip huge outliers
-                                                    return [Math.min(...allVals, -5), Math.min(maxVal, Math.max(20, p98 * 1.5))];
-                                                })(),
-                                                zeroline: true,
-                                                zerolinecolor: '#e5e7eb',
-                                                gridcolor: '#f3f4f6',
-                                                tickfont: { size: 10, color: '#64748b', family: '"Source Sans 3", sans-serif' }
-                                            },
-                                            yaxis2: {
-                                                title: { text: 'Hit Rate %', font: { size: 10, color: '#9ca3af', family: '"Source Sans 3", sans-serif' } },
-                                                overlaying: 'y',
-                                                side: 'right',
-                                                range: [0, 115], // Wider range so line doesn't hug top
-                                                tickfont: { size: 10, color: '#9ca3af', family: '"Source Sans 3", sans-serif' },
-                                                showgrid: false,
-                                                zeroline: false
-                                            },
-                                            xaxis: {
-                                                tickfont: { size: 10, color: '#64748b', family: '"Source Sans 3", sans-serif' },
-                                                fixedrange: true,
-                                                // tickangle: -45, // Remove tilt if not needed or keep it
-                                                type: 'category',
-                                                automargin: true,
-                                                showticklabels: true,
-                                                title: { text: 'MVSO Probability', font: { size: 10, color: '#9ca3af' }, standoff: 15 }, // Added title to push margin
-                                                showline: true, // Visible X-Axis line
-                                                linecolor: '#d1d5db',
-                                                linewidth: 1
-                                            },
-                                            showlegend: true,
-                                            legend: { orientation: 'h', x: 0, y: 1.1, font: { size: 10, family: '"Source Sans 3", sans-serif' } },
-                                            paper_bgcolor: 'white',
-                                            plot_bgcolor: 'white',
-                                            font: { family: '"Source Sans 3", sans-serif', size: 11, color: '#64748b' },
-                                            annotations: (boxPlotData || []).map((bucket) => {
-                                                const vals = (bucket as any).values || [];
-                                                const avg = vals.length > 0 ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : 0;
-                                                return {
-                                                    x: bucket.name,
-                                                    y: avg,
-                                                    text: `${avg.toFixed(1)}%`,
-                                                    showarrow: false,
-                                                    xanchor: 'center', // Centered
-                                                    yanchor: 'bottom',
-                                                    yshift: 10, // Shift up slightly from the average point
-                                                    font: { size: 11, color: '#111827', weight: 'bold', family: '"Source Sans 3", sans-serif' },
-                                                    bgcolor: 'rgba(255, 255, 255, 0.85)',
-                                                    borderpad: 2,
-                                                    borderwidth: 0
-                                                };
-                                            })
-                                        }}
-                                        config={{ displayModeBar: false, responsive: true }}
-                                        style={{ width: '100%', height: '100%' }}
-                                        useResizeHandler={true}
-                                    />
+                                                return traces;
+                                            })()}
+                                            layout={{
+                                                autosize: true,
+                                                margin: { l: 45, r: 45, t: 40, b: 110 }, // Increased bottom margin for X-axis labels
+                                                yaxis: {
+                                                    title: { text: 'Return %', font: { size: 10, color: '#64748b', family: '"Source Sans 3", sans-serif' } },
+                                                    // Calculate dynamic max range to avoid outlier squashing
+                                                    // We'll use a heuristic: e.g., max of (75th percentile + 3*IQR) across buckets, capped reasonable.
+                                                    // Actually simple: 95th percentile of all data.
+                                                    range: (() => {
+                                                        const allVals = (boxPlotData || []).flatMap(b => (b as any).values || []);
+                                                        if (allVals.length === 0) return undefined;
+                                                        allVals.sort((a, b) => a - b);
+                                                        const p98 = allVals[Math.floor(allVals.length * 0.98)] || 10;
+                                                        const maxVal = Math.max(...allVals);
+                                                        // Use the lesser of RealMax or P98*1.5 to clip huge outliers
+                                                        return [Math.min(...allVals, -5), Math.min(maxVal, Math.max(20, p98 * 1.5))];
+                                                    })(),
+                                                    zeroline: true,
+                                                    zerolinecolor: '#e5e7eb',
+                                                    gridcolor: '#f3f4f6',
+                                                    tickfont: { size: 10, color: '#64748b', family: '"Source Sans 3", sans-serif' }
+                                                },
+                                                yaxis2: {
+                                                    title: { text: 'Hit Rate %', font: { size: 10, color: '#9ca3af', family: '"Source Sans 3", sans-serif' } },
+                                                    overlaying: 'y',
+                                                    side: 'right',
+                                                    range: [0, 115], // Wider range so line doesn't hug top
+                                                    tickfont: { size: 10, color: '#9ca3af', family: '"Source Sans 3", sans-serif' },
+                                                    showgrid: false,
+                                                    zeroline: false
+                                                },
+                                                xaxis: {
+                                                    tickfont: { size: 10, color: '#64748b', family: '"Source Sans 3", sans-serif' },
+                                                    fixedrange: true,
+                                                    // tickangle: -45, // Remove tilt if not needed or keep it
+                                                    type: 'category',
+                                                    automargin: true,
+                                                    showticklabels: true,
+                                                    title: { text: 'MVSO Probability', font: { size: 10, color: '#9ca3af' }, standoff: 15 }, // Added title to push margin
+                                                    showline: true, // Visible X-Axis line
+                                                    linecolor: '#d1d5db',
+                                                    linewidth: 1
+                                                },
+                                                showlegend: true,
+                                                legend: { orientation: 'h', x: 0, y: 1.1, font: { size: 10, family: '"Source Sans 3", sans-serif' } },
+                                                paper_bgcolor: 'white',
+                                                plot_bgcolor: 'white',
+                                                font: { family: '"Source Sans 3", sans-serif', size: 11, color: '#64748b' },
+                                                annotations: (boxPlotData || []).map((bucket) => {
+                                                    const vals = (bucket as any).values || [];
+                                                    const avg = vals.length > 0 ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : 0;
+                                                    return {
+                                                        x: bucket.name,
+                                                        y: avg,
+                                                        text: `${avg.toFixed(1)}%`,
+                                                        showarrow: false,
+                                                        xanchor: 'center', // Centered
+                                                        yanchor: 'bottom',
+                                                        yshift: 10, // Shift up slightly from the average point
+                                                        font: { size: 11, color: '#111827', weight: 'bold', family: '"Source Sans 3", sans-serif' },
+                                                        bgcolor: 'rgba(255, 255, 255, 0.85)',
+                                                        borderpad: 2,
+                                                        borderwidth: 0
+                                                    };
+                                                })
+                                            }}
+                                            config={{ displayModeBar: false, responsive: true }}
+                                            style={{ width: '100%', height: '100%' }}
+                                            useResizeHandler={true}
+                                        />
+                                    </div>
                                 </div>
                                 {/* Efficiency Curve (Moved from below) */}
                                 <div style={{ flex: '1 1 50%', height: '100%' }} className="flex flex-col pl-4 border-l border-gray-100">
