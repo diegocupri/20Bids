@@ -674,7 +674,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                                         strokeDasharray={`${prob * 0.94} 94`}
                                                         className={cn(
                                                             "transition-all duration-300",
-                                                            prob > 80 ? "stroke-emerald-500" :
+                                                            prob >= 80 ? "stroke-emerald-500" :
                                                                 prob >= 75 ? "stroke-amber-500" : "stroke-rose-400"
                                                         )}
                                                     />
@@ -682,7 +682,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                                 <div className="absolute inset-0 flex items-center justify-center">
                                                     <span className={cn(
                                                         "text-[11px] font-bold tabular-nums",
-                                                        prob > 80 ? "text-emerald-600" :
+                                                        prob >= 80 ? "text-emerald-600" :
                                                             prob >= 75 ? "text-amber-600" : "text-rose-500"
                                                     )}>
                                                         {prob}
