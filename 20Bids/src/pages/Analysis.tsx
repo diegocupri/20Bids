@@ -1062,8 +1062,8 @@ export function AnalysisPage() {
                                 </button>
                             </div>
                             <div className="flex gap-4" style={{ height: 380 }}>
-                                /* Box Plot Chart */
-                                <div style={{ flex: '1 1 60%', minWidth: 0 }}>
+
+                                <div style={{ flex: '1 1 50%', minWidth: 0 }}>
                                     <Plot
                                         data={(() => {
                                             const traces: any[] = [];
@@ -1108,7 +1108,7 @@ export function AnalysisPage() {
                                         })()}
                                         layout={{
                                             autosize: true,
-                                            margin: { l: 45, r: 45, t: 40, b: 60 },
+                                            margin: { l: 45, r: 45, t: 40, b: 80 }, // Increased bottom margin for X-axis labels
                                             yaxis: {
                                                 title: { text: 'Return %', font: { size: 10, color: '#64748b', family: '"Source Sans 3", sans-serif' } },
                                                 // Calculate dynamic max range to avoid outlier squashing
@@ -1144,6 +1144,7 @@ export function AnalysisPage() {
                                                 type: 'category',
                                                 automargin: true,
                                                 showticklabels: true,
+                                                title: { text: 'MVSO Probability', font: { size: 10, color: '#9ca3af' }, standoff: 15 }, // Added title to push margin
                                                 showline: true, // Visible X-Axis line
                                                 linecolor: '#d1d5db',
                                                 linewidth: 1
@@ -1177,10 +1178,12 @@ export function AnalysisPage() {
                                     />
                                 </div>
                                 {/* Efficiency Curve (Moved from below) */}
-                                <div style={{ flex: '1 1 40%', height: '100%' }} className="flex flex-col pl-4 border-l border-gray-100">
-                                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 font-sans text-center">
-                                        EFFICIENCY CURVE <span className="font-normal normal-case">(Optimal SL for TP {targetTP}%)</span>
-                                    </h4>
+                                <div style={{ flex: '1 1 50%', height: '100%' }} className="flex flex-col pl-4 border-l border-gray-100">
+                                    <div className="flex items-center justify-between mb-2 px-2 pt-2">
+                                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2 font-sans">
+                                            Efficiency Curve <span className="font-normal text-[10px] text-gray-400 normal-case">(Optimal SL @ TP {targetTP}%)</span>
+                                        </h3>
+                                    </div>
                                     <div className="flex-1 w-full min-h-0">
                                         {optimizationData?.bubbleData?.length > 0 ? (() => {
                                             const curveData = optimizationData.bubbleData
