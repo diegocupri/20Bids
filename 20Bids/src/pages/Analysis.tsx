@@ -4,7 +4,7 @@ import { Sidebar } from '../components/Sidebar';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     ComposedChart, Line, Legend, Cell,
-    ScatterChart, Scatter, LineChart, ReferenceLine
+    LineChart, ReferenceLine
 } from 'recharts';
 import { cn } from '../lib/utils';
 import { fetchAnalysis } from '../api/client';
@@ -66,7 +66,8 @@ export function AnalysisPage() {
 
     // Optimization Heatmap state
     const [optimizationData, setOptimizationData] = useState<any>(null);
-    const [optimizationLoading, setOptimizationLoading] = useState(false);
+    // const [optimizationLoading, setOptimizationLoading] = useState(false); // Removed unused string
+
 
     // New UX Controls
     const [takeProfit, setTakeProfit] = useState<number>(() => {
@@ -114,8 +115,9 @@ export function AnalysisPage() {
     const [debouncedMinPrice, setDebouncedMinPrice] = useState<number>(minPrice);
     const [debouncedMinProb, setDebouncedMinProb] = useState<number>(minProb);
     const [mvsoThreshold] = useState<number>(0.5); // New MVSO Threshold Filter (Fixed)
-    const [maxRiskTolerance, setMaxRiskTolerance] = useState<number>(12); // Max SL% user is willing to accept
-    const [targetTP, setTargetTP] = useState<number>(5); // User's target Take Profit for SL calculator
+    const [maxRiskTolerance] = useState<number>(12); // Max SL% user is willing to accept
+    // const [targetTP, setTargetTP] = useState<number>(5); // Removed unused
+
 
     // Debounce Take Profit
     useEffect(() => {
@@ -145,7 +147,7 @@ export function AnalysisPage() {
 
     // Optimization Data Fetcher
     const fetchOptimizationData = async () => {
-        setOptimizationLoading(true);
+        // setOptimizationLoading(true);
         try {
             const { API_URL } = await import('../api/client');
             // Handle volume in millions
@@ -171,7 +173,7 @@ export function AnalysisPage() {
         } catch (err) {
             console.error('Optimization fetch error:', err);
         }
-        setOptimizationLoading(false);
+        // setOptimizationLoading(false);
     };
 
     // Auto-Run on Mount
