@@ -993,12 +993,12 @@ export function AnalysisPage() {
                             <ChartCard title="" height={500} className="w-full">
                                 <div className="flex flex-col h-full px-4 pt-2">
                                     <div className="flex items-center justify-between mb-2">
-                                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2 font-sans">
+                                        <p className="text-sm text-gray-500 mb-1 font-sans">
                                             Probability Efficiency
-                                            <span className="text-[10px] font-normal text-gray-400 normal-case">
+                                            <span className="text-[10px] text-gray-400 ml-2">
                                                 (Return Distribution by Prob %)
                                             </span>
-                                        </h3>
+                                        </p>
                                     </div>
                                     <div className="flex-1 w-full min-h-0">
                                         <Plot
@@ -1128,12 +1128,12 @@ export function AnalysisPage() {
                             <ChartCard title="" height={500}>
                                 <div className="flex flex-col h-full px-4 pt-2">
                                     <div className="flex items-center justify-between mb-3">
-                                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                            💰 VOLUME SEGMENT ANALYSIS
-                                            <span className="text-[10px] font-normal text-gray-400">
+                                        <p className="text-sm text-gray-500 mb-1 font-sans">
+                                            Volume Segment Analysis
+                                            <span className="text-[10px] text-gray-400 ml-2">
                                                 (MVSO distribution by volume)
                                             </span>
-                                        </h3>
+                                        </p>
                                     </div>
                                     <div className="flex-1 w-full min-h-0">
                                         {optimizationData?.volumeStats?.length > 0 ? (
@@ -1193,9 +1193,9 @@ export function AnalysisPage() {
                             <ChartCard title="" height={500} className="w-full">
                                 <div className="flex flex-col h-full px-4 pt-2">
                                     <div className="flex items-center justify-between mb-2">
-                                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2 font-sans">
-                                            Efficiency Curve <span className="font-normal text-[10px] text-gray-400 normal-case">(Optimal SL @ TP {takeProfit}%)</span>
-                                        </h3>
+                                        <p className="text-sm text-gray-500 mb-1 font-sans">
+                                            Efficiency Curve <span className="text-[10px] text-gray-400 ml-2">(Optimal SL @ TP {takeProfit}%)</span>
+                                        </p>
                                     </div>
                                     <div className="flex-1 w-full min-h-0">
                                         {optimizationData?.bubbleData?.length > 0 ? (() => {
@@ -1273,12 +1273,12 @@ export function AnalysisPage() {
                             {/* RECOMMENDED SL PER TP - Table */}
                             <ChartCard title="" height={500}>
                                 <div className="flex items-center justify-between mb-3 px-4 pt-2">
-                                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                        📊 RECOMMENDED STOP LOSS
-                                        <span className="text-[10px] font-normal text-gray-400">
+                                    <p className="text-sm text-gray-500 mb-1 font-sans">
+                                        Recommended Stop Loss
+                                        <span className="text-[10px] text-gray-400 ml-2">
                                             (Optimal SL for each TP target)
                                         </span>
-                                    </h3>
+                                    </p>
                                 </div>
                                 <div className="h-full overflow-y-auto px-4 pb-4">
                                     {optimizationData?.bubbleData?.length > 0 ? (() => {
