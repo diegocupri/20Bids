@@ -1027,11 +1027,12 @@ export function AnalysisPage() {
                             </ChartCard>
                         </div>
 
-                        {/* PROBABILITY EFFICIENCY (Box Plot) */}
-                        <ChartCard title="" height={500} className="w-full">
-                            <div className="flex gap-4" style={{ height: 500 }}>
-                                <div style={{ flex: '1 1 50%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                                    <div className="flex items-center justify-between mb-2 px-2 pt-2">
+                        {/* ROW 1: Distribution Analysis: Probability Efficiency + Volume Segment */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                            {/* PROBABILITY EFFICIENCY (Box Plot) */}
+                            <ChartCard title="" height={500} className="w-full">
+                                <div className="flex flex-col h-full px-4 pt-2">
+                                    <div className="flex items-center justify-between mb-2">
                                         <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2 font-sans">
                                             Probability Efficiency
                                             <span className="text-[10px] font-normal text-gray-400 normal-case">
@@ -1039,12 +1040,11 @@ export function AnalysisPage() {
                                             </span>
                                         </h3>
                                     </div>
-                                    <div style={{ flex: 1, minHeight: 0 }}>
+                                    <div className="flex-1 w-full min-h-0">
                                         <Plot
                                             data={(() => {
                                                 const traces: any[] = [];
-
-                                                // 1. Box Traces (One per bucket, all same color/group)
+                                                // 1. Box Traces
                                                 (boxPlotData || []).forEach((bucket) => {
                                                     const vals = (bucket as any).values || [];
                                                     if (vals.length > 0) {
@@ -1056,7 +1056,7 @@ export function AnalysisPage() {
                                                             boxpoints: 'all',
                                                             jitter: 0.5,
                                                             pointpos: -1.8,
-                                                            fillcolor: '#ffffff', // White interior
+                                                            fillcolor: '#ffffff',
                                                             line: { color: '#3b82f6', width: 1.5 },
                                                             showlegend: false,
                                                             hovertemplate:
@@ -1070,27 +1070,23 @@ export function AnalysisPage() {
                                                         });
                                                     }
                                                 });
-
-                                                // 2. Line Trace (Hit Rate %) - Overlay
-                                                // Collect x (bucket names) and y (hit rates)
+                                                // 2. Line Trace
                                                 const xValues = (boxPlotData || []).map(b => b.name);
                                                 const yValues = (boxPlotData || []).map(b => (b as any).hitRate || 0);
-
                                                 traces.push({
                                                     x: xValues,
                                                     y: yValues,
                                                     name: `MVSO > ${mvsoThreshold}% Rate`,
                                                     type: 'scatter',
                                                     mode: 'lines+markers',
-                                                    yaxis: 'y2', // Map to secondary y-axis
-                                                    line: { color: '#f59e0b', width: 2 }, // Different color (Amber)
+                                                    yaxis: 'y2',
+                                                    line: { color: '#f59e0b', width: 2 },
                                                     marker: { color: '#f59e0b', size: 6, symbol: 'circle', line: { color: 'white', width: 1 } },
                                                     hovertemplate:
                                                         '<b>%{x}</b><br>' +
                                                         '<span style="color:#f59e0b">●</span> Hit Rate: <b>%{y:.1f}%</b>' +
                                                         '<extra></extra>'
                                                 });
-
                                                 return traces;
                                             })()}
                                             layout={{
@@ -1101,19 +1097,15 @@ export function AnalysisPage() {
                                                     align: 'left'
                                                 },
                                                 autosize: true,
-                                                margin: { l: 45, r: 45, t: 40, b: 70 }, // Adjusted bottom margin
+                                                margin: { l: 45, r: 45, t: 40, b: 70 },
                                                 yaxis: {
                                                     title: { text: 'Return %', font: { size: 10, color: '#64748b', family: '"Source Sans 3", sans-serif' } },
-                                                    // Calculate dynamic max range to avoid outlier squashing
-                                                    // We'll use a heuristic: e.g., max of (75th percentile + 3*IQR) across buckets, capped reasonable.
-                                                    // Actually simple: 95th percentile of all data.
                                                     range: (() => {
                                                         const allVals = (boxPlotData || []).flatMap(b => (b as any).values || []);
                                                         if (allVals.length === 0) return undefined;
                                                         allVals.sort((a, b) => a - b);
                                                         const p98 = allVals[Math.floor(allVals.length * 0.98)] || 10;
                                                         const maxVal = Math.max(...allVals);
-                                                        // Use the lesser of RealMax or P98*1.5 to clip huge outliers
                                                         return [Math.min(...allVals, -5), Math.min(maxVal, Math.max(20, p98 * 1.5))];
                                                     })(),
                                                     zeroline: true,
@@ -1125,7 +1117,7 @@ export function AnalysisPage() {
                                                     title: { text: 'Hit Rate %', font: { size: 10, color: '#9ca3af', family: '"Source Sans 3", sans-serif' } },
                                                     overlaying: 'y',
                                                     side: 'right',
-                                                    range: [0, 115], // Wider range so line doesn't hug top
+                                                    range: [0, 115],
                                                     tickfont: { size: 10, color: '#9ca3af', family: '"Source Sans 3", sans-serif' },
                                                     showgrid: false,
                                                     zeroline: false
@@ -1133,12 +1125,11 @@ export function AnalysisPage() {
                                                 xaxis: {
                                                     tickfont: { size: 10, color: '#64748b', family: '"Source Sans 3", sans-serif' },
                                                     fixedrange: true,
-                                                    // tickangle: -45, // Remove tilt if not needed or keep it
                                                     type: 'category',
                                                     automargin: true,
                                                     showticklabels: true,
-                                                    title: { text: 'MVSO Probability', font: { size: 10, color: '#9ca3af' }, standoff: 15 }, // Added title to push margin
-                                                    showline: true, // Visible X-Axis line
+                                                    title: { text: 'MVSO Probability', font: { size: 10, color: '#9ca3af' }, standoff: 15 },
+                                                    showline: true,
                                                     linecolor: '#d1d5db',
                                                     linewidth: 1
                                                 },
@@ -1155,9 +1146,9 @@ export function AnalysisPage() {
                                                         y: avg,
                                                         text: `${avg.toFixed(1)}%`,
                                                         showarrow: false,
-                                                        xanchor: 'center', // Centered
+                                                        xanchor: 'center',
                                                         yanchor: 'bottom',
-                                                        yshift: 10, // Shift up slightly from the average point
+                                                        yshift: 10,
                                                         font: { size: 11, color: '#111827', weight: 'bold', family: '"Source Sans 3", sans-serif' },
                                                         bgcolor: 'rgba(255, 255, 255, 0.85)',
                                                         borderpad: 2,
@@ -1171,9 +1162,77 @@ export function AnalysisPage() {
                                         />
                                     </div>
                                 </div>
-                                {/* Efficiency Curve (Moved from below) */}
-                                <div style={{ flex: '1 1 50%', height: '100%' }} className="flex flex-col pl-4 border-l border-gray-100">
-                                    <div className="flex items-center justify-between mb-2 px-2 pt-2">
+                            </ChartCard>
+
+                            {/* VOLUME SEGMENT ANALYSIS */}
+                            <ChartCard title="" height={500}>
+                                <div className="flex flex-col h-full px-4 pt-2">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                            💰 VOLUME SEGMENT ANALYSIS
+                                            <span className="text-[10px] font-normal text-gray-400">
+                                                (MVSO distribution by volume)
+                                            </span>
+                                        </h3>
+                                    </div>
+                                    <div className="flex-1 w-full min-h-0">
+                                        {optimizationData?.volumeStats?.length > 0 ? (
+                                            <Plot
+                                                data={optimizationData.volumeStats.map((stat: any) => ({
+                                                    y: stat.values || [],
+                                                    type: 'box',
+                                                    name: stat.segment,
+                                                    marker: { color: 'rgba(59, 130, 246, 0.3)', line: { color: '#3b82f6', width: 1 }, size: 2 },
+                                                    boxpoints: 'all',
+                                                    jitter: 0.5,
+                                                    pointpos: -1.8,
+                                                    fillcolor: 'rgba(59, 130, 246, 0.1)',
+                                                    line: { color: '#3b82f6' },
+                                                    showlegend: false
+                                                }))}
+                                                layout={{
+                                                    autosize: true,
+                                                    margin: { l: 50, r: 20, t: 20, b: 60 },
+                                                    yaxis: {
+                                                        title: { text: 'MVSO %', font: { size: 10, color: '#64748b' } },
+                                                        zeroline: true,
+                                                        zerolinecolor: '#e5e7eb',
+                                                        gridcolor: '#f3f4f6',
+                                                        tickfont: { size: 10, color: '#64748b' }
+                                                    },
+                                                    xaxis: {
+                                                        tickfont: { size: 10, color: '#64748b' },
+                                                        type: 'category',
+                                                        automargin: true
+                                                    },
+                                                    showlegend: false,
+                                                    paper_bgcolor: 'transparent',
+                                                    plot_bgcolor: 'transparent',
+                                                    font: { family: 'Inter, sans-serif', size: 11, color: '#64748b' },
+                                                    annotations: optimizationData.volumeStats.map((stat: any) => ({
+                                                        x: stat.segment,
+                                                        y: stat.max + 2,
+                                                        text: `n=${stat.count}`,
+                                                        showarrow: false,
+                                                        font: { size: 9, color: '#9ca3af' }
+                                                    }))
+                                                }}
+                                                config={{ displayModeBar: false, responsive: true }}
+                                                style={{ width: '100%', height: '100%' }}
+                                                useResizeHandler={true}
+                                            />
+                                        ) : <div className="text-center text-gray-400 py-10">Loading volume data...</div>}
+                                    </div>
+                                </div>
+                            </ChartCard>
+                        </div>
+
+                        {/* ROW 2: Efficiency Analysis: Efficiency Curve + Rec SL */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                            {/* EFFICIENCY CURVE */}
+                            <ChartCard title="" height={500} className="w-full">
+                                <div className="flex flex-col h-full px-4 pt-2">
+                                    <div className="flex items-center justify-between mb-2">
                                         <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2 font-sans">
                                             Efficiency Curve <span className="font-normal text-[10px] text-gray-400 normal-case">(Optimal SL @ TP {takeProfit}%)</span>
                                         </h3>
@@ -1249,246 +1308,11 @@ export function AnalysisPage() {
                                         })() : <div className="text-center text-gray-400 py-10">Loading...</div>}
                                     </div>
                                 </div>
-                            </div>
-                        </ChartCard>
-
-                        {/* TP/SL OPTIMIZATION - DUAL VISUALIZATION */}
-                        {/* Premium Controls Panel */}
-                        <div className="flex flex-wrap items-center gap-6 mb-6 p-4 bg-gradient-to-r from-slate-50 to-gray-50 rounded-xl border border-gray-200/60 shadow-sm">
-                            {/* Risk Tolerance Control */}
-                            <div className="flex items-center gap-3">
-                                <div className="flex flex-col">
-                                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                                        Max Risk Tolerance
-                                    </label>
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="range"
-                                            min="1"
-                                            max="12"
-                                            step="0.5"
-                                            value={maxRiskTolerance}
-                                            onChange={(e) => setMaxRiskTolerance(parseFloat(e.target.value))}
-                                            className="w-32 h-1.5 bg-gray-200 rounded-full appearance-none cursor-pointer accent-blue-500"
-                                        />
-                                        <span className="text-sm font-bold text-gray-700 bg-white px-2 py-0.5 rounded-md border border-gray-200 min-w-[55px] text-center">
-                                            {maxRiskTolerance}% SL
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Divider */}
-                            <div className="h-10 w-px bg-gray-300"></div>
-
-                            {/* Target TP Calculator */}
-                            <div className="flex items-center gap-3">
-                                <div className="flex flex-col">
-                                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                                        Your Target TP
-                                    </label>
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="number"
-                                            min="0.5"
-                                            max="12"
-                                            step="0.5"
-                                            value={targetTP}
-                                            onChange={(e) => setTargetTP(parseFloat(e.target.value) || 5)}
-                                            className="w-16 h-8 text-sm font-bold text-center text-gray-800 bg-white border-2 border-blue-400 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
-                                        />
-                                        <span className="text-xs text-gray-500">%</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Calculated Optimal SL Display */}
-                            {optimizationData?.bubbleData?.length > 0 && (() => {
-                                const tpData = optimizationData.bubbleData.filter((d: any) => d.tp === targetTP && d.sl <= maxRiskTolerance);
-                                if (tpData.length === 0) return null;
-                                const best = tpData.reduce((a: any, b: any) => a.efficiency > b.efficiency ? a : b);
-                                return (
-                                    <div className="flex items-center gap-4 ml-2 px-4 py-2 bg-gradient-to-r from-emerald-50 to-green-50 rounded-lg border border-emerald-200">
-                                        <div className="flex flex-col items-center">
-                                            <span className="text-[9px] font-semibold text-emerald-600 uppercase">Optimal SL</span>
-                                            <span className="text-lg font-black text-emerald-700">{best.sl}%</span>
-                                        </div>
-                                        <div className="h-8 w-px bg-emerald-200"></div>
-                                        <div className="flex flex-col items-center">
-                                            <span className="text-[9px] font-semibold text-gray-500 uppercase">Avg Return</span>
-                                            <span className="text-sm font-bold text-gray-700">{best.avgReturn?.toFixed(2) || '0'}%</span>
-                                        </div>
-                                        <div className="flex flex-col items-center">
-                                            <span className="text-[9px] font-semibold text-gray-500 uppercase">Win Rate</span>
-                                            <span className="text-sm font-bold text-gray-700">{best.winRate}%</span>
-                                        </div>
-                                        <div className="flex flex-col items-center">
-                                            <span className="text-[9px] font-semibold text-gray-500 uppercase">Efficiency</span>
-                                            <span className="text-sm font-bold text-gray-700">{best.efficiency?.toFixed(1)}</span>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-
-                            {/* Refresh Button */}
-                            <button
-                                onClick={fetchOptimizationData}
-                                disabled={optimizationLoading}
-                                className="ml-auto px-4 py-2 text-xs font-semibold rounded-lg bg-gray-800 text-white hover:bg-gray-700 transition-all disabled:opacity-50 shadow-sm"
-                            >
-                                {optimizationLoading ? 'Calculating...' : '↻ Refresh'}
-                            </button>
-                        </div>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
-                            {/* HEATMAP: Efficiency (Return per Unit Risk) */}
-                            <ChartCard title="" height={420} className="w-full">
-                                <div className="flex items-center justify-between mb-2">
-                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 font-sans">
-                                        EFFICIENCY HEATMAP
-                                        <span className="text-[10px] font-normal text-text-secondary/70 font-mono">
-                                            Efficiency = Avg Return / SL%
-                                        </span>
-                                    </h3>
-                                </div>
-                                <div className="w-full h-full">
-                                    {optimizationData?.bubbleData?.length > 0 ? (() => {
-                                        // Filter data by risk tolerance
-                                        const filteredData = optimizationData.bubbleData.filter((d: any) => d.sl <= maxRiskTolerance);
-                                        if (filteredData.length === 0) return <div className="text-center text-gray-400 py-10">No data for selected risk level</div>;
-
-                                        const tpVals = optimizationData.tpRange?.filter((v: number) => v <= 12) || ([...new Set(filteredData.map((d: any) => d.tp))] as number[]).sort((a, b) => a - b);
-                                        const slVals = (optimizationData.slRange?.filter((v: number) => v <= maxRiskTolerance) || ([...new Set(filteredData.map((d: any) => d.sl))] as number[])).sort((a: number, b: number) => a - b);
-
-                                        // Build 2D matrix for heatmap (Z values)
-                                        const zMatrix: number[][] = [];
-                                        const textMatrix: string[][] = [];
-
-                                        for (const sl of slVals) {
-                                            const row: number[] = [];
-                                            const textRow: string[] = [];
-                                            for (const tp of tpVals) {
-                                                const point = filteredData.find((d: any) => d.tp === tp && d.sl === sl);
-                                                const eff = point ? point.efficiency : 0;
-                                                row.push(eff);
-                                                textRow.push(point ?
-                                                    `TP: ${tp}% | SL: ${sl}%<br>Efficiency: ${eff.toFixed(1)}<br>Avg Return/Trade: ${point.avgReturn?.toFixed(2) || '0'}%<br>WinRate: ${point.winRate}%<br>PF: ${point.pf}`
-                                                    : '');
-                                            }
-                                            zMatrix.push(row);
-                                            textMatrix.push(textRow);
-                                        }
-
-                                        // Find best efficiency point within risk tolerance
-                                        let bestEff = { tp: 0, sl: 0, efficiency: -Infinity, totalReturn: 0 };
-                                        filteredData.forEach((d: any) => {
-                                            if (d.efficiency > bestEff.efficiency) {
-                                                bestEff = { tp: d.tp, sl: d.sl, efficiency: d.efficiency, totalReturn: d.totalReturn };
-                                            }
-                                        });
-
-                                        // Using zmid: 0 to center colorscale at efficiency = 0
-
-                                        return (
-                                            <Plot
-                                                data={[
-                                                    {
-                                                        z: zMatrix,
-                                                        x: tpVals,
-                                                        y: slVals,
-                                                        type: 'heatmap',
-                                                        colorscale: [
-                                                            [0, '#dc2626'],      // Red (very negative)
-                                                            [0.2, '#ef4444'],    // Light red
-                                                            [0.35, '#fca5a5'],   // Pink
-                                                            [0.4, '#ffffff'],    // White starts at -30
-                                                            [0.6, '#ffffff'],    // White ends at +30
-                                                            [0.65, '#86efac'],   // Light green
-                                                            [0.8, '#22c55e'],    // Green
-                                                            [1, '#059669']       // Emerald (best)
-                                                        ],
-                                                        zmin: -100,  // Fixed scale
-                                                        zmax: 100,   // Fixed scale
-                                                        colorbar: {
-                                                            title: 'Efficiency',
-                                                            titleside: 'right',
-                                                            thickness: 12,
-                                                            len: 0.9
-                                                        },
-                                                        text: textMatrix,
-                                                        hoverinfo: 'text',
-                                                        showscale: true
-                                                    } as any
-                                                ]}
-                                                layout={{
-                                                    autosize: true,
-                                                    margin: { l: 60, r: 70, t: 20, b: 70 },
-                                                    xaxis: {
-                                                        title: {
-                                                            text: 'Take Profit (%)',
-                                                            font: { size: 11, color: '#6b7280' },
-                                                            standoff: 15
-                                                        },
-                                                        tickfont: { size: 10, color: '#374151' },
-                                                        gridcolor: '#f0f1f2',
-                                                        linecolor: '#e5e7eb',
-                                                        dtick: 1
-                                                    },
-                                                    yaxis: {
-                                                        title: {
-                                                            text: 'Stop Loss (%)',
-                                                            font: { size: 11, color: '#6b7280' },
-                                                            standoff: 10
-                                                        },
-                                                        tickfont: { size: 10, color: '#374151' },
-                                                        gridcolor: '#f0f1f2',
-                                                        linecolor: '#e5e7eb',
-                                                        dtick: 1
-                                                    },
-                                                    paper_bgcolor: 'transparent',
-                                                    plot_bgcolor: '#fafbfc',
-                                                    font: { family: 'Inter, system-ui, sans-serif', size: 10, color: '#374151' },
-                                                    shapes: [{
-                                                        type: 'rect',
-                                                        x0: bestEff.tp - 0.3,
-                                                        x1: bestEff.tp + 0.3,
-                                                        y0: bestEff.sl - 0.3,
-                                                        y1: bestEff.sl + 0.3,
-                                                        line: { color: '#1f2937', width: 2 },
-                                                        fillcolor: 'transparent'
-                                                    }],
-                                                    annotations: [{
-                                                        x: bestEff.tp,
-                                                        y: bestEff.sl,
-                                                        text: `<b>BEST</b><br>Eff: ${bestEff.efficiency.toFixed(0)}`,
-                                                        showarrow: true,
-                                                        arrowhead: 0,
-                                                        arrowcolor: '#059669',
-                                                        ax: 45,
-                                                        ay: -30,
-                                                        font: { size: 10, color: '#065f46' },
-                                                        bgcolor: '#d1fae5',
-                                                        borderpad: 5,
-                                                        bordercolor: '#10b981',
-                                                        borderwidth: 1
-                                                    }]
-                                                }}
-                                                config={{ displayModeBar: false, responsive: true }}
-                                                style={{ width: '100%', height: '100%' }}
-                                                useResizeHandler={true}
-                                            />
-                                        );
-                                    })() : (
-                                        <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
-                                            <p>Loading optimization data...</p>
-                                        </div>
-                                    )}
-                                </div>
                             </ChartCard>
 
                             {/* RECOMMENDED SL PER TP - Table */}
-                            <ChartCard title="" height={420}>
-                                <div className="flex items-center justify-between mb-3">
+                            <ChartCard title="" height={500}>
+                                <div className="flex items-center justify-between mb-3 px-4 pt-2">
                                     <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
                                         📊 RECOMMENDED STOP LOSS
                                         <span className="text-[10px] font-normal text-gray-400">
@@ -1496,33 +1320,20 @@ export function AnalysisPage() {
                                         </span>
                                     </h3>
                                 </div>
-                                <div className="h-[350px] overflow-y-auto">
+                                <div className="h-full overflow-y-auto px-4 pb-4">
                                     {optimizationData?.bubbleData?.length > 0 ? (() => {
                                         const data = optimizationData.bubbleData;
                                         const tpLevels = optimizationData.tpRange ||
                                             ([...new Set(data.map((d: any) => d.tp))] as number[]).sort((a: number, b: number) => a - b);
 
-                                        const recommendations: {
-                                            tp: number;
-                                            sl: number;
-                                            avgReturn: number;
-                                            winRate: number;
-                                            efficiency: number;
-                                        }[] = [];
-
+                                        const recommendations: any[] = [];
                                         for (const tp of tpLevels) {
                                             const tpData = data.filter((d: any) => d.tp === tp && d.sl <= maxRiskTolerance);
                                             if (tpData.length > 0) {
                                                 const best = tpData.reduce((a: any, b: any) =>
                                                     a.efficiency > b.efficiency ? a : b
                                                 );
-                                                recommendations.push({
-                                                    tp: best.tp,
-                                                    sl: best.sl,
-                                                    avgReturn: best.avgReturn || 0,
-                                                    winRate: best.winRate || 0,
-                                                    efficiency: best.efficiency || 0
-                                                });
+                                                recommendations.push(best);
                                             }
                                         }
 
@@ -1532,23 +1343,23 @@ export function AnalysisPage() {
 
                                         return (
                                             <table className="w-full text-xs">
-                                                <thead className="sticky top-0 bg-white">
-                                                    <tr className="border-b border-gray-200 text-gray-500 uppercase text-[10px]">
-                                                        <th className="py-2 text-left font-medium">TP Target</th>
+                                                <thead className="sticky top-0 bg-white shadow-sm z-10">
+                                                    <tr className="border-b border-gray-200 text-gray-500 uppercase text-[10px] bg-gray-50/50">
+                                                        <th className="py-2 pl-2 text-left font-medium">TP Target</th>
                                                         <th className="py-2 text-center font-medium">Recommended SL</th>
                                                         <th className="py-2 text-right font-medium">Avg Return</th>
                                                         <th className="py-2 text-right font-medium">Win Rate</th>
-                                                        <th className="py-2 text-right font-medium">Efficiency</th>
+                                                        <th className="py-2 pr-2 text-right font-medium">Efficiency</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {recommendations.map((rec, idx) => (
                                                         <tr
                                                             key={idx}
-                                                            className={`border-b border-gray-100 transition-colors ${rec.tp === targetTP ? 'bg-blue-50 font-semibold' : 'hover:bg-gray-50'}`}
+                                                            className={`border-b border-gray-50 transition-colors ${rec.tp === takeProfit ? 'bg-blue-50/80 font-semibold' : 'hover:bg-gray-50'}`}
                                                         >
-                                                            <td className="py-2 text-left">
-                                                                {rec.tp === targetTP && <span className="mr-1">→</span>}
+                                                            <td className="py-2 pl-2 text-left">
+                                                                {rec.tp === takeProfit && <span className="mr-1 text-blue-500">→</span>}
                                                                 {rec.tp}%
                                                             </td>
                                                             <td className="py-2 text-center">
@@ -1557,13 +1368,13 @@ export function AnalysisPage() {
                                                                 </span>
                                                             </td>
                                                             <td className={`py-2 text-right font-medium ${rec.avgReturn >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                                                {rec.avgReturn >= 0 ? '+' : ''}{rec.avgReturn.toFixed(2)}%
+                                                                {rec.avgReturn >= 0 ? '+' : ''}{rec.avgReturn?.toFixed(2)}%
                                                             </td>
                                                             <td className="py-2 text-right text-gray-600">
                                                                 {rec.winRate}%
                                                             </td>
-                                                            <td className="py-2 text-right text-amber-600 font-medium">
-                                                                {rec.efficiency.toFixed(1)}
+                                                            <td className="py-2 pr-2 text-right text-amber-600 font-medium">
+                                                                {rec.efficiency?.toFixed(1)}
                                                             </td>
                                                         </tr>
                                                     ))}
@@ -1579,6 +1390,8 @@ export function AnalysisPage() {
                             </ChartCard>
                         </div>
 
+
+
                         {/* ========== NEW TRADING ANALYTICS SECTION ========== */}
                         <div className="mt-8 mb-4">
                             <h2 className="text-lg font-bold text-gray-700 border-b border-gray-200 pb-2">
@@ -1588,108 +1401,6 @@ export function AnalysisPage() {
 
 
 
-                        {/* VOLUME ANALYSIS SECTION - Side by side */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                            {/* Volume Segment Analysis - PLOTLY BOXPLOT (same as PROBABILITY EFFICIENCY) */}
-                            <ChartCard title="" height={320}>
-                                <div className="flex items-center justify-between mb-3">
-                                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                        💰 VOLUME SEGMENT ANALYSIS
-                                        <span className="text-[10px] font-normal text-gray-400">
-                                            (MVSO distribution by volume)
-                                        </span>
-                                    </h3>
-                                </div>
-                                <div className="w-full h-[260px]">
-                                    {optimizationData?.volumeStats?.length > 0 ? (
-                                        <Plot
-                                            data={optimizationData.volumeStats.map((stat: any) => ({
-                                                y: stat.values || [],
-                                                type: 'box',
-                                                name: stat.segment,
-                                                marker: { color: 'rgba(59, 130, 246, 0.3)', line: { color: '#3b82f6', width: 1 }, size: 2 },
-                                                boxpoints: 'all',
-                                                jitter: 0.5,
-                                                pointpos: -1.8,
-                                                fillcolor: 'rgba(59, 130, 246, 0.1)',
-                                                line: { color: '#3b82f6' },
-                                                showlegend: false
-                                            }))}
-                                            layout={{
-                                                autosize: true,
-                                                margin: { l: 50, r: 20, t: 20, b: 60 },
-                                                yaxis: {
-                                                    title: { text: 'MVSO %', font: { size: 10, color: '#64748b' } },
-                                                    zeroline: true,
-                                                    zerolinecolor: '#e5e7eb',
-                                                    gridcolor: '#f3f4f6',
-                                                    tickfont: { size: 10, color: '#64748b' }
-                                                },
-                                                xaxis: {
-                                                    tickfont: { size: 10, color: '#64748b' },
-                                                    type: 'category',
-                                                    automargin: true
-                                                },
-                                                showlegend: false,
-                                                paper_bgcolor: 'transparent',
-                                                plot_bgcolor: 'transparent',
-                                                font: { family: 'Inter, sans-serif', size: 11, color: '#64748b' },
-                                                annotations: optimizationData.volumeStats.map((stat: any) => ({
-                                                    x: stat.segment,
-                                                    y: stat.max + 2,
-                                                    text: `n=${stat.count}`,
-                                                    showarrow: false,
-                                                    font: { size: 9, color: '#9ca3af' }
-                                                }))
-                                            }}
-                                            config={{ displayModeBar: false, responsive: true }}
-                                            style={{ width: '100%', height: '100%' }}
-                                        />
-                                    ) : <div className="text-center text-gray-400 py-10">Loading volume data...</div>}
-                                </div>
-                            </ChartCard>
-
-                            {/* Relative Volume Impact */}
-                            <ChartCard title="" height={320}>
-                                <div className="flex items-center justify-between mb-3">
-                                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                        ⚡ RELATIVE VOLUME IMPACT
-                                        <span className="text-[10px] font-normal text-gray-400">
-                                            (High relative volume = better performance?)
-                                        </span>
-                                    </h3>
-                                </div>
-                                <div className="w-full h-[260px]">
-                                    {optimizationData?.relVolStats?.length > 0 ? (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <ScatterChart margin={{ top: 20, right: 30, bottom: 30, left: 40 }}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                                <XAxis type="number" dataKey="relativeVol" name="Relative Vol" domain={[0, 'auto']} tick={{ fontSize: 10 }}
-                                                    label={{ value: 'Relative Volume', position: 'bottom', offset: 10, style: { fontSize: 11, fill: '#6b7280' } }} />
-                                                <YAxis type="number" dataKey="mvso" name="MVSO" tick={{ fontSize: 10 }}
-                                                    label={{ value: 'Max Upside %', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#6b7280' } }} />
-                                                <Tooltip content={({ active, payload }) => {
-                                                    if (active && payload && payload.length) {
-                                                        const d = payload[0].payload;
-                                                        return (
-                                                            <div className="bg-white p-2 rounded-lg shadow-lg border border-gray-200 text-xs">
-                                                                <p className="font-bold">Rel Vol: {d.relativeVol}x</p>
-                                                                <p>Max Upside: {d.mvso}%</p>
-                                                                <p>Sector: {d.sector}</p>
-                                                            </div>
-                                                        );
-                                                    }
-                                                    return null;
-                                                }} />
-                                                <Scatter data={optimizationData.relVolStats.slice(0, 200)} fill="#f59e0b" fillOpacity={0.5} />
-                                            </ScatterChart>
-                                        </ResponsiveContainer>
-                                    ) : <div className="text-center text-gray-400 py-10">Loading relative volume data...</div>}
-                                </div>
-                            </ChartCard>
-                        </div>
-
-                        {/* ========== END NEW TRADING ANALYTICS SECTION ========== */}
 
                         {/* ROW 2: Tables (Top Tickers + Top Periods + Sectors) */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
