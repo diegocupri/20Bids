@@ -52,12 +52,7 @@ type TimeRange = '1W' | '1M' | '3M' | 'YTD' | '1Y' | 'ALL';
 export function AnalysisPage() {
     const [data, setData] = useState<AnalysisData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [theme, setTheme] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return localStorage.getItem('theme') || 'midnight';
-        }
-        return 'midnight';
-    });
+
     const [timeRange, setTimeRange] = useState<TimeRange>('ALL');
     const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
     const [customStartDate, customEndDate] = dateRange;
@@ -210,23 +205,7 @@ export function AnalysisPage() {
     }, [debouncedTakeProfit, debouncedStopLoss, debouncedMinVolume, debouncedMinPrice, debouncedMinProb, customStartDate, customEndDate]);
 
     // Theme observer hook
-    useEffect(() => {
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.attributeName === 'data-theme') {
-                    const newTheme = document.documentElement.getAttribute('data-theme') || 'midnight';
-                    setTheme(newTheme);
-                }
-            });
-        });
-        observer.observe(document.documentElement, { attributes: true });
 
-        // Sync theme on mount
-        const currentTheme = document.documentElement.getAttribute('data-theme') || localStorage.getItem('theme') || 'midnight';
-        setTheme(currentTheme);
-
-        return () => observer.disconnect();
-    }, []);
 
     // Filter Logic & Metric Recalculation (with Take Profit)
     const filteredMetrics = useMemo(() => {
@@ -479,7 +458,7 @@ export function AnalysisPage() {
     }
 
     const { riskMetrics, equityCurve, boxPlotData } = filteredMetrics;
-    const isTerminal = theme === 'terminal';
+
     // Deleted chartColor logic entirely logic as it was unused
 
     // Best Day Calculation (Moved to useMemo)
@@ -497,9 +476,8 @@ export function AnalysisPage() {
                     {/* ROW 1: Title & Date (Simpler, Smaller) - SCROLLS AWAY */}
                     <div className="pb-4 border-b border-border-primary/50">
                         <div className="flex items-center justify-between">
-                            <h1 className="text-lg font-bold text-text-primary uppercase tracking-wider flex items-center gap-2">
-                                <span className={cn("inline-block w-2 h-2 rounded-full", isTerminal ? "bg-amber-400 animate-pulse" : "bg-accent-primary")}></span>
-                                SYSTEM PERFORMANCE
+                            <h1 className="text-base font-bold text-text-primary flex items-center gap-2">
+                                System Performance
                             </h1>
                             <div className="text-[10px] font-medium text-text-secondary uppercase tracking-widest bg-bg-secondary/50 px-3 py-1 rounded-full border border-border-primary/30">
                                 {new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}

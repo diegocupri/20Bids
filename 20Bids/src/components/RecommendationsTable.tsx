@@ -247,9 +247,8 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                 <div className="flex flex-col xl:flex-row items-center justify-between gap-4">
                     {/* Left: Title & Indices */}
                     <div className="flex items-center gap-6 w-full xl:w-auto justify-between xl:justify-start">
-                        <h2 className="text-lg font-bold text-text-primary uppercase tracking-wider flex items-center gap-2 whitespace-nowrap">
-                            <span className="inline-block w-2 h-2 rounded-full bg-accent-primary"></span>
-                            MARKET OPPORTUNITIES
+                        <h2 className="text-base font-bold text-text-primary flex items-center gap-2 whitespace-nowrap">
+                            Market Opportunities
                         </h2>
 
                         {/* Indices - Styled as a group */}
