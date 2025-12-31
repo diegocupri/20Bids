@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.20bids.autotrader</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/diegocupri/Documents/20Bids - Antigravity/20Bids/20Bids/server/run_auto_trader.sh</string>
+    </array>
+    
+    <!-- Run at 16:25 Spain time (which is local time) Mon-Fri -->
+    <key>StartCalendarInterval</key>
+    <array>
+        <!-- Monday -->
+        <dict>
+            <key>Weekday</key>
+            <integer>1</integer>
+            <key>Hour</key>
+            <integer>16</integer>
+            <key>Minute</key>
+            <integer>25</integer>
+        </dict>
+        <!-- Tuesday -->
+        <dict>
+            <key>Weekday</key>
+            <integer>2</integer>
+            <key>Hour</key>
+            <integer>16</integer>
+            <key>Minute</key>
+            <integer>25</integer>
+        </dict>
+        <!-- Wednesday -->
+        <dict>
+            <key>Weekday</key>
+            <integer>3</integer>
+            <key>Hour</key>
+            <integer>16</integer>
+            <key>Minute</key>
+            <integer>25</integer>
+        </dict>
+        <!-- Thursday -->
+        <dict>
+            <key>Weekday</key>
+            <integer>4</integer>
+            <key>Hour</key>
+            <integer>16</integer>
+            <key>Minute</key>
+            <integer>25</integer>
+        </dict>
+        <!-- Friday -->
+        <dict>
+            <key>Weekday</key>
+            <integer>5</integer>
+            <key>Hour</key>
+            <integer>16</integer>
+            <key>Minute</key>
+            <integer>25</integer>
+        </dict>
+    </array>
+    
+    <key>StandardOutPath</key>
+    <string>/tmp/20bids_autotrader.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/tmp/20bids_autotrader.log</string>
+    
+    <key>WorkingDirectory</key>
+    <string>/Users/diegocupri/Documents/20Bids - Antigravity/20Bids/20Bids/server</string>
+    
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin</string>
+    </dict>
+</dict>
+</plist>

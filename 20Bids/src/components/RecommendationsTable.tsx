@@ -21,13 +21,14 @@ interface RecommendationsTableProps {
     onMvsoThresholdChange: (value: number) => void;
     stopLossThreshold: number;
     onStopLossThresholdChange: (value: number) => void;
+    onOpenTradingModal?: () => void;
 }
 
 // ... (TAG_COLORS)
 
 type SortKey = 'symbol' | 'price' | 'refPrice1020' | 'change' | 'volume' | 'rsi' | 'relativeVol' | 'type' | 'probabilityValue' | 'sector' | 'open' | 'mvso' | 'lowBeforePeak';
 
-export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, mvsoThreshold, onMvsoThresholdChange, stopLossThreshold, onStopLossThresholdChange }: RecommendationsTableProps) {
+export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, mvsoThreshold, onMvsoThresholdChange, stopLossThreshold, onStopLossThresholdChange, onOpenTradingModal }: RecommendationsTableProps) {
     const [recommendations, setRecommendations] = useState<any[]>([]);
     const [prices, setPrices] = useState<Record<string, { price: number, change: number, refPrice1020?: number, volume?: number, sector?: string, open?: number, high?: number }>>({});
     const [indices, setIndices] = useState<any[]>([]);
@@ -358,6 +359,17 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                 />
                             </div>
                         </div>
+
+                        {/* Trading Config Button */}
+                        {onOpenTradingModal && (
+                            <button
+                                onClick={onOpenTradingModal}
+                                className="flex items-center gap-1.5 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow-sm hover:shadow-md"
+                            >
+                                <span className="text-[10px]">⚡</span>
+                                Trading
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

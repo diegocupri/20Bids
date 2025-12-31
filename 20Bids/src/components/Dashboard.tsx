@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar';
 import { RecommendationsTable } from './RecommendationsTable';
 import { TickerDetailsPanel } from './TickerDetailsPanel';
 import { SkeletonTable } from './SkeletonTable';
+import TradingModal from './TradingModal';
 
 import { fetchDates } from '../api/client';
 
@@ -16,6 +17,7 @@ export function Dashboard() {
     const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [recommendations, setRecommendations] = useState<any[]>([]);
+    const [isTradingModalOpen, setIsTradingModalOpen] = useState(false);
     const [mvsoThreshold, setMvsoThreshold] = useState<number>(0.5);
     const [stopLossThreshold, setStopLossThreshold] = useState<number>(() => {
         const saved = localStorage.getItem('stopLossThreshold');
@@ -107,6 +109,7 @@ export function Dashboard() {
                         onMvsoThresholdChange={handleThresholdChange}
                         stopLossThreshold={stopLossThreshold}
                         onStopLossThresholdChange={handleStopLossChange}
+                        onOpenTradingModal={() => setIsTradingModalOpen(true)}
                     />
                 )}
             </div>
@@ -119,6 +122,12 @@ export function Dashboard() {
                 selectedTicker={calculatorData?.ticker || null}
                 selectedPrice={calculatorData?.price || null}
                 selectedSector={calculatorData?.sector || null}
+            />
+
+            {/* Trading Modal */}
+            <TradingModal
+                isOpen={isTradingModalOpen}
+                onClose={() => setIsTradingModalOpen(false)}
             />
         </div>
     );
