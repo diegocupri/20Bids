@@ -1397,6 +1397,35 @@ app.get('/api/trading/logs', async (req, res) => {
     }
 });
 
+// Get real-time IBKR positions and orders (requires IB Gateway running)
+app.get('/api/trading/positions', async (req, res) => {
+    try {
+        // Dynamic import to avoid errors when IBKR not installed
+        const { getIBKRService } = await import('./services/ibkr_service');
+        const ibkr = getIBKRService();
+
+        const connected = await ibkr.connect();
+        if (!connected) {
+            return res.json({ connected: false, positions: [], orders: [], message: 'IB Gateway not available' });
+        }
+
+        const [positions, orders] = await Promise.all([
+            ibkr.getPositions(),
+            ibkr.getOpenOrders(),
+        ]);
+
+        res.json({
+            connected: true,
+            positions,
+            orders,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('[IBKR Positions] Error:', error);
+        res.json({ connected: false, positions: [], orders: [], error: 'Failed to get positions' });
+    }
+});
+
 app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
 

@@ -264,6 +264,90 @@ export class IBKRService {
             };
         }
     }
+
+    /**
+     * Get current positions in the account
+     */
+    async getPositions(): Promise<{ symbol: string; quantity: number; avgCost: number; marketPrice: number; unrealizedPnL: number }[]> {
+        return new Promise((resolve) => {
+            if (!this.connected) {
+                resolve([]);
+                return;
+            }
+
+            const positions: { symbol: string; quantity: number; avgCost: number; marketPrice: number; unrealizedPnL: number }[] = [];
+
+            const handler = (account: string, contract: Contract, pos: number, avgCost: number) => {
+                if (pos !== 0) {
+                    positions.push({
+                        symbol: contract.symbol || '',
+                        quantity: pos,
+                        avgCost: avgCost,
+                        marketPrice: 0, // Will be filled later if needed
+                        unrealizedPnL: 0,
+                    });
+                }
+            };
+
+            const endHandler = () => {
+                this.ib.off(EventName.position, handler);
+                this.ib.off(EventName.positionEnd, endHandler);
+                resolve(positions);
+            };
+
+            this.ib.on(EventName.position, handler);
+            this.ib.on(EventName.positionEnd, endHandler);
+            this.ib.reqPositions();
+
+            setTimeout(() => {
+                this.ib.off(EventName.position, handler);
+                this.ib.off(EventName.positionEnd, endHandler);
+                resolve(positions);
+            }, 5000);
+        });
+    }
+
+    /**
+     * Get open orders
+     */
+    async getOpenOrders(): Promise<{ orderId: number; symbol: string; action: string; quantity: number; orderType: string; price: number; status: string }[]> {
+        return new Promise((resolve) => {
+            if (!this.connected) {
+                resolve([]);
+                return;
+            }
+
+            const orders: { orderId: number; symbol: string; action: string; quantity: number; orderType: string; price: number; status: string }[] = [];
+
+            const openOrderHandler = (orderId: number, contract: Contract, order: Order, orderState: any) => {
+                orders.push({
+                    orderId: orderId,
+                    symbol: contract.symbol || '',
+                    action: order.action?.toString() || '',
+                    quantity: Number(order.totalQuantity) || 0,
+                    orderType: order.orderType?.toString() || '',
+                    price: order.lmtPrice || order.auxPrice || 0,
+                    status: orderState?.status || 'Unknown',
+                });
+            };
+
+            const endHandler = () => {
+                this.ib.off(EventName.openOrder, openOrderHandler);
+                this.ib.off(EventName.openOrderEnd, endHandler);
+                resolve(orders);
+            };
+
+            this.ib.on(EventName.openOrder, openOrderHandler);
+            this.ib.on(EventName.openOrderEnd, endHandler);
+            this.ib.reqOpenOrders();
+
+            setTimeout(() => {
+                this.ib.off(EventName.openOrder, openOrderHandler);
+                this.ib.off(EventName.openOrderEnd, endHandler);
+                resolve(orders);
+            }, 5000);
+        });
+    }
 }
 
 // Singleton instance

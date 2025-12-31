@@ -206,7 +206,7 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                                             </span>
                                         )}
                                     </div>
-                                    {stats && (
+                                    {stats ? (
                                         <div className="flex items-center gap-2">
                                             <span className={cn(
                                                 "text-xs font-bold tabular-nums",
@@ -216,7 +216,9 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                                                 {stats.accuracy}%
                                             </span>
                                         </div>
-                                    )}
+                                    ) : format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? (
+                                        <span className="text-xs font-medium text-gray-400">Live</span>
+                                    ) : null}
                                 </button>
                             </div>
                         );
