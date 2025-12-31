@@ -73,3 +73,37 @@ model Watchlist {
   
   @@unique([userId, symbol])
 }
+
+// Trading automation configuration
+model TradingConfig {
+  id                   Int      @id @default(autoincrement())
+  takeProfit           Float    @default(3.0)     // Take profit %
+  stopLoss             Float    @default(5.0)     // Stop loss %
+  maxStocks            Int      @default(10)      // Max stocks to trade
+  minVolume            Float    @default(1000000) // Min volume filter
+  minPrice             Float    @default(5.0)     // Min price filter
+  maxGainSkip          Float    @default(1.0)     // Skip if already gained >X%
+  prioritizeBelowRef   Boolean  @default(true)    // Prioritize stocks below refPrice1020
+  retryIntervalMinutes Int      @default(1)       // Retry interval if no data
+  maxRetries           Int      @default(10)      // Max retry attempts
+  executionHour        Int      @default(10)      // Hour to execute (ET)
+  executionMinute      Int      @default(25)      // Minute to execute (ET)
+  enabled              Boolean  @default(false)   // Auto-trading enabled
+  updatedAt            DateTime @updatedAt
+}
+
+// Log of executed trades
+model TradeLog {
+  id              String   @id @default(uuid())
+  symbol          String
+  quantity        Int
+  entryPrice      Float
+  takeProfitPrice Float
+  stopLossPrice   Float
+  parentOrderId   Int
+  tpOrderId       Int
+  slOrderId       Int
+  status          String   @default("SUBMITTED") // SUBMITTED, FILLED, CANCELLED, ERROR
+  errorMessage    String?
+  executedAt      DateTime @default(now())
+}

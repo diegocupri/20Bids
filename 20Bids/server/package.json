@@ -15,8 +15,10 @@
   "type": "commonjs",
   "dependencies": {
     "@prisma/client": "^6.19.0",
+    "@stoqey/ib": "^1.5.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.10.1",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
@@ -28,8 +30,7 @@
     "multer": "^2.0.2",
     "prisma": "^6.19.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3",
-    "@types/node": "^24.10.1"
+    "typescript": "^5.9.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

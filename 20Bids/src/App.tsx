@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { UploadPage } from './components/UploadPage';
 import { AnalysisPage } from './pages/Analysis';
+import { TradingPage } from './pages/TradingPage';
 // import { AnalyticsTremorPage } from './pages/AnalyticsTremor'; // Temporarily disabled
 
 import { GraphsPage } from './pages/GraphsPage';
@@ -18,6 +19,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<AuthenticatedLayout><Dashboard /></AuthenticatedLayout>} />
           <Route path="/analysis" element={<AuthenticatedLayout><AnalysisPage /></AuthenticatedLayout>} />
+          <Route path="/trading" element={<AuthenticatedLayout><TradingPage /></AuthenticatedLayout>} />
           {/* <Route path="/analytics-tremor" element={<AuthenticatedLayout><AnalyticsTremorPage /></AuthenticatedLayout>} /> */}
           <Route path="/graphs" element={<AuthenticatedLayout><GraphsPage /></AuthenticatedLayout>} />
           <Route path="/upload" element={<AuthenticatedLayout><UploadPage /></AuthenticatedLayout>} />

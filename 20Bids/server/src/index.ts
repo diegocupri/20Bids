@@ -1314,6 +1314,89 @@ app.post('/api/admin/backfill-1020', async (req, res) => {
     }
 });
 
+// ==================== TRADING AUTOMATION ENDPOINTS ====================
+
+// Get trading config
+app.get('/api/trading/config', async (req, res) => {
+    try {
+        let config = await prisma.tradingConfig.findFirst();
+        if (!config) {
+            config = await prisma.tradingConfig.create({
+                data: {
+                    takeProfit: 3.0,
+                    stopLoss: 5.0,
+                    maxStocks: 10,
+                    minVolume: 1000000,
+                    minPrice: 5.0,
+                    maxGainSkip: 1.0,
+                    prioritizeBelowRef: true,
+                    retryIntervalMinutes: 1,
+                    maxRetries: 10,
+                    executionHour: 10,
+                    executionMinute: 25,
+                    enabled: false,
+                },
+            });
+        }
+        res.json(config);
+    } catch (error) {
+        console.error('[Trading Config] Error:', error);
+        res.status(500).json({ error: 'Failed to get trading config' });
+    }
+});
+
+// Update trading config
+app.put('/api/trading/config', async (req, res) => {
+    try {
+        const {
+            takeProfit, stopLoss, maxStocks, minVolume, minPrice,
+            maxGainSkip, prioritizeBelowRef, retryIntervalMinutes, maxRetries,
+            executionHour, executionMinute, enabled
+        } = req.body;
+
+        let config = await prisma.tradingConfig.findFirst();
+        const updateData = {
+            takeProfit, stopLoss, maxStocks, minVolume, minPrice,
+            maxGainSkip, prioritizeBelowRef, retryIntervalMinutes, maxRetries,
+            executionHour, executionMinute, enabled
+        };
+
+        // Remove undefined values
+        Object.keys(updateData).forEach(key => {
+            if ((updateData as any)[key] === undefined) {
+                delete (updateData as any)[key];
+            }
+        });
+
+        if (!config) {
+            config = await prisma.tradingConfig.create({ data: updateData as any });
+        } else {
+            config = await prisma.tradingConfig.update({
+                where: { id: config.id },
+                data: updateData,
+            });
+        }
+        res.json(config);
+    } catch (error) {
+        console.error('[Trading Config] Update error:', error);
+        res.status(500).json({ error: 'Failed to update trading config' });
+    }
+});
+
+// Get trade logs
+app.get('/api/trading/logs', async (req, res) => {
+    try {
+        const logs = await prisma.tradeLog.findMany({
+            orderBy: { executedAt: 'desc' },
+            take: 100,
+        });
+        res.json(logs);
+    } catch (error) {
+        console.error('[Trade Logs] Error:', error);
+        res.status(500).json({ error: 'Failed to get trade logs' });
+    }
+});
+
 app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
 
