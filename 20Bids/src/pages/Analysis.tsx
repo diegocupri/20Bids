@@ -364,13 +364,16 @@ export function AnalysisPage() {
 
         // Advanced Metrics Calculations
         const bestDayStat = daysOfWeekStats.reduce((prev, curr) => (curr.return > prev.return) ? curr : prev, daysOfWeekStats[0]);
-        const bestDayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][bestDayStat.day];
+        const bestDayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][bestDayStat.day];
         const bestDayWR = bestDayStat.total > 0 ? (bestDayStat.wins / bestDayStat.total * 100) : 0;
 
         // Calculate Sessions (unique trading days) and Inversions per Day
         const uniqueDates = new Set(filteredEquity.map((d: any) => d.date));
         const sessions = uniqueDates.size;
-        const inversionsPerDay = sessions > 0 ? filteredEquity.length / sessions : 0;
+        // Inversions per day = total trades in the original data / total unique days in the data
+        const totalInvestments = data?.equityCurve?.length || 0;
+        const totalUniqueDays = new Set(data?.equityCurve?.map((d: any) => d.date) || []).size;
+        const inversionsPerDay = totalUniqueDays > 0 ? totalInvestments / totalUniqueDays : 0;
 
         const avgWin = totalWins > 0 ? sumWinReturns / totalWins : 0;
         const avgLoss = lossCount > 0 ? sumLossReturns / lossCount : 0;
@@ -1163,16 +1166,16 @@ export function AnalysisPage() {
                                         {optimizationData?.volumeStats?.length > 0 ? (
                                             <Plot
                                                 data={optimizationData.volumeStats.map((stat: any, idx: number) => {
-                                                    const pastelColors = [
-                                                        'rgba(167, 199, 231, 0.6)',  // Light Blue
-                                                        'rgba(199, 206, 234, 0.6)',  // Light Periwinkle
-                                                        'rgba(218, 191, 222, 0.6)',  // Light Lavender
-                                                        'rgba(232, 189, 214, 0.6)',  // Light Pink
-                                                        'rgba(241, 203, 195, 0.6)',  // Light Peach
-                                                        'rgba(245, 218, 195, 0.6)'   // Light Apricot
+                                                    const techColors = [
+                                                        'rgba(0, 200, 255, 0.4)',    // Cyan
+                                                        'rgba(130, 80, 255, 0.4)',   // Electric Purple
+                                                        'rgba(0, 255, 180, 0.4)',    // Neon Green
+                                                        'rgba(255, 80, 180, 0.4)',   // Hot Pink
+                                                        'rgba(255, 180, 0, 0.4)',    // Amber
+                                                        'rgba(80, 180, 255, 0.4)'    // Sky Blue
                                                     ];
                                                     const borderColors = [
-                                                        '#7EB0D5', '#9AADD0', '#C4A8D0', '#D59AC1', '#E0A8A0', '#E5C0A0'
+                                                        '#00C8FF', '#8250FF', '#00FFB4', '#FF50B4', '#FFB400', '#50B4FF'
                                                     ];
                                                     return {
                                                         y: stat.values || [],
@@ -1182,7 +1185,7 @@ export function AnalysisPage() {
                                                         boxpoints: 'all',
                                                         jitter: 0.5,
                                                         pointpos: -1.8,
-                                                        fillcolor: pastelColors[idx % 6],
+                                                        fillcolor: techColors[idx % 6],
                                                         line: { color: borderColors[idx % 6] },
                                                         showlegend: false
                                                     };
