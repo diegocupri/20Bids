@@ -477,8 +477,11 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
 
                             // Calculate MVSO: ((HighPost1020 - Ref1020) / Ref1020) * 100
                             // Backend stores highPost1020 in rec.high field (see index.ts line 65)
-                            // Use rec.high for historical, NOT update.high (which is live day high)
-                            const highAfter1020 = rec.high || 0;
+                            // For LIVE data: use MAX(rec.high, livePrice) since DB may not be updated yet
+                            // For HISTORICAL data: use rec.high only
+                            const isToday = new Date(rec.date).toDateString() === new Date().toDateString();
+                            const storedHigh = rec.high || 0;
+                            const highAfter1020 = isToday && livePrice > storedHigh ? livePrice : storedHigh;
                             const mvso = (highAfter1020 && refPrice)
                                 ? ((highAfter1020 - refPrice) / refPrice) * 100
                                 : 0;
