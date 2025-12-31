@@ -187,7 +187,7 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                                     className={cn(
                                         "w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm transition-all duration-200 border border-transparent",
                                         isSelected
-                                            ? "bg-white dark:bg-zinc-800 border-border-primary/50 shadow-sm text-text-primary font-medium"
+                                            ? "bg-white border-border-primary/50 shadow-sm text-text-primary font-medium"
                                             : "text-text-secondary hover:bg-bg-secondary hover:text-text-primary"
                                     )}
                                 >

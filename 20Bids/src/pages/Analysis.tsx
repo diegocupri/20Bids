@@ -364,8 +364,13 @@ export function AnalysisPage() {
 
         // Advanced Metrics Calculations
         const bestDayStat = daysOfWeekStats.reduce((prev, curr) => (curr.return > prev.return) ? curr : prev, daysOfWeekStats[0]);
-        const bestDayName = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][bestDayStat.day];
+        const bestDayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][bestDayStat.day];
         const bestDayWR = bestDayStat.total > 0 ? (bestDayStat.wins / bestDayStat.total * 100) : 0;
+
+        // Calculate Sessions (unique trading days) and Inversions per Day
+        const uniqueDates = new Set(filteredEquity.map((d: any) => d.date));
+        const sessions = uniqueDates.size;
+        const inversionsPerDay = sessions > 0 ? filteredEquity.length / sessions : 0;
 
         const avgWin = totalWins > 0 ? sumWinReturns / totalWins : 0;
         const avgLoss = lossCount > 0 ? sumLossReturns / lossCount : 0;
@@ -448,7 +453,10 @@ export function AnalysisPage() {
                 avgR,
                 expectancy,
                 reliability,
-                reliabilityColor
+                reliabilityColor,
+                // New metrics
+                sessions,
+                inversionsPerDay
             }
         }
 
@@ -660,8 +668,8 @@ export function AnalysisPage() {
                         </div>
                     </div>
 
-                    {/* Advanced Intraday Metrics Grid (4 Cards) */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    {/* Advanced Intraday Metrics Grid (6 Cards) */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
                         {/* 1. Profit Factor */}
                         <TerminalMetric
                             label="Profit Factor"
@@ -692,6 +700,22 @@ export function AnalysisPage() {
                             value={`${(riskMetrics as any).expectancy?.toFixed(2)}%`}
                             subValue="Per Trade"
                             trend={(riskMetrics as any).expectancy > 0 ? 'up' : 'down'}
+                        />
+
+                        {/* 5. Sessions (NEW) */}
+                        <TerminalMetric
+                            label="Sessions"
+                            value={`${(riskMetrics as any).sessions || 0}`}
+                            subValue="Days Traded"
+                            trend="neutral"
+                        />
+
+                        {/* 6. Inversions/Day (NEW) */}
+                        <TerminalMetric
+                            label="Inversions/Day"
+                            value={`${(riskMetrics as any).inversionsPerDay?.toFixed(1) || '0'}`}
+                            subValue="Avg Per Session"
+                            trend="neutral"
                         />
                     </div>
 
@@ -1138,18 +1162,31 @@ export function AnalysisPage() {
                                     <div className="flex-1 w-full min-h-0">
                                         {optimizationData?.volumeStats?.length > 0 ? (
                                             <Plot
-                                                data={optimizationData.volumeStats.map((stat: any) => ({
-                                                    y: stat.values || [],
-                                                    type: 'box',
-                                                    name: stat.segment,
-                                                    marker: { color: 'rgba(59, 130, 246, 0.3)', line: { color: '#3b82f6', width: 1 }, size: 2 },
-                                                    boxpoints: 'all',
-                                                    jitter: 0.5,
-                                                    pointpos: -1.8,
-                                                    fillcolor: 'rgba(59, 130, 246, 0.1)',
-                                                    line: { color: '#3b82f6' },
-                                                    showlegend: false
-                                                }))}
+                                                data={optimizationData.volumeStats.map((stat: any, idx: number) => {
+                                                    const pastelColors = [
+                                                        'rgba(167, 199, 231, 0.6)',  // Light Blue
+                                                        'rgba(199, 206, 234, 0.6)',  // Light Periwinkle
+                                                        'rgba(218, 191, 222, 0.6)',  // Light Lavender
+                                                        'rgba(232, 189, 214, 0.6)',  // Light Pink
+                                                        'rgba(241, 203, 195, 0.6)',  // Light Peach
+                                                        'rgba(245, 218, 195, 0.6)'   // Light Apricot
+                                                    ];
+                                                    const borderColors = [
+                                                        '#7EB0D5', '#9AADD0', '#C4A8D0', '#D59AC1', '#E0A8A0', '#E5C0A0'
+                                                    ];
+                                                    return {
+                                                        y: stat.values || [],
+                                                        type: 'box',
+                                                        name: stat.segment,
+                                                        marker: { color: borderColors[idx % 6], line: { color: borderColors[idx % 6], width: 1 }, size: 2 },
+                                                        boxpoints: 'all',
+                                                        jitter: 0.5,
+                                                        pointpos: -1.8,
+                                                        fillcolor: pastelColors[idx % 6],
+                                                        line: { color: borderColors[idx % 6] },
+                                                        showlegend: false
+                                                    };
+                                                })}
                                                 layout={{
                                                     autosize: true,
                                                     margin: { l: 50, r: 20, t: 20, b: 60 },
@@ -1158,7 +1195,8 @@ export function AnalysisPage() {
                                                         zeroline: true,
                                                         zerolinecolor: '#e5e7eb',
                                                         gridcolor: '#f3f4f6',
-                                                        tickfont: { size: 10, color: '#64748b' }
+                                                        tickfont: { size: 10, color: '#64748b' },
+                                                        range: [-2, 20]  // Clamp Y-axis to max 20%
                                                     },
                                                     xaxis: {
                                                         tickfont: { size: 10, color: '#64748b' },
@@ -1171,7 +1209,7 @@ export function AnalysisPage() {
                                                     font: { family: 'Inter, sans-serif', size: 11, color: '#64748b' },
                                                     annotations: optimizationData.volumeStats.map((stat: any) => ({
                                                         x: stat.segment,
-                                                        y: stat.max + 2,
+                                                        y: Math.min(stat.max + 2, 19),  // Keep annotations within clamped range
                                                         text: `n=${stat.count}`,
                                                         showarrow: false,
                                                         font: { size: 9, color: '#9ca3af' }
@@ -1394,7 +1432,7 @@ function TerminalMetric({
     const colorClass = trend === 'up' ? 'text-emerald-500' : trend === 'down' ? 'text-rose-500' : 'text-gray-400';
 
     return (
-        <div className="bg-white rounded-xl p-4 border border-gray-200 flex flex-col justify-between hover:border-gray-300 transition-colors h-24" title={tooltip}>
+        <div className="bg-white rounded-xl p-4 border border-gray-100 flex flex-col justify-between hover:border-gray-200 transition-colors h-24" title={tooltip}>
             <span className="text-xs font-medium text-gray-500 font-sans tracking-wide uppercase">
                 {label}
             </span>
