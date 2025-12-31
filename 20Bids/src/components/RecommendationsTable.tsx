@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Settings, Maximize2, Minimize2, TrendingDown, BarChart2, DollarSign, Activity } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Settings, Maximize2, Minimize2, TrendingDown, BarChart2, DollarSign, Activity, Zap } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { fetchRecommendations, fetchPrices, fetchIndices, fetchTradeLogs } from '../api/client';
 import type { TradeLog } from '../api/client';
@@ -242,107 +242,123 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                 </div>
             )}
 
-            {/* Header / Filters */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border-primary/50 bg-bg-primary relative z-20">
-                <h2 className="text-lg font-bold text-text-primary tracking-tight flex items-center gap-2">
-                    Market Opportunities
-                </h2>
+            {/* Header / Filters - Redesigned to match Analysis.tsx */}
+            <div className="sticky top-0 z-30 bg-bg-primary/95 backdrop-blur pt-4 pb-4 border-b border-border-primary/50 px-6">
+                <div className="flex flex-col xl:flex-row items-center justify-between gap-4">
+                    {/* Left: Title & Indices */}
+                    <div className="flex items-center gap-6 w-full xl:w-auto justify-between xl:justify-start">
+                        <h2 className="text-lg font-bold text-text-primary uppercase tracking-wider flex items-center gap-2 whitespace-nowrap">
+                            <span className="inline-block w-2 h-2 rounded-full bg-accent-primary"></span>
+                            MARKET OPPORTUNITIES
+                        </h2>
 
-                <div className="flex items-center gap-6">
-                    {/* Market Indices */}
-                    <div className="flex items-center gap-4 mr-6 border-r border-border-primary/50 pr-6 hidden md:flex">
-                        {indices.map(idx => (
-                            <div key={idx.symbol} className="flex items-center gap-2 text-xs">
-                                <span className="font-bold text-text-primary">{idx.symbol === 'VIXY' ? 'VIX' : idx.symbol}</span>
-                                <span className={cn(
-                                    "font-medium tabular-nums",
-                                    idx.change >= 0 ? "text-emerald-600" : "text-rose-600"
-                                )}>
-                                    {idx.price.toFixed(2)}
-                                    <span className="ml-1 opacity-60 text-[10px]">
-                                        {idx.change >= 0 ? '+' : ''}{idx.change.toFixed(2)}%
+                        {/* Indices - Styled as a group */}
+                        <div className="hidden md:flex items-center gap-4 bg-bg-secondary/30 px-3 py-1.5 rounded-lg border border-border-primary/30">
+                            {indices.map((idx, i) => (
+                                <div key={idx.symbol} className={cn("flex items-center gap-2 text-xs", i < indices.length - 1 && "border-r border-border-primary/30 pr-4")}>
+                                    <span className="font-bold text-text-primary">{idx.symbol === 'VIXY' ? 'VIX' : idx.symbol}</span>
+                                    <span className={cn(
+                                        "font-medium tabular-nums",
+                                        idx.change >= 0 ? "text-emerald-600" : "text-rose-600"
+                                    )}>
+                                        {idx.price.toFixed(2)}
+                                        <span className="ml-1 opacity-60 text-[10px]">
+                                            {idx.change >= 0 ? '+' : ''}{idx.change.toFixed(2)}%
+                                        </span>
                                     </span>
-                                </span>
-                            </div>
-                        ))}
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        {/* MVSO Threshold Input */}
-                        <div className="flex items-center h-8 bg-bg-secondary rounded-lg px-3 group hover:bg-bg-tertiary transition-colors border border-transparent hover:border-border-primary/50 gap-1.5">
-                            <Activity size={14} className="text-text-secondary group-hover:text-accent-primary" />
-                            <label className="text-xs font-bold text-text-primary select-none">MVSO</label>
-                            <input
-                                type="number"
-                                step="0.1"
-                                value={mvsoThreshold}
-                                onChange={(e) => onMvsoThresholdChange(parseFloat(e.target.value) || 0)}
-                                className="w-10 bg-transparent text-xs font-normal font-sans text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
-                            />
-                            <span className="text-[10px] text-text-secondary opacity-50">%</span>
+                    {/* Right: Filters Grouped */}
+                    <div className="flex items-center gap-4 w-full xl:w-auto justify-end">
+                        <div className="flex items-center gap-1.5 bg-bg-secondary/30 p-1 rounded-lg border border-border-primary/30 overflow-x-auto max-w-full">
+                            {/* MVSO */}
+                            <div className="flex items-center gap-1.5 px-2 py-1 group hover:bg-white/5 rounded transition-colors shrink-0">
+                                <Activity size={14} className="text-text-secondary group-hover:text-accent-primary" />
+                                <label className="text-xs font-bold text-text-primary select-none whitespace-nowrap">MVSO</label>
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    value={mvsoThreshold}
+                                    onChange={(e) => onMvsoThresholdChange(parseFloat(e.target.value) || 0)}
+                                    className="w-8 bg-transparent text-xs font-normal font-sans text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
+                                />
+                                <span className="text-[10px] text-text-secondary opacity-50">%</span>
+                            </div>
+
+                            <div className="w-px h-5 bg-border-primary/30 shrink-0"></div>
+
+                            {/* Vol */}
+                            <div className="flex items-center gap-1.5 px-2 py-1 group hover:bg-white/5 rounded transition-colors shrink-0">
+                                <BarChart2 size={14} className="text-text-secondary group-hover:text-accent-primary" />
+                                <label className="text-xs font-bold text-text-primary select-none whitespace-nowrap">Vol</label>
+                                <input
+                                    type="number"
+                                    value={minVolume}
+                                    onChange={(e) => setMinVolume(parseFloat(e.target.value) || 0)}
+                                    placeholder="0"
+                                    className="w-8 bg-transparent text-xs font-normal font-sans text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
+                                />
+                                <span className="text-[10px] text-text-secondary opacity-50">M</span>
+                            </div>
+
+                            <div className="w-px h-5 bg-border-primary/30 shrink-0"></div>
+
+                            {/* Min $ */}
+                            <div className="flex items-center gap-1.5 px-2 py-1 group hover:bg-white/5 rounded transition-colors shrink-0">
+                                <DollarSign size={14} className="text-text-secondary group-hover:text-accent-primary" />
+                                <label className="text-xs font-bold text-text-primary select-none whitespace-nowrap">Min $</label>
+                                <input
+                                    type="number"
+                                    value={minOpenPrice}
+                                    onChange={(e) => setMinOpenPrice(parseFloat(e.target.value) || 0)}
+                                    placeholder="0"
+                                    className="w-8 bg-transparent text-xs font-normal font-sans text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
+                                />
+                            </div>
+
+                            <div className="w-px h-5 bg-border-primary/30 shrink-0"></div>
+
+                            {/* SL */}
+                            <div className="flex items-center gap-1.5 px-2 py-1 group hover:bg-white/5 rounded transition-colors shrink-0">
+                                <TrendingDown size={14} className="text-rose-500" />
+                                <label className="text-xs font-bold text-text-primary select-none whitespace-nowrap">SL</label>
+                                <input
+                                    type="number"
+                                    step="0.5"
+                                    value={stopLossThreshold}
+                                    onChange={(e) => onStopLossThresholdChange(parseFloat(e.target.value) || 0)}
+                                    placeholder="5"
+                                    className="w-8 bg-transparent text-xs font-normal font-sans text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
+                                />
+                                <span className="text-[10px] text-text-secondary opacity-50">%</span>
+                            </div>
                         </div>
 
-                        {/* Min Volume Input */}
-                        <div className="flex items-center h-8 bg-bg-secondary rounded-lg px-3 group hover:bg-bg-tertiary transition-colors border border-transparent hover:border-border-primary/50 gap-1.5">
-                            <BarChart2 size={14} className="text-text-secondary group-hover:text-accent-primary" />
-                            <label className="text-xs font-bold text-text-primary select-none">Vol</label>
-                            <input
-                                type="number"
-                                value={minVolume}
-                                onChange={(e) => setMinVolume(parseFloat(e.target.value) || 0)}
-                                placeholder="0"
-                                className="w-10 bg-transparent text-xs font-normal font-sans text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
-                            />
-                            <span className="text-[10px] text-text-secondary opacity-50">M</span>
-                        </div>
+                        {/* Controls Group */}
+                        <div className="flex items-center gap-2">
+                            {/* Trading Config Button */}
+                            {onOpenTradingModal && (
+                                <button
+                                    onClick={onOpenTradingModal}
+                                    className="w-8 h-8 flex items-center justify-center bg-bg-secondary hover:bg-bg-tertiary text-text-secondary hover:text-text-primary rounded-lg transition-all border border-transparent hover:border-border-primary/50"
+                                    title="Trading Configuration"
+                                >
+                                    <Settings className="w-4 h-4" />
+                                </button>
+                            )}
 
-                        {/* Min Open Price Input */}
-                        <div className="flex items-center h-8 bg-bg-secondary rounded-lg px-3 group hover:bg-bg-tertiary transition-colors border border-transparent hover:border-border-primary/50 gap-1.5">
-                            <DollarSign size={14} className="text-text-secondary group-hover:text-accent-primary" />
-                            <label className="text-xs font-bold text-text-primary select-none">Min $</label>
-                            <input
-                                type="number"
-                                value={minOpenPrice}
-                                onChange={(e) => setMinOpenPrice(parseFloat(e.target.value) || 0)}
-                                placeholder="0"
-                                className="w-10 bg-transparent text-xs font-normal font-sans text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
-                            />
-                        </div>
-
-                        {/* Stop Loss Threshold Input */}
-                        <div className="flex items-center h-8 bg-bg-secondary rounded-lg px-3 group hover:bg-bg-tertiary transition-colors border border-transparent hover:border-border-primary/50 gap-1.5">
-                            <TrendingDown size={14} className="text-rose-500" />
-                            <label className="text-xs font-bold text-text-primary select-none">SL</label>
-                            <input
-                                type="number"
-                                step="0.5"
-                                value={stopLossThreshold}
-                                onChange={(e) => onStopLossThresholdChange(parseFloat(e.target.value) || 0)}
-                                placeholder="5"
-                                className="w-10 bg-transparent text-xs font-normal font-sans text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
-                            />
-                            <span className="text-[10px] text-text-secondary opacity-50">%</span>
-                        </div>
-
-                        {/* Trading Config Button */}
-                        {onOpenTradingModal && (
+                            {/* Discrete Extended Hours Toggle */}
                             <button
-                                onClick={onOpenTradingModal}
-                                className="w-8 h-8 flex items-center justify-center bg-bg-secondary hover:bg-bg-tertiary text-text-secondary hover:text-text-primary rounded-lg transition-all border border-transparent hover:border-border-primary/50"
-                                title="Trading Configuration"
+                                onClick={() => setShowExtraHours(!showExtraHours)}
+                                className="p-2 text-text-secondary hover:text-text-primary transition-colors hover:bg-bg-secondary rounded-lg"
+                                title={showExtraHours ? "Hide Extended Hours" : "Show Extended Hours"}
                             >
-                                <Settings className="w-4 h-4" />
+                                {showExtraHours ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                             </button>
-                        )}
-
-                        {/* Discrete Extended Hours Toggle */}
-                        <button
-                            onClick={() => setShowExtraHours(!showExtraHours)}
-                            className="p-1.5 text-text-secondary hover:text-text-primary transition-colors ml-auto"
-                            title={showExtraHours ? "Hide Extended Hours" : "Show Extended Hours"}
-                        >
-                            {showExtraHours ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                        </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -536,7 +552,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                                                 onMouseEnter={(e) => setTradeHover({ symbol: rec.symbol, x: e.clientX, y: e.clientY })}
                                                                 onMouseLeave={() => setTradeHover(null)}
                                                             >
-                                                                <span className="text-[10px] font-black bg-blue-500 text-white px-1 py-0.5 rounded tracking-tighter">IN</span>
+                                                                <Zap className="w-3 h-3 text-amber-300/60 fill-amber-300/10" />
                                                                 {tradeHover?.symbol === rec.symbol && (
                                                                     <div
                                                                         className="fixed z-50 bg-white rounded-xl shadow-2xl border border-gray-100 p-4 min-w-[200px]"
