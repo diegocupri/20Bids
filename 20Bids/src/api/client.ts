@@ -96,3 +96,28 @@ export const fetchSocialSentiment = async (ticker: string) => {
     return response.json();
 };
 
+export interface TradeLog {
+    id: number;
+    symbol: string;
+    quantity: number;
+    entryPrice: number;
+    takeProfitPrice: number;
+    stopLossPrice: number;
+    parentOrderId: number;
+    tpOrderId: number;
+    slOrderId: number;
+    status: string;
+    errorMessage?: string;
+    executedAt: string;
+}
+
+export const fetchTradeLogs = async (): Promise<TradeLog[]> => {
+    try {
+        const response = await fetch(`${API_URL}/trading/logs`);
+        if (!response.ok) return [];
+        return response.json();
+    } catch (error) {
+        console.error('Failed to fetch trade logs:', error);
+        return [];
+    }
+};

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Zap } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { fetchRecommendations, fetchPrices, updateTag, fetchIndices } from '../api/client';
+import { fetchRecommendations, fetchPrices, updateTag, fetchIndices, fetchTradeLogs } from '../api/client';
+import type { TradeLog } from '../api/client';
 
 const TAG_COLORS = [
     '#ef4444', // Red
@@ -35,6 +36,8 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
     const [tagPopover, setTagPopover] = useState<{ symbol: string, x: number, y: number } | null>(null);
     const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: 'asc' | 'desc' }>({ key: 'probabilityValue', direction: 'desc' });
     const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+    const [tradeLogs, setTradeLogs] = useState<TradeLog[]>([]);
+    const [tradeHover, setTradeHover] = useState<{ symbol: string, x: number, y: number } | null>(null);
 
     // Persistent Filter States
     const [showExtraHours, setShowExtraHours] = useState(() => {
@@ -69,6 +72,15 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
         const interval = setInterval(loadIndices, 60000); // Poll every minute
         return () => clearInterval(interval);
     }, []);
+
+    // Fetch Trade Logs
+    useEffect(() => {
+        const loadTradeLogs = async () => {
+            const logs = await fetchTradeLogs();
+            setTradeLogs(logs);
+        };
+        loadTradeLogs();
+    }, [selectedDate]);
 
     useEffect(() => {
         const loadData = async () => {
@@ -537,6 +549,57 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                             <div className="flex flex-col min-w-0">
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-bold text-text-primary text-sm tracking-tight">{rec.symbol}</span>
+                                                    {/* Trade Status Icon */}
+                                                    {(() => {
+                                                        const trade = tradeLogs.find(t => t.symbol === rec.symbol);
+                                                        if (!trade) return null;
+                                                        return (
+                                                            <div
+                                                                className="relative"
+                                                                onMouseEnter={(e) => setTradeHover({ symbol: rec.symbol, x: e.clientX, y: e.clientY })}
+                                                                onMouseLeave={() => setTradeHover(null)}
+                                                            >
+                                                                <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                                                                {tradeHover?.symbol === rec.symbol && (
+                                                                    <div
+                                                                        className="fixed z-50 bg-white rounded-xl shadow-2xl border border-gray-100 p-4 min-w-[200px]"
+                                                                        style={{ top: (tradeHover?.y ?? 0) - 120, left: (tradeHover?.x ?? 0) + 10 }}
+                                                                    >
+                                                                        <div className="text-xs font-semibold text-gray-500 mb-2">
+                                                                            {new Date(trade.executedAt).toLocaleDateString('es-ES')}
+                                                                        </div>
+                                                                        <div className="space-y-1.5">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                                                                                <span className="text-xs text-gray-600">Entry</span>
+                                                                                <span className="text-xs font-bold text-gray-900 ml-auto">${trade.entryPrice.toFixed(2)}</span>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                                                                <span className="text-xs text-gray-600">TP</span>
+                                                                                <span className="text-xs font-bold text-emerald-600 ml-auto">${trade.takeProfitPrice.toFixed(2)}</span>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                                                                                <span className="text-xs text-gray-600">SL</span>
+                                                                                <span className="text-xs font-bold text-rose-600 ml-auto">${trade.stopLossPrice.toFixed(2)}</span>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
+                                                                                <span className="text-xs text-gray-600">Qty</span>
+                                                                                <span className="text-xs font-bold text-gray-900 ml-auto">{trade.quantity.toLocaleString()}</span>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="text-xs text-gray-600">Status</span>
+                                                                                <span className={`text-xs font-bold ml-auto ${trade.status === 'SUBMITTED' ? 'text-emerald-600' : trade.status === 'DRY_RUN' ? 'text-amber-600' : 'text-rose-600'}`}>
+                                                                                    {trade.status}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
                                                     <button
                                                         onClick={(e) => handleTradingViewClick(rec.symbol, e)}
                                                         className="text-text-secondary hover:text-accent-primary transition-colors opacity-0 group-hover:opacity-100"
