@@ -572,7 +572,7 @@ export function AnalysisPage() {
                                             setTakeProfit(val);
                                             localStorage.setItem('takeProfit', val.toString());
                                         }}
-                                        className="w-10 bg-transparent border-0 text-text-primary text-sm font-black font-sans text-right focus:outline-none focus:ring-0 p-0"
+                                        className="w-10 bg-transparent border-0 text-text-primary text-xs font-normal font-sans text-right focus:outline-none focus:ring-0 p-0"
                                     />
                                     <span className="text-[10px] text-text-secondary opacity-50">%</span>
                                 </div>
@@ -594,7 +594,7 @@ export function AnalysisPage() {
                                             const val = e.target.value === '' ? 100 : (parseFloat(e.target.value) || 100);
                                             setStopLoss(val);
                                         }}
-                                        className="w-10 bg-transparent border-0 text-text-primary text-sm font-black font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
+                                        className="w-10 bg-transparent border-0 text-text-primary text-xs font-normal font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
                                     />
                                     <span className="text-[10px] text-text-secondary opacity-50">%</span>
                                 </div>
@@ -613,7 +613,7 @@ export function AnalysisPage() {
                                         value={minVolume === 0 ? '' : minVolume}
                                         placeholder="Any"
                                         onChange={(e) => setMinVolume(parseFloat(e.target.value) || 0)}
-                                        className="w-14 bg-transparent border-0 text-text-primary text-sm font-black font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
+                                        className="w-14 bg-transparent border-0 text-text-primary text-xs font-normal font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
                                     />
                                 </div>
 
@@ -630,7 +630,7 @@ export function AnalysisPage() {
                                         value={minPrice === 0 ? '' : minPrice}
                                         placeholder="0"
                                         onChange={(e) => setMinPrice(parseFloat(e.target.value) || 0)}
-                                        className="w-9 bg-transparent border-0 text-text-primary text-sm font-black font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
+                                        className="w-9 bg-transparent border-0 text-text-primary text-xs font-normal font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
                                     />
                                 </div>
 
@@ -648,7 +648,7 @@ export function AnalysisPage() {
                                         value={minProb === 0 ? '' : minProb}
                                         placeholder="0"
                                         onChange={(e) => setMinProb(parseInt(e.target.value) || 0)}
-                                        className="w-9 bg-transparent border-0 text-text-primary text-sm font-black font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
+                                        className="w-9 bg-transparent border-0 text-text-primary text-xs font-normal font-sans text-right focus:outline-none focus:ring-0 placeholder:text-text-secondary/50 p-0"
                                     />
                                     <span className="text-[10px] text-text-secondary opacity-50">%</span>
                                 </div>
