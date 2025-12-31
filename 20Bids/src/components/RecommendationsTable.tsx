@@ -1,18 +1,10 @@
 import { useState, useEffect } from 'react';
-import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Zap } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Target, Maximize2, Minimize2 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { fetchRecommendations, fetchPrices, updateTag, fetchIndices, fetchTradeLogs } from '../api/client';
+import { fetchRecommendations, fetchPrices, fetchIndices, fetchTradeLogs } from '../api/client';
 import type { TradeLog } from '../api/client';
 
-const TAG_COLORS = [
-    '#ef4444', // Red
-    '#f97316', // Orange
-    '#eab308', // Yellow
-    '#22c55e', // Green
-    '#06b6d4', // Cyan
-    '#3b82f6', // Blue
-    '#a855f7', // Purple
-];
+
 
 interface RecommendationsTableProps {
     selectedDate: Date;
@@ -33,9 +25,8 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
     const [recommendations, setRecommendations] = useState<any[]>([]);
     const [prices, setPrices] = useState<Record<string, { price: number, change: number, refPrice1020?: number, volume?: number, sector?: string, open?: number, high?: number }>>({});
     const [indices, setIndices] = useState<any[]>([]);
-    const [tagPopover, setTagPopover] = useState<{ symbol: string, x: number, y: number } | null>(null);
     const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: 'asc' | 'desc' }>({ key: 'probabilityValue', direction: 'desc' });
-    const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+    const [selectedSymbols, setSelectedSymbols] = useState<Set<string>>(new Set());
     const [tradeLogs, setTradeLogs] = useState<TradeLog[]>([]);
     const [tradeHover, setTradeHover] = useState<{ symbol: string, x: number, y: number } | null>(null);
 
@@ -130,31 +121,6 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
         return () => clearInterval(interval);
     }, [selectedDate]);
 
-    const handleTagClick = async (symbol: string, e: React.MouseEvent) => {
-        e.stopPropagation();
-        const rect = e.currentTarget.getBoundingClientRect();
-        setTagPopover({ symbol, x: rect.left, y: rect.bottom + 5 });
-    };
-
-    const handleColorSelect = async (color: string | null) => {
-        if (!tagPopover) return;
-
-        // Optimistic update
-        setRecommendations(prev => prev.map(r =>
-            r.symbol === tagPopover.symbol ? { ...r, userTag: color } : r
-        ));
-
-        try {
-            await updateTag(tagPopover.symbol, color);
-        } catch (error) {
-            console.error('Failed to update tag:', error);
-            // Revert on error
-            const data = await fetchRecommendations(selectedDate);
-            setRecommendations(data);
-        }
-        setTagPopover(null);
-    };
-
     const handleTradingViewClick = (symbol: string, e: React.MouseEvent) => {
         e.stopPropagation();
         window.open(`https://www.tradingview.com/chart/?symbol=${symbol}`, '_blank');
@@ -226,7 +192,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
             return 0;
         });
 
-    const [selectedSymbols, setSelectedSymbols] = useState<Set<string>>(new Set());
+
 
     const toggleSelection = (symbol: string) => {
         const newSelection = new Set(selectedSymbols);
@@ -283,19 +249,6 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                 </h2>
 
                 <div className="flex items-center gap-6">
-                    {/* Toggle Extra Hours */}
-                    <button
-                        onClick={() => setShowExtraHours(!showExtraHours)}
-                        className={cn(
-                            "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 border",
-                            showExtraHours
-                                ? "bg-accent-primary text-white border-accent-primary shadow-sm"
-                                : "bg-bg-secondary text-text-secondary border-transparent hover:text-text-primary hover:bg-bg-tertiary"
-                        )}
-                    >
-                        {showExtraHours ? 'Hide Extended' : 'Show Extended'}
-                    </button>
-
                     {/* Market Indices */}
                     <div className="flex items-center gap-4 mr-6 border-r border-border-primary/50 pr-6 hidden md:flex">
                         {indices.map(idx => (
@@ -378,10 +331,19 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                 onClick={onOpenTradingModal}
                                 className="flex items-center gap-1.5 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow-sm hover:shadow-md"
                             >
-                                <span className="text-[10px]">⚡</span>
+                                <Target className="w-3.5 h-3.5" />
                                 Trading
                             </button>
                         )}
+
+                        {/* Discrete Extended Hours Toggle */}
+                        <button
+                            onClick={() => setShowExtraHours(!showExtraHours)}
+                            className="p-1.5 text-text-secondary hover:text-text-primary transition-colors ml-auto"
+                            title={showExtraHours ? "Hide Extended Hours" : "Show Extended Hours"}
+                        >
+                            {showExtraHours ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -392,14 +354,20 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                     <thead className="sticky top-0 bg-bg-primary z-20">
                         <tr className="text-left text-text-secondary border-b border-border-primary/50 text-xs font-medium align-bottom">
                             <th className="pt-6 pb-3 pl-4 w-[4%]">
-                                <input
-                                    type="checkbox"
-                                    className="rounded border-border-primary text-accent-primary focus:ring-0 cursor-pointer"
-                                    checked={selectedSymbols.size === sortedData.length && sortedData.length > 0}
-                                    onChange={toggleAll}
-                                />
+                                <div
+                                    className={cn(
+                                        "w-4 h-4 rounded-full border-2 cursor-pointer transition-all flex items-center justify-center",
+                                        selectedSymbols.size === sortedData.length && sortedData.length > 0
+                                            ? "border-accent-primary bg-accent-primary"
+                                            : "border-border-primary hover:border-text-secondary"
+                                    )}
+                                    onClick={toggleAll}
+                                >
+                                    {selectedSymbols.size === sortedData.length && sortedData.length > 0 && (
+                                        <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                                    )}
+                                </div>
                             </th>
-                            <th className="pt-6 pb-3 w-[4%]"></th> {/* Tag Column */}
 
                             <th className="pt-6 pb-3 font-medium cursor-pointer hover:text-text-primary transition-colors w-[12%]" onClick={() => handleSort('symbol')}>
                                 <div className="flex items-center gap-1">Ticker <SortIcon column="symbol" /></div>
@@ -522,40 +490,44 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                     )}
                                 >
                                     <td className="py-3 pl-4" onClick={(e) => e.stopPropagation()}>
-                                        <input
-                                            type="checkbox"
-                                            checked={isSelected}
-                                            onChange={() => toggleSelection(rec.symbol)}
-                                            className="rounded border-border-primary text-accent-primary focus:ring-0 cursor-pointer"
-                                        />
-                                    </td>
-                                    <td className="py-3 pl-4">
-                                        <button
-                                            onClick={(e) => handleTagClick(rec.symbol, e)}
-                                            className="w-4 h-4 rounded-full border-2 border-border-primary flex items-center justify-center hover:border-text-primary transition-colors"
-                                            style={{ backgroundColor: rec.userTag || 'transparent', borderColor: rec.userTag ? 'transparent' : undefined }}
+                                        <div
+                                            onClick={() => toggleSelection(rec.symbol)}
+                                            className={cn(
+                                                "w-4 h-4 rounded-full border-2 cursor-pointer transition-all flex items-center justify-center",
+                                                isSelected
+                                                    ? "border-accent-primary bg-accent-primary"
+                                                    : "border-border-primary hover:border-text-secondary"
+                                            )}
                                         >
-                                            {!rec.userTag && <div className="w-1 h-1 rounded-full bg-text-secondary opacity-0 group-hover:opacity-50" />}
-                                        </button>
+                                            {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                        </div>
                                     </td>
                                     <td className="py-3">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-bg-secondary flex items-center justify-center">
-                                                {!failedImages.has(rec.symbol) ? (
-                                                    <img
-                                                        src={`https://financialmodelingprep.com/image-stock/${rec.symbol}.png`}
-                                                        alt={rec.symbol}
-                                                        className="w-full h-full object-contain"
-                                                        onError={() => setFailedImages(prev => new Set(prev).add(rec.symbol))}
-                                                    />
-                                                ) : (
-                                                    <span className="text-xs font-bold text-text-primary">{rec.symbol[0]}</span>
-                                                )}
+                                                {/* Removed failedImages state and usage */}
+                                                <img
+                                                    src={`https://financialmodelingprep.com/image-stock/${rec.symbol}.png`}
+                                                    alt={rec.symbol}
+                                                    className="w-full h-full object-contain"
+                                                    onError={(e) => {
+                                                        e.currentTarget.onerror = null; // Prevent infinite loop
+                                                        e.currentTarget.src = ''; // Hide broken image
+                                                        e.currentTarget.style.display = 'none'; // Hide the img tag
+                                                        const parent = e.currentTarget.parentElement;
+                                                        if (parent) {
+                                                            const fallbackSpan = document.createElement('span');
+                                                            fallbackSpan.className = 'text-xs font-bold text-text-primary';
+                                                            fallbackSpan.textContent = rec.symbol[0];
+                                                            parent.appendChild(fallbackSpan);
+                                                        }
+                                                    }}
+                                                />
                                             </div>
                                             <div className="flex flex-col min-w-0">
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-bold text-text-primary text-sm tracking-tight">{rec.symbol}</span>
-                                                    {/* Trade Status Icon */}
+                                                    {/* Trade Status Icon - IBKR Badge */}
                                                     {(() => {
                                                         const trade = tradeLogs.find(t => t.symbol === rec.symbol);
                                                         if (!trade) return null;
@@ -565,7 +537,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                                                 onMouseEnter={(e) => setTradeHover({ symbol: rec.symbol, x: e.clientX, y: e.clientY })}
                                                                 onMouseLeave={() => setTradeHover(null)}
                                                             >
-                                                                <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                                                                <span className="text-[9px] font-black bg-text-primary text-bg-primary px-1 py-0.5 rounded tracking-tighter">IBKR</span>
                                                                 {tradeHover?.symbol === rec.symbol && (
                                                                     <div
                                                                         className="fixed z-50 bg-white rounded-xl shadow-2xl border border-gray-100 p-4 min-w-[200px]"
@@ -778,35 +750,6 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                     </tbody>
                 </table>
             </div >
-
-            {/* Tag Popover */}
-            {
-                tagPopover && (
-                    <>
-                        <div className="fixed inset-0 z-40" onClick={() => setTagPopover(null)} />
-                        <div
-                            className="fixed z-50 bg-bg-secondary border border-border-primary rounded-lg shadow-xl p-2 grid grid-cols-3 gap-2 animate-in fade-in zoom-in-95 duration-200"
-                            style={{ top: tagPopover.y + 5, left: tagPopover.x }}
-                        >
-                            <button
-                                onClick={() => handleColorSelect(null)}
-                                className="w-6 h-6 rounded-full border border-text-secondary/50 flex items-center justify-center hover:bg-bg-tertiary"
-                                title="Clear"
-                            >
-                                <div className="w-3 h-0.5 bg-text-secondary rotate-45" />
-                            </button>
-                            {TAG_COLORS.map((color) => (
-                                <button
-                                    key={color}
-                                    onClick={() => handleColorSelect(color)}
-                                    className="w-6 h-6 rounded-full border border-transparent hover:scale-110 transition-transform"
-                                    style={{ backgroundColor: color }}
-                                />
-                            ))}
-                        </div>
-                    </>
-                )
-            }
         </div >
     );
 }
