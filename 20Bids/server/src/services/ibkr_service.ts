@@ -277,7 +277,7 @@ export class IBKRService {
 
             const positions: { symbol: string; quantity: number; avgCost: number; marketPrice: number; unrealizedPnL: number }[] = [];
 
-            const handler = (account: string, contract: Contract, pos: number, avgCost: number) => {
+            const handler = (account: any, contract: any, pos: any, avgCost: any) => {
                 if (pos !== 0) {
                     positions.push({
                         symbol: contract.symbol || '',
@@ -319,7 +319,7 @@ export class IBKRService {
 
             const orders: { orderId: number; symbol: string; action: string; quantity: number; orderType: string; price: number; status: string }[] = [];
 
-            const openOrderHandler = (orderId: number, contract: Contract, order: Order, orderState: any) => {
+            const openOrderHandler = (orderId: any, contract: any, order: any, orderState: any) => {
                 orders.push({
                     orderId: orderId,
                     symbol: contract.symbol || '',
