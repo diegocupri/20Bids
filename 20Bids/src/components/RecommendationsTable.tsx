@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Target, Maximize2, Minimize2 } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Settings, Maximize2, Minimize2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { fetchRecommendations, fetchPrices, fetchIndices, fetchTradeLogs } from '../api/client';
 import type { TradeLog } from '../api/client';
@@ -269,70 +269,65 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
 
                     <div className="flex items-center gap-4">
                         {/* MVSO Threshold Input */}
-                        <div className="flex items-center gap-2 group">
-                            <div className="flex items-center bg-bg-secondary rounded-lg px-2 py-1 transition-all group-hover:bg-bg-tertiary">
-                                <label className="text-[10px] font-bold text-text-primary mr-2">MVSO</label>
-                                <input
-                                    type="number"
-                                    step="0.1"
-                                    value={mvsoThreshold}
-                                    onChange={(e) => onMvsoThresholdChange(parseFloat(e.target.value) || 0)}
-                                    className="w-12 bg-transparent text-xs font-bold text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
-                                />
-                            </div>
+                        <div className="flex items-center h-8 bg-bg-secondary rounded-lg px-3 group hover:bg-bg-tertiary transition-colors border border-transparent hover:border-border-primary/50">
+                            <label className="text-xs font-bold text-text-primary mr-2 select-none">MVSO</label>
+                            <input
+                                type="number"
+                                step="0.1"
+                                value={mvsoThreshold}
+                                onChange={(e) => onMvsoThresholdChange(parseFloat(e.target.value) || 0)}
+                                className="w-12 bg-transparent text-sm font-normal text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
+                            />
+                            <span className="text-xs text-text-secondary ml-1">%</span>
                         </div>
 
                         {/* Min Volume Input */}
-                        <div className="flex items-center gap-2 group">
-                            <div className="flex items-center bg-bg-secondary rounded-lg px-2 py-1 transition-all group-hover:bg-bg-tertiary">
-                                <label className="text-[10px] font-bold text-text-primary mr-2">VOL (M)</label>
-                                <input
-                                    type="number"
-                                    value={minVolume}
-                                    onChange={(e) => setMinVolume(parseFloat(e.target.value) || 0)}
-                                    placeholder="0"
-                                    className="w-12 bg-transparent text-xs font-bold text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
-                                />
-                            </div>
+                        <div className="flex items-center h-8 bg-bg-secondary rounded-lg px-3 group hover:bg-bg-tertiary transition-colors border border-transparent hover:border-border-primary/50">
+                            <label className="text-xs font-bold text-text-primary mr-2 select-none">Vol</label>
+                            <input
+                                type="number"
+                                value={minVolume}
+                                onChange={(e) => setMinVolume(parseFloat(e.target.value) || 0)}
+                                placeholder="0"
+                                className="w-12 bg-transparent text-sm font-normal text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
+                            />
+                            <span className="text-xs text-text-secondary ml-1">M</span>
                         </div>
 
                         {/* Min Open Price Input */}
-                        <div className="flex items-center gap-2 group">
-                            <div className="flex items-center bg-bg-secondary rounded-lg px-2 py-1 transition-all group-hover:bg-bg-tertiary">
-                                <label className="text-[10px] font-bold text-text-primary mr-2">OPEN $</label>
-                                <input
-                                    type="number"
-                                    value={minOpenPrice}
-                                    onChange={(e) => setMinOpenPrice(parseFloat(e.target.value) || 0)}
-                                    placeholder="0"
-                                    className="w-12 bg-transparent text-xs font-bold text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
-                                />
-                            </div>
+                        <div className="flex items-center h-8 bg-bg-secondary rounded-lg px-3 group hover:bg-bg-tertiary transition-colors border border-transparent hover:border-border-primary/50">
+                            <label className="text-xs font-bold text-text-primary mr-2 select-none">Min $</label>
+                            <input
+                                type="number"
+                                value={minOpenPrice}
+                                onChange={(e) => setMinOpenPrice(parseFloat(e.target.value) || 0)}
+                                placeholder="0"
+                                className="w-12 bg-transparent text-sm font-normal text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
+                            />
                         </div>
 
                         {/* Stop Loss Threshold Input */}
-                        <div className="flex items-center gap-2 group">
-                            <div className="flex items-center bg-bg-secondary rounded-lg px-2 py-1 transition-all group-hover:bg-bg-tertiary">
-                                <label className="text-[10px] font-bold text-text-primary mr-2">SL %</label>
-                                <input
-                                    type="number"
-                                    step="0.5"
-                                    value={stopLossThreshold}
-                                    onChange={(e) => onStopLossThresholdChange(parseFloat(e.target.value) || 0)}
-                                    placeholder="5"
-                                    className="w-12 bg-transparent text-xs font-bold text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
-                                />
-                            </div>
+                        <div className="flex items-center h-8 bg-bg-secondary rounded-lg px-3 group hover:bg-bg-tertiary transition-colors border border-transparent hover:border-border-primary/50">
+                            <label className="text-xs font-bold text-text-primary mr-2 select-none">SL</label>
+                            <input
+                                type="number"
+                                step="0.5"
+                                value={stopLossThreshold}
+                                onChange={(e) => onStopLossThresholdChange(parseFloat(e.target.value) || 0)}
+                                placeholder="5"
+                                className="w-12 bg-transparent text-sm font-normal text-text-primary outline-none text-right tabular-nums focus:text-accent-primary"
+                            />
+                            <span className="text-xs text-text-secondary ml-1">%</span>
                         </div>
 
                         {/* Trading Config Button */}
                         {onOpenTradingModal && (
                             <button
                                 onClick={onOpenTradingModal}
-                                className="flex items-center gap-1.5 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow-sm hover:shadow-md"
+                                className="w-8 h-8 flex items-center justify-center bg-bg-secondary hover:bg-bg-tertiary text-text-secondary hover:text-text-primary rounded-lg transition-all border border-transparent hover:border-border-primary/50"
+                                title="Trading Configuration"
                             >
-                                <Target className="w-3.5 h-3.5" />
-                                Trading
+                                <Settings className="w-4 h-4" />
                             </button>
                         )}
 
@@ -537,7 +532,10 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                                                 onMouseEnter={(e) => setTradeHover({ symbol: rec.symbol, x: e.clientX, y: e.clientY })}
                                                                 onMouseLeave={() => setTradeHover(null)}
                                                             >
-                                                                <span className="text-[9px] font-black bg-text-primary text-bg-primary px-1 py-0.5 rounded tracking-tighter">IBKR</span>
+                                                                <svg viewBox="0 0 32 32" className="w-5 h-5" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                    <rect width="32" height="32" rx="6" fill="#000000" />
+                                                                    <path d="M7 8h4v16H7V8zm5 0h8v3h-5v3.5h5v3h-5v3.5h5v3h-8V8zm10 0h3.5l4 8-4 8h-3.5l3.5-8-3.5-8z" fill="#ffffff" />
+                                                                </svg>
                                                                 {tradeHover?.symbol === rec.symbol && (
                                                                     <div
                                                                         className="fixed z-50 bg-white rounded-xl shadow-2xl border border-gray-100 p-4 min-w-[200px]"
