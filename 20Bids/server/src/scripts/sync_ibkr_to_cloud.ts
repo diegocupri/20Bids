@@ -58,38 +58,60 @@ ib.on(EventName.positionEnd, () => {
     sendToCloud();
 });
 
-async function sendToCloud() {
-    if (hasEnded) return;
-    hasEnded = true;
+// Continuous Loop Implementation
+const SYNC_INTERVAL_MS = 60000; // 1 minute
+let isConnected = false;
 
+// Connect once
+ib.connect();
+isConnected = true;
+
+ib.on(EventName.connected, () => {
+    console.log('Connected to IBKR.');
+});
+
+ib.on(EventName.disconnected, () => {
+    console.log('Disconnected. Reconnecting...');
+    isConnected = false;
+    setTimeout(() => ib.connect(), 5000);
+});
+
+async function syncLoop() {
+    const now = new Date();
+    // Assuming local time is configured correctly or using UTC
+    // Market Open is 15:30 CET (Spain/User Time) or 9:30 ET
+    // User requested 16:25 (Spain?) -> Let's assume user knows when to run it.
+    // But we can just log the time.
+
+    console.log(`[${now.toLocaleTimeString()}] Fetching positions...`);
+    positions = []; // Clear previous
+    ib.reqPositions();
+
+    // Give it 3 seconds to gather positions, then send
+    setTimeout(sendToCloud, 3000);
+}
+
+// Start the loop
+console.log('Starting Sync Loop (Every 60s)...');
+syncLoop();
+setInterval(syncLoop, SYNC_INTERVAL_MS);
+
+// Modified sendToCloud to NOT exit process
+async function sendToCloud() {
     if (positions.length === 0) {
         console.log('No positions to sync.');
-        process.exit(0);
+        // Don't duplicate logic, just send empty array or skip
+        // If we send empty, we might clear previous stale data in DB? 
+        // Better to send empty so cloud knows we have 0 positions.
     }
 
     try {
-        console.log('Sending data to cloud...');
-        const response = await axios.post(CLOUD_WEBHOOK_URL, {
+        await axios.post(CLOUD_WEBHOOK_URL, {
             positions: positions
         });
-        console.log('Success:', response.data);
+        console.log(`Synced ${positions.length} positions to cloud.`);
     } catch (e: any) {
         console.error('Failed to sync to cloud:', e.message);
-        if (e.response) console.error('Response:', e.response.data);
-    } finally {
-        ib.disconnect();
-        process.exit(0);
     }
 }
 
-// Connect and Req Positions
-ib.connect();
-ib.reqPositions();
-
-// Timeout safety
-setTimeout(() => {
-    if (!hasEnded) {
-        console.log('Timeout waiting for positions. Sending what we have (if any)...');
-        sendToCloud();
-    }
-}, 10000); // 10s timeout
