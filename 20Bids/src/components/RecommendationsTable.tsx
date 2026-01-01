@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Settings, Maximize2, Minimize2, TrendingDown, BarChart2, DollarSign, Activity, Zap, RotateCcw } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { fetchRecommendations, fetchPrices, fetchIndices, fetchTradeLogs } from '../api/client';
+import { fetchRecommendations, fetchPrices, fetchIndices, fetchTradeLogs, API_URL } from '../api/client';
 import type { TradeLog } from '../api/client';
 
 
@@ -223,7 +223,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
             const dateStr = new Date(selectedDate).toISOString().split('T')[0];
             await fetch(`${API_URL}/admin/refresh-day?date=${dateStr}&action=refresh`, { method: 'POST' });
             // Reload data
-            if (onDataLoaded) onDataLoaded(); // Trigger parent reload if possible, otherwise we rely on polling
+            if (onDataLoaded) onDataLoaded([]); // Trigger parent reload if possible
             // Or force reload by toggling date
         } catch (e) {
             console.error('Refresh failed', e);
