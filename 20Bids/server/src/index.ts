@@ -958,6 +958,59 @@ app.get('/api/admin/diagnose-ticker', async (req, res) => {
     }
 });
 
+// Helper to refresh data for a specific date
+async function refreshDailyData(dateStr: string) {
+    const startOfDay = new Date(dateStr);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(dateStr);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
+    const recs = await prisma.recommendation.findMany({
+        where: { date: { gte: startOfDay, lte: endOfDay } }
+    });
+
+    console.log(`[Auto-Refresh] Found ${recs.length} records for ${dateStr}`);
+
+    let updatedCount = 0;
+    if (recs.length > 0) {
+        for (const rec of recs) {
+            try {
+                // Rate limit prevention
+                await new Promise(resolve => setTimeout(resolve, 200));
+
+                const intraday = await getIntradayStats(rec.symbol, dateStr);
+                if (intraday) {
+                    const updateData: any = {};
+                    if (intraday.mvso1020) {
+                        updateData.refPrice1020 = intraday.mvso1020.refPrice;
+                        updateData.high = intraday.mvso1020.highPost; // Save authentic high
+                        updateData.lowBeforePeak = intraday.mvso1020.lowBeforePeak;
+                    }
+                    if (intraday.mvso1120) {
+                        updateData.refPrice1120 = intraday.mvso1120.refPrice;
+                        updateData.highPost1120 = intraday.mvso1120.highPost;
+                    }
+                    if (intraday.mvso1220) {
+                        updateData.refPrice1220 = intraday.mvso1220.refPrice;
+                        updateData.highPost1220 = intraday.mvso1220.highPost;
+                    }
+
+                    if (Object.keys(updateData).length > 0) {
+                        await prisma.recommendation.update({
+                            where: { id: rec.id },
+                            data: updateData
+                        });
+                        updatedCount++;
+                    }
+                }
+            } catch (err) {
+                console.error(`[Auto-Refresh] Error updating ${rec.symbol}:`, err);
+            }
+        }
+    }
+    return updatedCount;
+}
+
 app.post('/api/admin/refresh-day', async (req, res) => {
     try {
         const { date, action } = req.query;
@@ -978,58 +1031,8 @@ app.post('/api/admin/refresh-day', async (req, res) => {
         console.log(`[Admin] Found ${recs.length} records.`);
 
         if (action === 'delete') {
-            if (recs.length > 0) {
-                const ids = recs.map(r => r.id);
-                await prisma.recommendation.deleteMany({ where: { id: { in: ids } } });
-                console.log(`[Admin] Deleted ${ids.length} records.`);
-                return res.json({ success: true, count: ids.length, message: 'Records deleted successfully.' });
-            } else {
-                return res.json({ success: true, count: 0, message: 'No records found to delete.' });
-            }
-        }
-
-        if (recs.length > 0) {
-            console.log(`[Admin] Starting refresh for ${recs.length} records...`);
-            let updatedCount = 0;
-
-            for (const rec of recs) {
-                try {
-                    // Rate limit prevention
-                    await new Promise(resolve => setTimeout(resolve, 200));
-
-                    const intraday = await getIntradayStats(rec.symbol, dateStr);
-                    if (intraday) {
-                        const updateData: any = {};
-                        if (intraday.mvso1020) {
-                            updateData.refPrice1020 = intraday.mvso1020.refPrice;
-                            updateData.high = intraday.mvso1020.highPost;
-                            updateData.lowBeforePeak = intraday.mvso1020.lowBeforePeak;
-                        }
-                        if (intraday.mvso1120) {
-                            updateData.refPrice1120 = intraday.mvso1120.refPrice;
-                            updateData.highPost1120 = intraday.mvso1120.highPost;
-                        }
-                        if (intraday.mvso1220) {
-                            updateData.refPrice1220 = intraday.mvso1220.refPrice;
-                            updateData.highPost1220 = intraday.mvso1220.highPost;
-                        }
-
-                        if (Object.keys(updateData).length > 0) {
-                            await prisma.recommendation.update({
-                                where: { id: rec.id },
-                                data: updateData
-                            });
-                            updatedCount++;
-                        }
-                    }
-                } catch (err) {
-                    console.error(`[Admin] Error updating ${rec.symbol}:`, err);
-                }
-            }
-            console.log(`[Admin] Refreshed ${updatedCount} records.`);
-        }
-
-        res.json({ success: true, count: recs.length, message: 'Refresh process triggered in background (awaited).' });
+            const count = await refreshDailyData(dateStr);
+        res.json({ success: true, count, message: 'Refresh process completed.' });
     } catch (error) {
         console.error('[Admin] Error refreshing/deleting day:', error);
         res.status(500).json({ error: 'Internal Server Error' });
@@ -1469,6 +1472,25 @@ app.get('/api/trading/positions', async (req, res) => {
 
 app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
+
+    // Auto-Refresh Background Task (Every 2 minutes)
+    setInterval(() => {
+        const now = new Date();
+        const nyTime = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+        const hour = nyTime.getHours();
+        const day = nyTime.getDay(); // 0 = Sun, 6 = Sat
+
+        // Run only Mon-Fri (1-5), between 9 AM and 4:30 PM ET
+        if (day >= 1 && day <= 5 && hour >= 9 && hour <= 16) {
+            const todayStr = now.toISOString().split('T')[0]; // Current UTC date matches Polygon query usually
+            // Use NY date string just to be safe if server is in different timezone
+            // const todayStr = nyTime.toISOString().split('T')[0]; 
+            // Better stick to UTC date since our DB stores UTC dates at 00:00
+
+            console.log(`[Background] Triggering auto-refresh for ${todayStr}`);
+            refreshDailyData(todayStr).catch(e => console.error('[Background] Refresh failed', e));
+        }
+    }, 120000); // 2 minutes
 
 });
 

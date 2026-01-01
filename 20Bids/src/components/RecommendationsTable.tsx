@@ -222,9 +222,13 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
         try {
             const dateStr = new Date(selectedDate).toISOString().split('T')[0];
             await fetch(`${API_URL}/admin/refresh-day?date=${dateStr}&action=refresh`, { method: 'POST' });
-            // Reload data
-            if (onDataLoaded) onDataLoaded([]); // Trigger parent reload if possible
-            // Or force reload by toggling date
+
+            // Reload data explicitly
+            const data = await fetchRecommendations(selectedDate);
+            if (Array.isArray(data)) {
+                setRecommendations(data);
+                if (onDataLoaded) onDataLoaded(data);
+            }
         } catch (e) {
             console.error('Refresh failed', e);
         }
