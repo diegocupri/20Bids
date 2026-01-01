@@ -1522,24 +1522,24 @@ app.get('/api/trading/positions', async (req, res) => {
 app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
 
-    // Auto-Refresh Background Task (Every 2 minutes)
-    setInterval(() => {
-        const now = new Date();
-        const nyTime = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
-        const hour = nyTime.getHours();
-        const day = nyTime.getDay(); // 0 = Sun, 6 = Sat
-
-        // Run only Mon-Fri (1-5), between 9 AM and 4:30 PM ET
-        if (day >= 1 && day <= 5 && hour >= 9 && hour <= 16) {
-            const todayStr = now.toISOString().split('T')[0]; // Current UTC date matches Polygon query usually
-            // Use NY date string just to be safe if server is in different timezone
-            // const todayStr = nyTime.toISOString().split('T')[0]; 
-            // Better stick to UTC date since our DB stores UTC dates at 00:00
-
-            console.log(`[Background] Triggering auto-refresh for ${todayStr}`);
-            refreshDailyData(todayStr).catch(e => console.error('[Background] Refresh failed', e));
-        }
-    }, 120000); // 2 minutes
+    // [DISABLED] Auto-Refresh Background Task
+    // This was causing memory issues on Render's free tier.
+    // Use the manual refresh button in the UI instead.
+    // To re-enable: uncomment the setInterval block below.
+    //
+    // setInterval(() => {
+    //     const now = new Date();
+    //     const nyTime = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+    //     const hour = nyTime.getHours();
+    //     const day = nyTime.getDay(); // 0 = Sun, 6 = Sat
+    //
+    //     // Run only Mon-Fri (1-5), between 9 AM and 4:30 PM ET
+    //     if (day >= 1 && day <= 5 && hour >= 9 && hour <= 16) {
+    //         const todayStr = now.toISOString().split('T')[0];
+    //         console.log(`[Background] Triggering auto-refresh for ${todayStr}`);
+    //         refreshDailyData(todayStr).catch(e => console.error('[Background] Refresh failed', e));
+    //     }
+    // }, 120000); // 2 minutes
 
 });
 
