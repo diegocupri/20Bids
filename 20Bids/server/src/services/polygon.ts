@@ -134,8 +134,21 @@ export async function getIntradayStats(ticker: string, dateStr: string): Promise
                 // START SCAN FROM NEXT BAR (refBarIndex + 1) because we enter at Close of refBar.
                 for (let i = refBarIndex + 1; i < bars.length; i++) {
                     const b = bars[i];
+
+                    // Simple timezone-agnostic check: 16:00 ET is usually close.
+                    // But to be safe vs timezone parsing issues, let's trust the data is within the single day requested.
+                    // We only stop if we are sure it's past 16:00 ET.
+                    // 16:00 ET = 20:00 UTC (Standard) or 21:00 UTC (Daylight)
+                    // Let's use the explicit conversion again but log if we are skipping
+
                     const bDate = new Date(b.t);
                     const bET = new Date(bDate.toLocaleString("en-US", { timeZone: "America/New_York" }));
+
+                    // Debug specific ticker
+                    if (ticker === 'APLD' && i % 60 === 0) {
+                        console.log(`[APLD Debug] Scanning bar ${i} at ${bET.toLocaleTimeString()} (h=${bET.getHours()}), High=${b.h}, Max=${maxHighAfter}`);
+                    }
+
                     if (bET.getHours() >= 16) break; // Stop at market close
 
                     if (b.h > maxHighAfter) {
@@ -144,6 +157,7 @@ export async function getIntradayStats(ticker: string, dateStr: string): Promise
                     }
                 }
                 const highPost = maxHighAfter === -Infinity ? refPrice : maxHighAfter;
+                if (ticker === 'APLD') console.log(`[APLD Debug] Final HighPost=${highPost}, Ref=${refPrice}`);
 
                 // 2. Find Lowest Low between Entry and Peak High
                 // WE ALSO START SCAN FROM NEXT BAR

@@ -449,11 +449,14 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                             const openPrice = update.open || rec.open || 0;
                             const highPrice = update.high || rec.high || 0;
 
-                            // Calculate change vs 10:20 if available, else use daily change
-                            // User Feedback: Always show standard Daily Change
-                            // Fallback: Calculate from high/open for historical data (where price often equals open)
+                            // Calculate change vs 10:20 Ref Price (User Requirement)
+                            // If RefPrice is available, Change = (Price - Ref) / Ref
+                            // Fallback to daily change if Ref is missing
                             let liveChange = update.change ?? rec.changePercent;
-                            if (liveChange === 0 && openPrice > 0 && highPrice > 0) {
+                            if (refPrice && refPrice > 0) {
+                                liveChange = ((livePrice - refPrice) / refPrice) * 100;
+                            } else if (liveChange === 0 && openPrice > 0 && highPrice > 0) {
+                                // Fallback for historical data if no ref price
                                 liveChange = ((highPrice - openPrice) / openPrice) * 100;
                             }
 
