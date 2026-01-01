@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Settings, Maximize2, Minimize2, TrendingDown, BarChart2, DollarSign, Activity, Zap } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Settings, Maximize2, Minimize2, TrendingDown, BarChart2, DollarSign, Activity, Zap, RotateCcw } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { fetchRecommendations, fetchPrices, fetchIndices, fetchTradeLogs } from '../api/client';
 import type { TradeLog } from '../api/client';
@@ -218,6 +218,18 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
         window.open(url, '_blank');
     };
 
+    const handleRefresh = async () => {
+        try {
+            const dateStr = new Date(selectedDate).toISOString().split('T')[0];
+            await fetch(`${API_URL}/admin/refresh-day?date=${dateStr}&action=refresh`, { method: 'POST' });
+            // Reload data
+            if (onDataLoaded) onDataLoaded(); // Trigger parent reload if possible, otherwise we rely on polling
+            // Or force reload by toggling date
+        } catch (e) {
+            console.error('Refresh failed', e);
+        }
+    };
+
     const SortIcon = ({ column }: { column: SortKey }) => {
         if (sortConfig.key !== column) return <ArrowUpDown className="w-3 h-3 text-border-primary ml-1 opacity-0 group-hover:opacity-50" />;
         return sortConfig.direction === 'asc'
@@ -348,6 +360,15 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                     <Settings className="w-4 h-4" />
                                 </button>
                             )}
+
+                            {/* Refresh Button - Discrete */}
+                            <button
+                                onClick={handleRefresh}
+                                className="w-8 h-8 flex items-center justify-center bg-bg-secondary hover:bg-bg-tertiary text-text-secondary hover:text-text-primary rounded-lg transition-all border border-transparent hover:border-border-primary/50"
+                                title="Refresh Data (Polygon)"
+                            >
+                                <RotateCcw className="w-4 h-4" />
+                            </button>
 
                             {/* Discrete Extended Hours Toggle */}
                             <button

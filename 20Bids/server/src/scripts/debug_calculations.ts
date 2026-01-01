@@ -67,4 +67,4 @@ async function debugTicker(ticker: string, dateStr: string) {
 }
 
 // Test with a ticker that likely has data for Dec 23
-debugTicker('AAPL', '2024-12-23');
+debugTicker('APLD', '2025-12-31');

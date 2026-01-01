@@ -989,7 +989,44 @@ app.post('/api/admin/refresh-day', async (req, res) => {
         }
 
         if (recs.length > 0) {
-            await refreshIntradayData(recs);
+            console.log(`[Admin] Starting refresh for ${recs.length} records...`);
+            let updatedCount = 0;
+
+            for (const rec of recs) {
+                try {
+                    // Rate limit prevention
+                    await new Promise(resolve => setTimeout(resolve, 200));
+
+                    const intraday = await getIntradayStats(rec.symbol, dateStr);
+                    if (intraday) {
+                        const updateData: any = {};
+                        if (intraday.mvso1020) {
+                            updateData.refPrice1020 = intraday.mvso1020.refPrice;
+                            updateData.high = intraday.mvso1020.highPost;
+                            updateData.lowBeforePeak = intraday.mvso1020.lowBeforePeak;
+                        }
+                        if (intraday.mvso1120) {
+                            updateData.refPrice1120 = intraday.mvso1120.refPrice;
+                            updateData.highPost1120 = intraday.mvso1120.highPost;
+                        }
+                        if (intraday.mvso1220) {
+                            updateData.refPrice1220 = intraday.mvso1220.refPrice;
+                            updateData.highPost1220 = intraday.mvso1220.highPost;
+                        }
+
+                        if (Object.keys(updateData).length > 0) {
+                            await prisma.recommendation.update({
+                                where: { id: rec.id },
+                                data: updateData
+                            });
+                            updatedCount++;
+                        }
+                    }
+                } catch (err) {
+                    console.error(`[Admin] Error updating ${rec.symbol}:`, err);
+                }
+            }
+            console.log(`[Admin] Refreshed ${updatedCount} records.`);
         }
 
         res.json({ success: true, count: recs.length, message: 'Refresh process triggered in background (awaited).' });
