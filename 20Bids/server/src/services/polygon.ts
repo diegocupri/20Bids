@@ -289,7 +289,7 @@ export async function fetchRealTimePrices(tickers: string[]) {
         const res = await axios.get(snapshotUrl, {
             params: {
                 apiKey: API_KEY,
-                tickers: tickers.join(',') // Filter server-side if supported, or client-side
+                // tickers: tickers.join(',') // Removed to avoid URL length issues and ensure we get data
             }
         });
 

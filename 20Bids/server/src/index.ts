@@ -1114,6 +1114,7 @@ app.post('/api/recommendations/upload', upload.array('files'), async (req, res) 
                     let highPost1120: number | undefined = undefined;
                     let refPrice1220: number | undefined = undefined;
                     let highPost1220: number | undefined = undefined;
+                    let lowBeforePeak: number | undefined = undefined;
 
                     try {
                         const intraday = await getIntradayStats(symbol, dateStr);
@@ -1121,6 +1122,7 @@ app.post('/api/recommendations/upload', upload.array('files'), async (req, res) 
                             if (intraday.mvso1020) {
                                 refPrice1020 = intraday.mvso1020.refPrice;
                                 high = intraday.mvso1020.highPost; // OVERRIDE high with post-10:20 high
+                                lowBeforePeak = intraday.mvso1020.lowBeforePeak;
                             }
                             if (intraday.mvso1120) {
                                 refPrice1120 = intraday.mvso1120.refPrice;
@@ -1162,6 +1164,7 @@ app.post('/api/recommendations/upload', upload.array('files'), async (req, res) 
                             price: open, // For historical data, price = open (will be updated with RT for today)
                             high, // High from Polygon or default to open (Stores 10:20 Max Excursion)
                             refPrice1020, // 10:20 AM reference price from Polygon
+                            lowBeforePeak,
                             refPrice1120,
                             highPost1120,
                             refPrice1220,
@@ -1193,6 +1196,7 @@ app.post('/api/recommendations/upload', upload.array('files'), async (req, res) 
                             price: open, // For historical data, price = open (will be updated with RT for today)
                             high, // High from Polygon or default to open (Stores 10:20 Max Excursion)
                             refPrice1020, // 10:20 AM reference price from Polygon
+                            lowBeforePeak,
                             refPrice1120,
                             highPost1120,
                             refPrice1220,
