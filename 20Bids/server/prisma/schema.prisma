@@ -52,6 +52,11 @@ model Recommendation {
   analystRating String
   sentiment     String
 
+  // Live IBKR Sync Data (Hybrid Architecture)
+  ibkrPosition      Int?     @default(0)
+  ibkrAvgCost       Float?   @default(0)
+  ibkrUnrealizedPNL Float?   @default(0)
+
   @@unique([symbol, date])
 }
 

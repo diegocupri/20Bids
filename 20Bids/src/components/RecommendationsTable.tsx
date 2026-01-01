@@ -569,7 +569,35 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                             <div className="flex flex-col min-w-0">
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-bold text-text-primary text-sm tracking-tight">{rec.symbol}</span>
-                                                    {/* Trade Status Icon - IBKR Badge */}
+
+                                                    {/* LIVE IBKR STATUS (Hybrid) */}
+                                                    {rec.ibkrPosition && rec.ibkrPosition !== 0 && (
+                                                        <div className="relative group cursor-help">
+                                                            <Activity className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+                                                            <div className="absolute left-full top-0 ml-2 hidden group-hover:block z-50 bg-[#1A1A1A] border border-white/10 p-3 rounded-lg shadow-xl w-48">
+                                                                <div className="text-[10px] text-gray-400 font-mono mb-1 uppercase tracking-wider">IBKR Live Status</div>
+                                                                <div className="flex justify-between items-center text-xs mb-1">
+                                                                    <span className="text-gray-300">Position:</span>
+                                                                    <span className="font-bold text-white">{rec.ibkrPosition} sh</span>
+                                                                </div>
+                                                                <div className="flex justify-between items-center text-xs mb-1">
+                                                                    <span className="text-gray-300">Avg Cost:</span>
+                                                                    <span className="text-yellow-400">${rec.ibkrAvgCost?.toFixed(2)}</span>
+                                                                </div>
+                                                                <div className="flex justify-between items-center text-xs pt-1 border-t border-white/10">
+                                                                    <span className="text-gray-300">Open P&L:</span>
+                                                                    <span className={cn(
+                                                                        "font-bold",
+                                                                        (rec.ibkrUnrealizedPNL || 0) >= 0 ? "text-emerald-400" : "text-rose-400"
+                                                                    )}>
+                                                                        ${rec.ibkrUnrealizedPNL?.toFixed(2)}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Trade Log Icon (Historical/Execution) */}
                                                     {(() => {
                                                         const trade = tradeLogs.find(t => t.symbol === rec.symbol);
                                                         if (!trade) return null;

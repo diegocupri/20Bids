@@ -1032,12 +1032,12 @@ app.post('/api/admin/refresh-day', async (req, res) => {
 
         if (action === 'delete') {
             const count = await refreshDailyData(dateStr);
-        res.json({ success: true, count, message: 'Refresh process completed.' });
-    } catch (error) {
-        console.error('[Admin] Error refreshing/deleting day:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
-});
+            res.json({ success: true, count, message: 'Refresh process completed.' });
+        } catch (error) {
+            console.error('[Admin] Error refreshing/deleting day:', error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    });
 
 // Upload Recommendations (File Upload with Polygon Enrichment)
 import multer from 'multer';
@@ -1467,6 +1467,54 @@ app.get('/api/trading/positions', async (req, res) => {
     } catch (error) {
         console.error('[IBKR Positions] Error:', error);
         res.json({ connected: false, positions: [], orders: [], error: 'Failed to get positions' });
+    }
+});
+
+// ------------------------------------------------------------------
+// REMOTE IBKR SYNC WEBHOOK (Hybrid Architecture)
+// ------------------------------------------------------------------
+app.post('/api/webhooks/ibkr-sync', async (req, res) => {
+    try {
+        const { positions } = req.body; // Expects array of { symbol, position, avgCost, unrealizedPNL }
+
+        if (!Array.isArray(positions)) {
+            return res.status(400).json({ error: 'Invalid data format. Expected positions array.' });
+        }
+
+        console.log(`[Webhook] Received ${positions.length} IBKR positions to sync.`);
+
+        // Determine "today" to match Recommendation
+        // We find the latest recommendation for each symbol and update it
+        // Or strictly match today's date if you only care about active day
+
+        const updates = [];
+        for (const pos of positions) {
+            // Find latest recommendation for this symbol (descending date)
+            const rec = await prisma.recommendation.findFirst({
+                where: { symbol: pos.symbol },
+                orderBy: { date: 'desc' }
+            });
+
+            if (rec) {
+                // Update it
+                const updated = await prisma.recommendation.update({
+                    where: { id: rec.id },
+                    data: {
+                        ibkrPosition: Math.round(Number(pos.position)),
+                        ibkrAvgCost: Number(pos.avgCost),
+                        ibkrUnrealizedPNL: Number(pos.unrealizedPNL)
+                    }
+                });
+                updates.push(updated.symbol);
+            }
+        }
+
+        console.log(`[Webhook] Synced IBKR data for: ${updates.join(', ')}`);
+        res.json({ success: true, updated: updates.length });
+
+    } catch (error) {
+        console.error('[Webhook] Error syncing IBKR data:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
