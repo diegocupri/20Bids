@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon src/index.ts",
     "build": "tsc",
-    "start": "npx prisma db push && npx prisma generate && npx ts-node src/index.ts",
+    "start": "npx prisma db push --accept-data-loss && npx prisma generate && npx ts-node src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -29,6 +29,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.0.2",
     "prisma": "^6.19.0",
+    "socket.io": "^4.8.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },
