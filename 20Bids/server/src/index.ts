@@ -1024,20 +1024,23 @@ app.post('/api/admin/refresh-day', async (req, res) => {
         const endOfDay = new Date(dateStr);
         endOfDay.setUTCHours(23, 59, 59, 999);
 
-        const recs = await prisma.recommendation.findMany({
-            where: { date: { gte: startOfDay, lte: endOfDay } }
-        });
-
-        console.log(`[Admin] Found ${recs.length} records.`);
-
         if (action === 'delete') {
+            // Delete all records for this day
+            const deleted = await prisma.recommendation.deleteMany({
+                where: { date: { gte: startOfDay, lte: endOfDay } }
+            });
+            console.log(`[Admin] Deleted ${deleted.count} records.`);
+            res.json({ success: true, count: deleted.count, message: 'Records deleted.' });
+        } else {
+            // Refresh data from Polygon
             const count = await refreshDailyData(dateStr);
             res.json({ success: true, count, message: 'Refresh process completed.' });
-        } catch (error) {
-            console.error('[Admin] Error refreshing/deleting day:', error);
-            res.status(500).json({ error: 'Internal Server Error' });
         }
-    });
+    } catch (error) {
+        console.error('[Admin] Error refreshing/deleting day:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
 
 // Upload Recommendations (File Upload with Polygon Enrichment)
 import multer from 'multer';
