@@ -283,70 +283,74 @@ export async function fetchDailyStats(ticker: string, date: string) {
 export async function fetchRealTimePrices(tickers: string[]) {
     const API_KEY = process.env.POLYGON_API_KEY;
     if (!API_KEY) return {};
-
-    // 1. Check Market Hours
-    // 1. Check Market Hours
-    // if (!isMarketOpen()) {
-    //     // Return empty if market closed?
-    //     // For now, we want to see data even if market is closed (Snapshot returns last close).
-    //     // return {};
-    // }
+    if (tickers.length === 0) return {};
 
     try {
         const etNow = getETDate();
         const dateStr = format(etNow, 'yyyy-MM-dd');
         const isBefore1020 = (etNow.getHours() < 10) || (etNow.getHours() === 10 && etNow.getMinutes() < 20);
 
-        // 2. Fetch Grouped Snapshot (Efficient: 1 call for ALL tickers)
-        // /v2/snapshot/locale/us/markets/stocks/tickers
-        const snapshotUrl = `${BASE_URL}/v2/snapshot/locale/us/markets/stocks/tickers`;
-        const res = await axios.get(snapshotUrl, {
-            params: {
-                apiKey: API_KEY,
-                // tickers: tickers.join(',') // Removed to avoid URL length issues and ensure we get data
-            }
-        });
-
-        // Polygon's Grouped Daily doesn't support 'tickers' param filter efficiently in all plans,
-        // but it returns all. We filter in memory.
-        const allTickers = res.data.tickers || [];
         const updates: Record<string, { price: number, change: number, refPrice1020?: number, volume: number, open: number, high: number }> = {};
 
-        for (const t of allTickers) {
-            if (tickers.includes(t.ticker)) {
-                const currentPrice = t.lastTrade?.p || t.day?.c || t.prevDay?.c;
+        // Fetch individual ticker snapshots to avoid OOM from loading all market data
+        // Process in small batches to avoid rate limiting
+        const BATCH_SIZE = 10;
 
-                if (!currentPrice) continue;
+        for (let i = 0; i < tickers.length; i += BATCH_SIZE) {
+            const batch = tickers.slice(i, i + BATCH_SIZE);
 
-                let change = t.todaysChangePerc; // Default to daily change
-                let refPrice1020 = undefined;
+            // Fetch each ticker individually (more API calls but much less memory)
+            const promises = batch.map(async (ticker) => {
+                try {
+                    const snapshotUrl = `${BASE_URL}/v2/snapshot/locale/us/markets/stocks/tickers/${ticker}`;
+                    const res = await axios.get(snapshotUrl, {
+                        params: { apiKey: API_KEY }
+                    });
 
-                // 3. Apply 10:20 AM Logic
-                if (!isBefore1020) {
-                    // Try to get 10:20 reference
-                    let refPrice = await getReferencePrice(t.ticker, dateStr);
+                    const t = res.data.ticker;
+                    if (!t) return null;
 
-                    if (refPrice) {
-                        refPrice1020 = refPrice;
-                        // Calculate change relative to 10:20 AM
-                        change = ((currentPrice - refPrice) / refPrice) * 100;
+                    const currentPrice = t.lastTrade?.p || t.day?.c || t.prevDay?.c;
+                    if (!currentPrice) return null;
+
+                    let change = t.todaysChangePerc;
+                    let refPrice1020 = undefined;
+
+                    if (!isBefore1020) {
+                        let refPrice = await getReferencePrice(ticker, dateStr);
+                        if (refPrice) {
+                            refPrice1020 = refPrice;
+                            change = ((currentPrice - refPrice) / refPrice) * 100;
+                        }
                     }
-                } else {
-                    // Before 10:20, maybe use Open price as reference?
-                    // Or just keep daily change.
-                    // User said "change relative to 10:20".
-                    // Before 10:20, that reference doesn't exist.
-                    // Let's stick to daily change (todaysChangePerc) until then.
-                }
 
-                updates[t.ticker] = {
-                    price: currentPrice,
-                    change: change,
-                    refPrice1020: refPrice1020,
-                    volume: t.day?.v || 0,
-                    open: t.day?.o || t.prevDay?.c || 0, // Fallback to prev close if no open yet
-                    high: t.day?.h || 0
-                };
+                    return {
+                        ticker,
+                        data: {
+                            price: currentPrice,
+                            change: change,
+                            refPrice1020: refPrice1020,
+                            volume: t.day?.v || 0,
+                            open: t.day?.o || t.prevDay?.c || 0,
+                            high: t.day?.h || 0
+                        }
+                    };
+                } catch (e) {
+                    console.error(`Error fetching snapshot for ${ticker}:`, (e as any).message);
+                    return null;
+                }
+            });
+
+            const results = await Promise.all(promises);
+            for (const result of results) {
+                if (result) {
+                    updates[result.ticker] = result.data;
+                }
+            }
+
+            // Small delay between batches to avoid rate limiting
+            if (i + BATCH_SIZE < tickers.length) {
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
         }
 
