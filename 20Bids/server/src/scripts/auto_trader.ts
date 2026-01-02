@@ -281,30 +281,86 @@ async function executeAutoTrading(dryRun: boolean = false, force: boolean = fals
                 },
             });
         } else {
-            const result = await ibkr.placeBracketOrder(
-                stock.symbol,
-                quantity,
-                entryPrice,
-                config.takeProfit,
-                config.stopLoss
-            );
+            // RETRY LOGIC: Try to fill entry order up to 5 times with 10s wait
+            const MAX_RETRIES = 5;
+            const WAIT_SECONDS = 10;
+            let filled = false;
+            let finalEntryPrice = entryPrice;
+            let finalOrderId = 0;
 
-            await prisma.tradeLog.create({
-                data: {
-                    symbol: stock.symbol,
+            for (let attempt = 1; attempt <= MAX_RETRIES && !filled; attempt++) {
+                // Get fresh price for each attempt
+                const attemptPrice = await ibkr.getCurrentPrice(stock.symbol) || entryPrice;
+                console.log(`\n   🔄 Attempt ${attempt}/${MAX_RETRIES} - LIMIT @ $${attemptPrice.toFixed(2)}`);
+
+                const orderResult = await ibkr.placeLimitBuyOrder(stock.symbol, quantity, attemptPrice);
+
+                if (!orderResult.success) {
+                    console.log(`   ❌ Order placement failed: ${orderResult.error}`);
+                    break;
+                }
+
+                finalOrderId = orderResult.orderId;
+                finalEntryPrice = attemptPrice;
+
+                // Wait and check if filled
+                console.log(`   ⏳ Waiting ${WAIT_SECONDS}s for fill...`);
+                await sleep(WAIT_SECONDS * 1000);
+
+                if (ibkr.isOrderFilled(orderResult.orderId)) {
+                    console.log(`   ✅ ORDER FILLED at $${attemptPrice.toFixed(2)}!`);
+                    filled = true;
+                } else {
+                    console.log(`   ⚠️  Not filled, cancelling...`);
+                    ibkr.cancelOrder(orderResult.orderId);
+                    await sleep(1000); // Brief wait for cancel to process
+                }
+            }
+
+            if (filled) {
+                // Place TP and SL orders now that entry is filled
+                console.log(`   📊 Placing TP/SL orders...`);
+                const tpslResult = await ibkr.placeTPandSLOrders(
+                    stock.symbol,
                     quantity,
-                    entryPrice,
-                    takeProfitPrice: entryPrice * (1 + config.takeProfit / 100),
-                    stopLossPrice: entryPrice * (1 - config.stopLoss / 100),
-                    parentOrderId: result.parentOrderId,
-                    tpOrderId: result.takeProfitOrderId,
-                    slOrderId: result.stopLossOrderId,
-                    status: result.success ? "SUBMITTED" : "ERROR",
-                    errorMessage: result.error,
-                },
-            });
+                    finalEntryPrice,
+                    config.takeProfit,
+                    config.stopLoss
+                );
 
-            if (result.success) successCount++;
+                await prisma.tradeLog.create({
+                    data: {
+                        symbol: stock.symbol,
+                        quantity,
+                        entryPrice: finalEntryPrice,
+                        takeProfitPrice: finalEntryPrice * (1 + config.takeProfit / 100),
+                        stopLossPrice: finalEntryPrice * (1 - config.stopLoss / 100),
+                        parentOrderId: finalOrderId,
+                        tpOrderId: tpslResult.tpOrderId,
+                        slOrderId: tpslResult.slOrderId,
+                        status: "FILLED",
+                    },
+                });
+
+                successCount++;
+            } else {
+                console.log(`   ❌ ${stock.symbol}: Failed to fill after ${MAX_RETRIES} attempts`);
+
+                await prisma.tradeLog.create({
+                    data: {
+                        symbol: stock.symbol,
+                        quantity,
+                        entryPrice: finalEntryPrice,
+                        takeProfitPrice: finalEntryPrice * (1 + config.takeProfit / 100),
+                        stopLossPrice: finalEntryPrice * (1 - config.stopLoss / 100),
+                        parentOrderId: finalOrderId,
+                        tpOrderId: 0,
+                        slOrderId: 0,
+                        status: "RETRY_FAILED",
+                        errorMessage: `Failed to fill after ${MAX_RETRIES} attempts`,
+                    },
+                });
+            }
         }
     }
 

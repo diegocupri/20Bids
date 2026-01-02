@@ -38,6 +38,7 @@ export class IBKRService {
             clientId: CLIENT_ID,
         });
         this.setupEventHandlers();
+        this.setupOrderStatusHandler();
     }
 
     private setupEventHandlers(): void {
@@ -168,6 +169,145 @@ export class IBKRService {
 
     getNextOrderId(): number {
         return this.nextOrderId++;
+    }
+
+    // Track order statuses
+    private orderStatuses: Map<number, { status: string; filled: number; remaining: number }> = new Map();
+
+    private setupOrderStatusHandler(): void {
+        this.ib.on(EventName.orderStatus, (orderId: number, status: string, filled: number, remaining: number) => {
+            this.orderStatuses.set(orderId, { status, filled, remaining });
+            console.log(`📋 Order ${orderId}: ${status} (Filled: ${filled}, Remaining: ${remaining})`);
+        });
+    }
+
+    /**
+     * Check if an order is filled
+     */
+    isOrderFilled(orderId: number): boolean {
+        const status = this.orderStatuses.get(orderId);
+        if (!status) return false;
+        return status.status === 'Filled' || status.remaining === 0;
+    }
+
+    /**
+     * Get order status
+     */
+    getOrderStatus(orderId: number): { status: string; filled: number; remaining: number } | null {
+        return this.orderStatuses.get(orderId) || null;
+    }
+
+    /**
+     * Cancel an order
+     */
+    cancelOrder(orderId: number): void {
+        console.log(`🚫 Cancelling order ${orderId}...`);
+        this.ib.cancelOrder(orderId);
+    }
+
+    /**
+     * Place a simple LIMIT BUY order (without bracket) for retry logic
+     */
+    async placeLimitBuyOrder(
+        symbol: string,
+        quantity: number,
+        limitPrice: number
+    ): Promise<{ orderId: number; success: boolean; error?: string }> {
+        if (!this.connected) {
+            return { orderId: 0, success: false, error: "Not connected" };
+        }
+
+        const contract: Contract = {
+            symbol: symbol,
+            secType: SecType.STK,
+            exchange: "SMART",
+            currency: "USD",
+        };
+
+        const orderId = this.getNextOrderId();
+
+        const order: Order = {
+            orderId: orderId,
+            action: OrderAction.BUY,
+            orderType: OrderType.LMT,
+            totalQuantity: quantity,
+            lmtPrice: limitPrice,
+            tif: TimeInForce.DAY,
+            transmit: true,
+        };
+
+        try {
+            console.log(`📊 Placing LIMIT BUY for ${symbol}: ${quantity} @ $${limitPrice.toFixed(2)}`);
+            this.ib.placeOrder(orderId, contract, order);
+            return { orderId, success: true };
+        } catch (error: any) {
+            return { orderId: 0, success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Place TP and SL orders after entry is filled
+     */
+    async placeTPandSLOrders(
+        symbol: string,
+        quantity: number,
+        entryPrice: number,
+        takeProfitPercent: number,
+        stopLossPercent: number
+    ): Promise<{ tpOrderId: number; slOrderId: number; success: boolean }> {
+        if (!this.connected) {
+            return { tpOrderId: 0, slOrderId: 0, success: false };
+        }
+
+        const contract: Contract = {
+            symbol: symbol,
+            secType: SecType.STK,
+            exchange: "SMART",
+            currency: "USD",
+        };
+
+        const takeProfitPrice = Math.round(entryPrice * (1 + takeProfitPercent / 100) * 100) / 100;
+        const stopLossPrice = Math.round(entryPrice * (1 - stopLossPercent / 100) * 100) / 100;
+
+        const tpOrderId = this.getNextOrderId();
+        const slOrderId = this.getNextOrderId();
+
+        // Take Profit: LIMIT SELL
+        const tpOrder: Order = {
+            orderId: tpOrderId,
+            action: OrderAction.SELL,
+            orderType: OrderType.LMT,
+            totalQuantity: quantity,
+            lmtPrice: takeProfitPrice,
+            tif: TimeInForce.GTC,
+            transmit: true,
+            ocaGroup: `${symbol}_TP_SL_${Date.now()}`,
+            ocaType: 1, // Cancel on fill
+        };
+
+        // Stop Loss: STOP SELL
+        const slOrder: Order = {
+            orderId: slOrderId,
+            action: OrderAction.SELL,
+            orderType: OrderType.STP,
+            totalQuantity: quantity,
+            auxPrice: stopLossPrice,
+            tif: TimeInForce.GTC,
+            transmit: true,
+            ocaGroup: `${symbol}_TP_SL_${Date.now()}`,
+            ocaType: 1,
+        };
+
+        try {
+            console.log(`   📈 TP: LIMIT SELL @ $${takeProfitPrice.toFixed(2)}`);
+            console.log(`   📉 SL: STOP SELL @ $${stopLossPrice.toFixed(2)}`);
+            this.ib.placeOrder(tpOrderId, contract, tpOrder);
+            this.ib.placeOrder(slOrderId, contract, slOrder);
+            return { tpOrderId, slOrderId, success: true };
+        } catch (error: any) {
+            console.error(`Failed to place TP/SL: ${error.message}`);
+            return { tpOrderId: 0, slOrderId: 0, success: false };
+        }
     }
 
     /**
