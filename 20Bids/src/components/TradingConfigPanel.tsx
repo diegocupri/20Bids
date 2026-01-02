@@ -286,6 +286,60 @@ export default function TradingConfigPanel() {
                 </div>
             </div>
 
+            {/* Auto-Trader Logic Documentation */}
+            <details className="mt-6 bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 rounded-lg">
+                <summary className="px-4 py-3 cursor-pointer text-sm font-semibold text-slate-700 hover:text-slate-900 flex items-center gap-2">
+                    <span className="text-lg">📖</span>
+                    <span>Lógica del Auto-Trader (click para expandir)</span>
+                </summary>
+                <div className="px-4 pb-4 text-sm text-slate-600 space-y-3">
+                    <div className="border-l-4 border-blue-400 pl-3">
+                        <strong className="text-slate-800">1️⃣ Filtrado de Stocks</strong>
+                        <ul className="mt-1 ml-4 list-disc">
+                            <li>Volumen &gt; {config.minVolume.toLocaleString()}$</li>
+                            <li>Precio &gt; ${config.minPrice}</li>
+                            <li>Obtiene precios LIVE de Polygon</li>
+                            <li>Calcula gain: (precioActual - refPrice1020) / refPrice1020</li>
+                            <li>Solo compra si gain ≤ {config.maxGainSkip}% (stock no ha subido mucho)</li>
+                        </ul>
+                    </div>
+
+                    <div className="border-l-4 border-emerald-400 pl-3">
+                        <strong className="text-slate-800">2️⃣ Tamaño de Posición</strong>
+                        <ul className="mt-1 ml-4 list-disc">
+                            <li>Máximo 20% del portfolio por stock</li>
+                            <li>Basado en Net Liquidation Value</li>
+                            <li>quantity = maxPerPosition / precioLive</li>
+                        </ul>
+                    </div>
+
+                    <div className="border-l-4 border-amber-400 pl-3">
+                        <strong className="text-slate-800">3️⃣ Colocación de Órdenes (en paralelo)</strong>
+                        <ul className="mt-1 ml-4 list-disc">
+                            <li>Orden LIMIT BUY al precio live +0.1%</li>
+                            <li>Si empieza a llenar (filled &gt; 0) → mantener abierta</li>
+                            <li>Si filled = 0 tras 10s → cancelar y reintentar</li>
+                            <li>Buffer progresivo: +0.3% tras intento 5, +0.5% tras intento 8</li>
+                            <li>Una sola orden activa por stock</li>
+                        </ul>
+                    </div>
+
+                    <div className="border-l-4 border-purple-400 pl-3">
+                        <strong className="text-slate-800">4️⃣ Take Profit & Stop Loss</strong>
+                        <ul className="mt-1 ml-4 list-disc">
+                            <li>Se colocan como OCA (One-Cancels-All)</li>
+                            <li>TP: LIMIT SELL @ entryPrice × (1 + {config.takeProfit}%)</li>
+                            <li>SL: STOP SELL @ entryPrice × (1 - {config.stopLoss}%)</li>
+                            <li>Cuando uno ejecuta, el otro se cancela automáticamente</li>
+                        </ul>
+                    </div>
+
+                    <div className="mt-3 text-xs text-slate-500 italic">
+                        Ejecución automática: {spainHour.toString().padStart(2, '0')}:{config.executionMinute.toString().padStart(2, '0')} hora España ({config.executionHour}:{config.executionMinute.toString().padStart(2, '0')} ET)
+                    </div>
+                </div>
+            </details>
+
             {/* Warning */}
             <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
                 <AlertTriangle className="text-amber-500 flex-shrink-0" size={20} />
