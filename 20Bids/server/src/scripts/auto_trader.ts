@@ -14,6 +14,7 @@
 
 import { PrismaClient } from "@prisma/client";
 import { getIBKRService } from "../services/ibkr_service";
+import { fetchRealTimePrices } from "../services/polygon";
 
 const prisma = new PrismaClient();
 
@@ -21,6 +22,7 @@ interface TradingConfig {
     takeProfit: number;
     stopLoss: number;
     maxStocks: number;
+    maxPositionPercent: number;
     minVolume: number;
     minPrice: number;
     maxGainSkip: number;
@@ -50,6 +52,7 @@ async function getConfig(): Promise<TradingConfig> {
                 takeProfit: 3.0,
                 stopLoss: 5.0,
                 maxStocks: 10,
+                maxPositionPercent: 20.0,
                 minVolume: 1000000,
                 minPrice: 5.0,
                 maxGainSkip: 1.0,
@@ -226,11 +229,14 @@ async function executeAutoTrading(dryRun: boolean = false, force: boolean = fals
     }
 
     console.log(`\n💰 Account: ${account.accountId}`);
+    console.log(`   Net Liquidation: $${account.netLiquidation?.toLocaleString() || 'N/A'}`);
     console.log(`   Available Funds: $${account.availableFunds.toLocaleString()}`);
 
-    // 7. Calculate position sizes (equal distribution)
-    const fundsPerStock = account.availableFunds / selected.length;
-    console.log(`   Funds per stock: $${fundsPerStock.toLocaleString()}`);
+    // 7. Calculate position sizes based on FIXED percentage of portfolio
+    // Use netLiquidation (total portfolio value) as the base, NOT available funds
+    const portfolioValue = account.netLiquidation || account.availableFunds;
+    const maxPerPosition = portfolioValue * (config.maxPositionPercent / 100);
+    console.log(`   Max per position (${config.maxPositionPercent}%): $${maxPerPosition.toLocaleString()}`);
 
     // 8. Place orders
     console.log("\n📈 Placing bracket orders...\n");
@@ -250,8 +256,8 @@ async function executeAutoTrading(dryRun: boolean = false, force: boolean = fals
             continue;
         }
 
-        // Calculate quantity
-        const quantity = Math.floor(fundsPerStock / entryPrice);
+        // Calculate quantity based on max position size (fixed % of portfolio)
+        const quantity = Math.floor(maxPerPosition / entryPrice);
 
         if (quantity < 1) {
             console.log(`⚠️  ${stock.symbol}: Skipping - not enough funds for 1 share at $${entryPrice.toFixed(2)}`);
@@ -281,17 +287,30 @@ async function executeAutoTrading(dryRun: boolean = false, force: boolean = fals
                 },
             });
         } else {
-            // RETRY LOGIC: Try to fill entry order up to 5 times with 10s wait
-            const MAX_RETRIES = 5;
+            // RETRY LOGIC: Try to fill entry order up to 20 times with 10s wait
+            // Progressive buffer: attempts 1-4 = 0%, 5-9 = +0.3%, 10-20 = +0.5%
+            const MAX_RETRIES = 20;
             const WAIT_SECONDS = 10;
             let filled = false;
             let finalEntryPrice = entryPrice;
             let finalOrderId = 0;
 
             for (let attempt = 1; attempt <= MAX_RETRIES && !filled; attempt++) {
-                // Get fresh price for each attempt
-                const attemptPrice = await ibkr.getCurrentPrice(stock.symbol) || entryPrice;
-                console.log(`\n   🔄 Attempt ${attempt}/${MAX_RETRIES} - LIMIT @ $${attemptPrice.toFixed(2)}`);
+                // Get fresh price from Polygon API (we pay for this!)
+                const polygonPrices = await fetchRealTimePrices([stock.symbol]);
+                const rawPrice = polygonPrices[stock.symbol]?.price || entryPrice;
+
+                // Progressive buffer based on attempt number
+                let bufferPercent = 0;
+                if (attempt >= 10) {
+                    bufferPercent = 0.5;
+                } else if (attempt >= 5) {
+                    bufferPercent = 0.3;
+                }
+
+                const attemptPrice = Math.round(rawPrice * (1 + bufferPercent / 100) * 100) / 100;
+                const bufferLabel = bufferPercent > 0 ? ` +${bufferPercent}%` : '';
+                console.log(`\n   🔄 Attempt ${attempt}/${MAX_RETRIES} - LIMIT @ $${attemptPrice.toFixed(2)} (live: $${rawPrice.toFixed(2)}${bufferLabel})`);
 
                 const orderResult = await ibkr.placeLimitBuyOrder(stock.symbol, quantity, attemptPrice);
 

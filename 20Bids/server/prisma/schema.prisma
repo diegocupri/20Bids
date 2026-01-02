@@ -87,6 +87,7 @@ model TradingConfig {
   takeProfit           Float    @default(3.0)     // Take profit %
   stopLoss             Float    @default(5.0)     // Stop loss %
   maxStocks            Int      @default(10)      // Max stocks to trade
+  maxPositionPercent   Float    @default(20.0)    // Max % of portfolio per position
   minVolume            Float    @default(1000000) // Min volume filter
   minPrice             Float    @default(5.0)     // Min price filter
   maxGainSkip          Float    @default(1.0)     // Skip if already gained >X%
