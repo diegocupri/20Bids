@@ -2,11 +2,13 @@ import express, { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import multer from 'multer';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-prod';
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB limit
 
 // REGISTER
 router.post('/register', async (req: Request, res: Response) => {
@@ -138,9 +140,9 @@ router.put('/profile', authenticateToken, async (req: AuthRequest, res: Response
     }
 });
 
-// UPLOAD AVATAR (as base64)
+// UPLOAD AVATAR (using multer)
 // @ts-ignore
-router.post('/avatar', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/avatar', upload.single('avatar'), authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.id;
         if (!userId) {
@@ -148,61 +150,23 @@ router.post('/avatar', authenticateToken, async (req: AuthRequest, res: Response
             return;
         }
 
-        // Check if it's multipart form data
-        const contentType = req.headers['content-type'] || '';
-
-        if (contentType.includes('multipart/form-data')) {
-            // Handle file upload using raw body
-            const chunks: Buffer[] = [];
-            req.on('data', (chunk: Buffer) => chunks.push(chunk));
-            req.on('end', async () => {
-                const body = Buffer.concat(chunks);
-
-                // Simple multipart parser - extract file data
-                const boundary = contentType.split('boundary=')[1];
-                if (!boundary) {
-                    res.status(400).json({ error: 'No boundary found' });
-                    return;
-                }
-
-                const parts = body.toString('binary').split('--' + boundary);
-                let fileData: string | null = null;
-                let mimeType = 'image/png';
-
-                for (const part of parts) {
-                    if (part.includes('filename=')) {
-                        // Extract content type
-                        const ctMatch = part.match(/Content-Type:\s*([^\r\n]+)/i);
-                        if (ctMatch) mimeType = ctMatch[1].trim();
-
-                        // Extract file data (after double CRLF)
-                        const dataStart = part.indexOf('\r\n\r\n') + 4;
-                        const dataEnd = part.lastIndexOf('\r\n');
-                        if (dataStart > 0 && dataEnd > dataStart) {
-                            const rawData = part.substring(dataStart, dataEnd);
-                            fileData = Buffer.from(rawData, 'binary').toString('base64');
-                        }
-                    }
-                }
-
-                if (!fileData) {
-                    res.status(400).json({ error: 'No file found in request' });
-                    return;
-                }
-
-                const dataUrl = `data:${mimeType};base64,${fileData}`;
-
-                const user = await prisma.user.update({
-                    where: { id: userId },
-                    data: { avatarUrl: dataUrl },
-                    select: { id: true, avatarUrl: true }
-                });
-
-                res.json({ avatarUrl: user.avatarUrl });
-            });
-        } else {
-            res.status(400).json({ error: 'Expected multipart/form-data' });
+        const file = (req as any).file;
+        if (!file) {
+            res.status(400).json({ error: 'No file uploaded' });
+            return;
         }
+
+        // Convert to base64 data URL
+        const base64 = file.buffer.toString('base64');
+        const dataUrl = `data:${file.mimetype};base64,${base64}`;
+
+        const user = await prisma.user.update({
+            where: { id: userId },
+            data: { avatarUrl: dataUrl },
+            select: { id: true, avatarUrl: true }
+        });
+
+        res.json({ avatarUrl: user.avatarUrl });
     } catch (error) {
         console.error('Avatar upload error:', error);
         res.status(500).json({ error: 'Failed to upload avatar' });
