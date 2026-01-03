@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { X, Camera, Save, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { ThemeSelector } from './ThemeSelector';
 
 interface ProfileModalProps {
     isOpen: boolean;
@@ -79,19 +78,35 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                     className="w-full h-full object-cover"
                                 />
                             </div>
-                            <div className="absolute bottom-0 right-0 p-2 bg-accent-primary text-white rounded-full shadow-lg cursor-pointer hover:bg-accent-primary/90 transition-all opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0">
+                            <label className="absolute bottom-0 right-0 p-2 bg-accent-primary text-white rounded-full shadow-lg cursor-pointer hover:bg-accent-primary/90 transition-all">
                                 <Camera className="w-4 h-4" />
-                            </div>
-                        </div>
-                        <div className="w-full">
-                            <label className="text-xs font-medium text-text-secondary mb-1 block">Avatar URL</label>
-                            <input
-                                type="url"
-                                value={avatarUrl}
-                                onChange={(e) => setAvatarUrl(e.target.value)}
-                                className="w-full bg-bg-secondary border border-border-primary rounded-lg px-3 py-2 text-sm text-text-primary focus:border-accent-primary focus:outline-none"
-                                placeholder="https://..."
-                            />
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+
+                                        const formData = new FormData();
+                                        formData.append('avatar', file);
+
+                                        try {
+                                            const res = await fetch(`${API_URL}/auth/avatar`, {
+                                                method: 'POST',
+                                                headers: { 'Authorization': `Bearer ${token}` },
+                                                body: formData
+                                            });
+                                            const data = await res.json();
+                                            if (res.ok && data.avatarUrl) {
+                                                setAvatarUrl(data.avatarUrl);
+                                            }
+                                        } catch (err) {
+                                            console.error('Upload failed', err);
+                                        }
+                                    }}
+                                />
+                            </label>
                         </div>
                     </div>
 
@@ -116,13 +131,6 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                 className="w-full bg-bg-secondary border border-border-primary rounded-lg px-3 py-2 text-sm text-text-primary focus:border-accent-primary focus:outline-none"
                                 placeholder="••••••••"
                             />
-                        </div>
-
-                        <div>
-                            <label className="text-xs font-medium text-text-secondary mb-1 block">Theme</label>
-                            <div className="bg-bg-secondary border border-border-primary rounded-lg p-3">
-                                <ThemeSelector />
-                            </div>
                         </div>
                     </div>
 

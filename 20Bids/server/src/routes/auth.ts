@@ -138,4 +138,75 @@ router.put('/profile', authenticateToken, async (req: AuthRequest, res: Response
     }
 });
 
+// UPLOAD AVATAR (as base64)
+// @ts-ignore
+router.post('/avatar', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: 'Unauthorized' });
+            return;
+        }
+
+        // Check if it's multipart form data
+        const contentType = req.headers['content-type'] || '';
+
+        if (contentType.includes('multipart/form-data')) {
+            // Handle file upload using raw body
+            const chunks: Buffer[] = [];
+            req.on('data', (chunk: Buffer) => chunks.push(chunk));
+            req.on('end', async () => {
+                const body = Buffer.concat(chunks);
+
+                // Simple multipart parser - extract file data
+                const boundary = contentType.split('boundary=')[1];
+                if (!boundary) {
+                    res.status(400).json({ error: 'No boundary found' });
+                    return;
+                }
+
+                const parts = body.toString('binary').split('--' + boundary);
+                let fileData: string | null = null;
+                let mimeType = 'image/png';
+
+                for (const part of parts) {
+                    if (part.includes('filename=')) {
+                        // Extract content type
+                        const ctMatch = part.match(/Content-Type:\s*([^\r\n]+)/i);
+                        if (ctMatch) mimeType = ctMatch[1].trim();
+
+                        // Extract file data (after double CRLF)
+                        const dataStart = part.indexOf('\r\n\r\n') + 4;
+                        const dataEnd = part.lastIndexOf('\r\n');
+                        if (dataStart > 0 && dataEnd > dataStart) {
+                            const rawData = part.substring(dataStart, dataEnd);
+                            fileData = Buffer.from(rawData, 'binary').toString('base64');
+                        }
+                    }
+                }
+
+                if (!fileData) {
+                    res.status(400).json({ error: 'No file found in request' });
+                    return;
+                }
+
+                const dataUrl = `data:${mimeType};base64,${fileData}`;
+
+                const user = await prisma.user.update({
+                    where: { id: userId },
+                    data: { avatarUrl: dataUrl },
+                    select: { id: true, avatarUrl: true }
+                });
+
+                res.json({ avatarUrl: user.avatarUrl });
+            });
+        } else {
+            res.status(400).json({ error: 'Expected multipart/form-data' });
+        }
+    } catch (error) {
+        console.error('Avatar upload error:', error);
+        res.status(500).json({ error: 'Failed to upload avatar' });
+    }
+});
+
 export default router;

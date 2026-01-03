@@ -29,6 +29,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
     const [selectedSymbols, setSelectedSymbols] = useState<Set<string>>(new Set());
     const [tradeLogs, setTradeLogs] = useState<TradeLog[]>([]);
     const [tradeHover, setTradeHover] = useState<{ symbol: string, x: number, y: number } | null>(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     // Persistent Filter States
     const [showExtraHours, setShowExtraHours] = useState(() => {
@@ -219,6 +220,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
     };
 
     const handleRefresh = async () => {
+        setIsRefreshing(true);
         try {
             const dateStr = new Date(selectedDate).toISOString().split('T')[0];
             await fetch(`${API_URL}/admin/refresh-day?date=${dateStr}&action=refresh`, { method: 'POST' });
@@ -231,6 +233,8 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
             }
         } catch (e) {
             console.error('Refresh failed', e);
+        } finally {
+            setIsRefreshing(false);
         }
     };
 
@@ -368,10 +372,11 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                             {/* Refresh Button - Discrete */}
                             <button
                                 onClick={handleRefresh}
-                                className="w-8 h-8 flex items-center justify-center bg-bg-secondary hover:bg-bg-tertiary text-text-secondary hover:text-text-primary rounded-lg transition-all border border-transparent hover:border-border-primary/50"
+                                disabled={isRefreshing}
+                                className="w-8 h-8 flex items-center justify-center bg-bg-secondary hover:bg-bg-tertiary text-text-secondary hover:text-text-primary rounded-lg transition-all border border-transparent hover:border-border-primary/50 disabled:opacity-50"
                                 title="Refresh Data (Polygon)"
                             >
-                                <RotateCcw className="w-4 h-4" />
+                                <RotateCcw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                             </button>
 
                             {/* Discrete Extended Hours Toggle */}
