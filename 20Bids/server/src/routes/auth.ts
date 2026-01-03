@@ -142,7 +142,7 @@ router.put('/profile', authenticateToken, async (req: AuthRequest, res: Response
 
 // UPLOAD AVATAR (using multer)
 // @ts-ignore
-router.post('/avatar', upload.single('avatar'), authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/avatar', authenticateToken, upload.single('avatar'), async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.id;
         if (!userId) {

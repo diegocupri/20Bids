@@ -21,6 +21,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
 
     jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
         if (err) {
+            console.error('JWT verify error:', err.message, '| Token first 20 chars:', token?.substring(0, 20));
             res.status(403).json({ error: 'Invalid or expired token' });
             return;
         }
