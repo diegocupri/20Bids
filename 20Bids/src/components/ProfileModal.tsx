@@ -88,6 +88,8 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                         const file = e.target.files?.[0];
                                         if (!file) return;
 
+                                        console.log('Uploading file:', file.name, 'Token:', token?.substring(0, 20));
+
                                         const formData = new FormData();
                                         formData.append('avatar', file);
 
@@ -97,12 +99,19 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                                 headers: { 'Authorization': `Bearer ${token}` },
                                                 body: formData
                                             });
+                                            console.log('Response status:', res.status);
                                             const data = await res.json();
+                                            console.log('Response data:', data);
                                             if (res.ok && data.avatarUrl) {
                                                 setAvatarUrl(data.avatarUrl);
+                                                setSuccess(true);
+                                                setTimeout(() => setSuccess(false), 3000);
+                                            } else {
+                                                setError(data.error || 'Upload failed');
                                             }
-                                        } catch (err) {
+                                        } catch (err: any) {
                                             console.error('Upload failed', err);
+                                            setError(err.message || 'Network error');
                                         }
                                     }}
                                 />
