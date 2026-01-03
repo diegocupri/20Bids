@@ -1,19 +1,14 @@
 import { useState } from 'react';
 import { X, Camera, Save, Loader2 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 
 interface ProfileModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-
 export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
-    const { user, token, updateUser } = useAuth();
-    const [name, setName] = useState(user?.name || '');
-    const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || '');
-    const [password, setPassword] = useState('');
+    const [name, setName] = useState(localStorage.getItem('userName') || 'User');
+    const [avatarUrl, setAvatarUrl] = useState(localStorage.getItem('userAvatar') || '');
     const [isLoading, setIsLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
@@ -27,25 +22,19 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
         setSuccess(false);
 
         try {
-            const res = await fetch(`${API_URL}/auth/profile`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ name, avatarUrl, password: password || undefined })
-            });
+            // Save to localStorage (no backend login)
+            localStorage.setItem('userName', name);
+            if (avatarUrl) {
+                localStorage.setItem('userAvatar', avatarUrl);
+            }
 
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error);
-
-            updateUser(data);
             setSuccess(true);
-            setPassword(''); // Clear password field
-
-            setTimeout(() => setSuccess(false), 3000);
+            setTimeout(() => {
+                setSuccess(false);
+                onClose();
+            }, 1500);
         } catch (err: any) {
-            setError(err.message);
+            setError(err.message || 'Failed to save');
         } finally {
             setIsLoading(false);
         }
@@ -88,31 +77,19 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                         const file = e.target.files?.[0];
                                         if (!file) return;
 
-                                        console.log('Uploading file:', file.name, 'Token:', token?.substring(0, 20));
-
-                                        const formData = new FormData();
-                                        formData.append('avatar', file);
-
-                                        try {
-                                            const res = await fetch(`${API_URL}/auth/avatar`, {
-                                                method: 'POST',
-                                                headers: { 'Authorization': `Bearer ${token}` },
-                                                body: formData
-                                            });
-                                            console.log('Response status:', res.status);
-                                            const data = await res.json();
-                                            console.log('Response data:', data);
-                                            if (res.ok && data.avatarUrl) {
-                                                setAvatarUrl(data.avatarUrl);
-                                                setSuccess(true);
-                                                setTimeout(() => setSuccess(false), 3000);
-                                            } else {
-                                                setError(data.error || 'Upload failed');
-                                            }
-                                        } catch (err: any) {
-                                            console.error('Upload failed', err);
-                                            setError(err.message || 'Network error');
-                                        }
+                                        // Convert to base64 and store locally
+                                        const reader = new FileReader();
+                                        reader.onload = (event) => {
+                                            const base64 = event.target?.result as string;
+                                            setAvatarUrl(base64);
+                                            localStorage.setItem('userAvatar', base64);
+                                            setSuccess(true);
+                                            setTimeout(() => setSuccess(false), 3000);
+                                        };
+                                        reader.onerror = () => {
+                                            setError('Failed to read file');
+                                        };
+                                        reader.readAsDataURL(file);
                                     }}
                                 />
                             </label>
@@ -128,17 +105,6 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 className="w-full bg-bg-secondary border border-border-primary rounded-lg px-3 py-2 text-sm text-text-primary focus:border-accent-primary focus:outline-none"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="text-xs font-medium text-text-secondary mb-1 block">Change Password (Optional)</label>
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-bg-secondary border border-border-primary rounded-lg px-3 py-2 text-sm text-text-primary focus:border-accent-primary focus:outline-none"
-                                placeholder="••••••••"
                             />
                         </div>
                     </div>
