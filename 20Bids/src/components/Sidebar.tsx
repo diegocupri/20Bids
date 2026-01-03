@@ -22,12 +22,21 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
     const navigate = useNavigate();
     const location = useLocation();
     const isAnalysis = location.pathname === '/analysis';
-    const { user, logout } = useAuth();
+    const { logout } = useAuth();
 
     const [dates, setDates] = useState<Date[]>([]);
     const [mvsoHistory, setMvsoHistory] = useState<Record<string, number[]>>({});
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [userAvatar, setUserAvatar] = useState(localStorage.getItem('userAvatar') || '');
+    const [userName, setUserName] = useState(localStorage.getItem('userName') || 'User');
+
+    // Refresh user data when profile modal closes
+    const handleProfileClose = () => {
+        setIsProfileOpen(false);
+        setUserAvatar(localStorage.getItem('userAvatar') || '');
+        setUserName(localStorage.getItem('userName') || 'User');
+    };
 
     useEffect(() => {
         fetchDates().then(setDates);
@@ -242,17 +251,17 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                         className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-bg-secondary transition-colors text-left border border-transparent hover:border-border-primary/50"
                     >
                         <div className="w-8 h-8 rounded-full bg-accent-primary/10 flex items-center justify-center overflow-hidden ring-2 ring-white dark:ring-zinc-800">
-                            {user?.avatarUrl ? (
-                                <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                            {userAvatar ? (
+                                <img src={userAvatar} alt="User" className="w-full h-full object-cover" />
                             ) : (
                                 <div className="text-accent-primary font-bold text-xs">
-                                    {user?.name?.[0] || user?.email?.[0] || 'U'}
+                                    {userName[0]}
                                 </div>
                             )}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <div className="text-sm font-semibold text-text-primary truncate">{user?.name || 'User'}</div>
-                            <div className="text-xs text-text-secondary truncate">{user?.email || 'No Email'}</div>
+                            <div className="text-sm font-semibold text-text-primary truncate">{userName}</div>
+                            <div className="text-xs text-text-secondary truncate">Local Profile</div>
                         </div>
                         <MoreHorizontal className="h-4 w-4 text-text-secondary" />
                     </button>
@@ -288,7 +297,7 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
                 </div >
             </div >
 
-            <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
+            <ProfileModal isOpen={isProfileOpen} onClose={handleProfileClose} />
         </div >
     );
 }
