@@ -93,10 +93,7 @@ export function Sidebar({ selectedDate, onDateSelect, mvsoThreshold = 0.5 }: Sid
         <div className="w-72 bg-bg-primary border-r border-border-primary/50 flex flex-col h-full transition-colors duration-300 font-sans">
             <div className="p-4">
                 <div className="flex items-center gap-3 mb-4 px-2">
-                    <div className="w-8 h-8 bg-accent-primary rounded-lg shadow-sm flex items-center justify-center">
-                        <span className="text-white font-bold text-lg tracking-tighter">20</span>
-                    </div>
-                    <span className="text-xl font-bold text-text-primary tracking-tight">Bids</span>
+                    <img src="/logo.png" alt="20Bids" className="h-8" />
                 </div>
 
                 {/* Performance Summary */}
