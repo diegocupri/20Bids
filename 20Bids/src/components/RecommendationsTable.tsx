@@ -3,6 +3,7 @@ import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Settings, Maximize2, Min
 import { cn } from '../lib/utils';
 import { fetchRecommendations, fetchPrices, fetchIndices, fetchTradeLogs, API_URL } from '../api/client';
 import type { TradeLog } from '../api/client';
+import { TickerImage } from './TickerImage';
 
 
 
@@ -581,23 +582,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-bg-secondary flex items-center justify-center">
                                                 {/* Removed failedImages state and usage */}
-                                                <img
-                                                    src={`https://financialmodelingprep.com/image-stock/${rec.symbol}.png`}
-                                                    alt={rec.symbol}
-                                                    className="w-full h-full object-contain"
-                                                    onError={(e) => {
-                                                        e.currentTarget.onerror = null; // Prevent infinite loop
-                                                        e.currentTarget.src = ''; // Hide broken image
-                                                        e.currentTarget.style.display = 'none'; // Hide the img tag
-                                                        const parent = e.currentTarget.parentElement;
-                                                        if (parent) {
-                                                            const fallbackSpan = document.createElement('span');
-                                                            fallbackSpan.className = 'text-xs font-bold text-text-primary';
-                                                            fallbackSpan.textContent = rec.symbol[0];
-                                                            parent.appendChild(fallbackSpan);
-                                                        }
-                                                    }}
-                                                />
+                                                <TickerImage symbol={rec.symbol} />
                                             </div>
                                             <div className="flex flex-col min-w-0">
                                                 <div className="flex items-center gap-2">

@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useMemo } from 'react';
+import { TickerImage } from './TickerImage';
 
 // Reusing MarketContext logic but in a side panel layout
 interface TickerDetailsPanelProps {
@@ -78,24 +79,7 @@ export function TickerDetailsPanel({
                             {/* Ticker Header */}
                             <div className="flex items-start gap-4">
                                 <div className="w-16 h-16 rounded-2xl bg-white p-2 shadow-sm border border-border-primary/50 flex items-center justify-center overflow-hidden shrink-0">
-                                    <img
-                                        src={`https://financialmodelingprep.com/image-stock/${selectedTicker}.png`}
-                                        alt={selectedTicker}
-                                        className="w-full h-full object-contain"
-                                        onError={(e) => {
-                                            e.currentTarget.style.display = 'none';
-                                            const parent = e.currentTarget.parentElement;
-                                            if (parent) {
-                                                parent.classList.add('bg-bg-secondary');
-                                                if (!parent.querySelector('.fallback-text')) {
-                                                    const fallback = document.createElement('div');
-                                                    fallback.className = 'text-xl font-bold text-text-primary fallback-text';
-                                                    fallback.innerText = selectedTicker[0];
-                                                    parent.appendChild(fallback);
-                                                }
-                                            }
-                                        }}
-                                    />
+                                    <TickerImage symbol={selectedTicker} />
                                 </div>
                                 <div>
                                     <h3 className="text-2xl font-bold text-text-primary">{selectedTicker}</h3>
