@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Settings, Maximize2, Minimize2, TrendingDown, BarChart2, DollarSign, Activity, Zap, RotateCcw } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { fetchRecommendations, fetchPrices, fetchIndices, fetchTradeLogs, API_URL } from '../api/client';
@@ -150,19 +150,19 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
         };
     }, [selectedDate]);
 
-    const handleTradingViewClick = (symbol: string, e: React.MouseEvent) => {
+    const handleTradingViewClick = useCallback((symbol: string, e: React.MouseEvent) => {
         e.stopPropagation();
         window.open(`https://www.tradingview.com/chart/?symbol=${symbol}`, '_blank');
-    };
+    }, []);
 
-    const handleSort = (key: SortKey) => {
+    const handleSort = useCallback((key: SortKey) => {
         setSortConfig(current => ({
             key,
             direction: current.key === key && current.direction === 'desc' ? 'asc' : 'desc'
         }));
-    };
+    }, []);
 
-    const sortedData = [...recommendations]
+    const sortedData = useMemo(() => [...recommendations]
         .filter(rec => {
             const update = prices[rec.symbol] || {};
             const volume = update.volume || rec.volume;
@@ -219,7 +219,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
             if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
             if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
             return 0;
-        });
+        }), [recommendations, prices, sortConfig, minVolume, minOpenPrice]);
 
 
 
