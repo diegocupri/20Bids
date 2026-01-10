@@ -52,7 +52,10 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
 
     // Fetch Indices
     useEffect(() => {
+        let interval: ReturnType<typeof setInterval> | null = null;
+
         const loadIndices = async () => {
+            if (document.hidden) return; // Skip if tab not visible
             try {
                 const data = await fetchIndices();
                 setIndices(data);
@@ -60,9 +63,13 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                 console.error('Failed to load indices:', error);
             }
         };
+
         loadIndices();
-        const interval = setInterval(loadIndices, 60000); // Poll every minute
-        return () => clearInterval(interval);
+        interval = setInterval(loadIndices, 120000); // Changed from 60s to 120s
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
     }, []);
 
     // Fetch Trade Logs
@@ -100,7 +107,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
         loadData();
     }, [selectedDate, onDataLoaded]);
 
-    // Poll for real-time prices every 10 seconds (only if today)
+    // Poll for real-time prices every 30 seconds (only if today AND tab is visible)
     useEffect(() => {
         const isToday = new Date(selectedDate).toDateString() === new Date().toDateString();
         if (!isToday) {
@@ -108,7 +115,12 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
             return;
         }
 
+        let interval: ReturnType<typeof setInterval> | null = null;
+
         const pollPrices = async () => {
+            // Skip polling if tab is not visible
+            if (document.hidden) return;
+
             try {
                 const updates = await fetchPrices();
                 setPrices(prev => ({ ...prev, ...updates }));
@@ -117,9 +129,25 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
             }
         };
 
-        pollPrices(); // Initial poll
-        const interval = setInterval(pollPrices, 10000);
-        return () => clearInterval(interval);
+        const handleVisibilityChange = () => {
+            if (!document.hidden && !interval) {
+                pollPrices(); // Poll immediately when tab becomes visible
+                interval = setInterval(pollPrices, 30000);
+            } else if (document.hidden && interval) {
+                clearInterval(interval);
+                interval = null;
+            }
+        };
+
+        // Initial setup
+        pollPrices();
+        interval = setInterval(pollPrices, 30000); // Changed from 10s to 30s
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            if (interval) clearInterval(interval);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, [selectedDate]);
 
     const handleTradingViewClick = (symbol: string, e: React.MouseEvent) => {

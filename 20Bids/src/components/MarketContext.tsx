@@ -19,7 +19,10 @@ export function MarketContext({ selectedTicker, selectedPrice, selectedSector, s
 
     // Fetch Sectors
     useEffect(() => {
+        let interval: ReturnType<typeof setInterval> | null = null;
+
         const loadSectors = async () => {
+            if (document.hidden) return; // Skip if tab not visible
             setIsLoading(true);
             try {
                 const data = await fetchSectors(selectedDate);
@@ -34,9 +37,11 @@ export function MarketContext({ selectedTicker, selectedPrice, selectedSector, s
         // Only poll if it's today
         const isToday = !selectedDate || new Date().toDateString() === selectedDate.toDateString();
         if (isToday) {
-            const interval = setInterval(loadSectors, 60000);
-            return () => clearInterval(interval);
+            interval = setInterval(loadSectors, 120000); // Changed from 60s to 120s
         }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
     }, [selectedDate]);
 
     return (
