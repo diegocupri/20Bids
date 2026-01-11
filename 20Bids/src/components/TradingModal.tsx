@@ -97,8 +97,8 @@ export default function TradingModal({ isOpen, onClose }: TradingModalProps) {
                             <button
                                 onClick={() => update('enabled', !config.enabled)}
                                 className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${config.enabled
-                                        ? 'bg-emerald-50 text-emerald-600'
-                                        : 'bg-gray-100 text-gray-400'
+                                    ? 'bg-emerald-50 text-emerald-600'
+                                    : 'bg-gray-100 text-gray-400'
                                     }`}
                             >
                                 {config.enabled ? 'ON' : 'OFF'}
@@ -192,11 +192,12 @@ export default function TradingModal({ isOpen, onClose }: TradingModalProps) {
 
                         {showDocs && (
                             <div className="mt-3 text-[11px] text-gray-500 space-y-1.5 pl-5">
-                                <p>1. Filtra por volumen, precio y gain (precio LIVE vs ref1020)</p>
-                                <p>2. Máx 20% del portfolio por posición</p>
-                                <p>3. LIMIT BUY +0.1%, mantiene si llena, sube buffer si no</p>
-                                <p>4. TP/SL como OCA (uno cancela el otro)</p>
-                                <p className="text-gray-400 pt-1">Ejecuta L-V vía LaunchAgent</p>
+                                <p><b>Entrada:</b> LIMIT -20% bajo mercado (tú ajustas en IBKR)</p>
+                                <p><b>Límite:</b> Máx €30K/día, 20% portfolio por posición</p>
+                                <p><b>Filtros:</b> Vol ≥2M, Precio ≥$5, Skip si +1%</p>
+                                <p><b>TP/SL:</b> Automáticos como OCA (uno cancela otro)</p>
+                                <p><b>Cuenta:</b> IBKR U9444436 • Puerto 7496 (Live)</p>
+                                <p className="text-gray-400 pt-1">Ejecución: L-V a las 16:25 España</p>
                             </div>
                         )}
 

@@ -18,6 +18,7 @@ import { PrismaClient } from "@prisma/client";
 import { getIBKRService } from "../services/ibkr_service";
 import { fetchRealTimePrices } from "../services/polygon";
 import { Contract, Order, OrderAction, OrderType, SecType, TimeInForce } from "@stoqey/ib";
+import { sendOrdersNotification } from "../services/telegram";
 
 const prisma = new PrismaClient();
 
@@ -298,6 +299,15 @@ async function main() {
 
     const successCount = results.filter(r => r).length;
     console.log(`\n✅ Completed: ${successCount}/${orders.length} orders active/filling`);
+
+    // Send Telegram notification with order details
+    const telegramOrders = orders.map(o => ({
+        symbol: o.symbol,
+        quantity: o.quantity,
+        limitPrice: Math.round(o.price * 0.8 * 100) / 100, // -20% limit
+        marketPrice: o.price,
+    }));
+    await sendOrdersNotification(telegramOrders);
 
     // Cleanup
     setTimeout(() => {
