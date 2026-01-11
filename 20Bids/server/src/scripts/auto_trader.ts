@@ -26,6 +26,7 @@ interface TradingConfig {
     stopLoss: number;
     maxStocks: number;
     maxPositionPercent: number;
+    maxDailySpend: number;
     minVolume: number;
     minPrice: number;
     maxGainSkip: number;
@@ -54,7 +55,8 @@ async function getConfig(): Promise<TradingConfig> {
                 stopLoss: 3.0,
                 maxStocks: 10,
                 maxPositionPercent: 20.0,
-                minVolume: 1000000,
+                maxDailySpend: 32500,  // ~30K€
+                minVolume: 2000000,    // 2M
                 minPrice: 5.0,
                 maxGainSkip: 1.0,
                 prioritizeBelowRef: true,
@@ -95,14 +97,11 @@ async function placeAndWaitForOrder(
         const polygonPrices = await fetchRealTimePrices([symbol]);
         const rawPrice = polygonPrices[symbol]?.price || initialPrice;
 
-        // Progressive buffer: 0.1% base, +0.3% at attempt 5, +0.5% at attempt 8
-        let bufferPercent = 0.1;
-        if (attempt >= 8) bufferPercent = 0.5;
-        else if (attempt >= 5) bufferPercent = 0.3;
+        // Set limit price 20% BELOW market - user will manually adjust up when ready
+        const discountPercent = 20;
+        const limitPrice = Math.round(rawPrice * (1 - discountPercent / 100) * 100) / 100;
 
-        const limitPrice = Math.round(rawPrice * (1 + bufferPercent / 100) * 100) / 100;
-
-        console.log(`   [${symbol}] Attempt ${attempt}/${MAX_ORDER_RETRIES} - LIMIT @ $${limitPrice.toFixed(2)} (+${bufferPercent}%)`);
+        console.log(`   [${symbol}] Attempt ${attempt}/${MAX_ORDER_RETRIES} - LIMIT @ $${limitPrice.toFixed(2)} (-${discountPercent}% from $${rawPrice.toFixed(2)})`);
 
         // Place the order
         const orderResult = await ibkr.placeLimitBuyOrder(symbol, quantity, limitPrice);

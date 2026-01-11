@@ -7,7 +7,7 @@
 
 import { IBApi, EventName, ErrorCode, Contract, Order, OrderAction, OrderType, SecType } from "@stoqey/ib";
 
-const PORT = 7497; // Paper trading port (use 7496 for live)
+const PORT = 7496; // LIVE trading port (use 7497 for paper)
 const HOST = "127.0.0.1";
 const CLIENT_ID = 1;
 

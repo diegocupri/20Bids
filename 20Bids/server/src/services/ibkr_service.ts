@@ -6,9 +6,10 @@
 
 import { IBApi, EventName, ErrorCode, Contract, Order, OrderAction, OrderType, SecType, TimeInForce } from "@stoqey/ib";
 
-const PORT = 7497; // Paper trading (7496 for live)
+const PORT = 7496; // LIVE trading (7497 for paper)
 const HOST = "127.0.0.1";
 const CLIENT_ID = 1;
+const ACCOUNT_ID = "U9444436"; // Live trading account
 
 interface AccountSummary {
     accountId: string;
@@ -234,6 +235,7 @@ export class IBKRService {
             lmtPrice: limitPrice,
             tif: TimeInForce.DAY,
             transmit: true,
+            account: ACCOUNT_ID,
         };
 
         try {
@@ -281,6 +283,7 @@ export class IBKRService {
             lmtPrice: takeProfitPrice,
             tif: TimeInForce.GTC,
             transmit: true,
+            account: ACCOUNT_ID,
             ocaGroup: `${symbol}_TP_SL_${Date.now()}`,
             ocaType: 1, // Cancel on fill
         };
@@ -294,6 +297,7 @@ export class IBKRService {
             auxPrice: stopLossPrice,
             tif: TimeInForce.GTC,
             transmit: true,
+            account: ACCOUNT_ID,
             ocaGroup: `${symbol}_TP_SL_${Date.now()}`,
             ocaType: 1,
         };
@@ -354,6 +358,7 @@ export class IBKRService {
             lmtPrice: limitPrice,
             tif: TimeInForce.DAY,
             transmit: false, // Don't transmit yet - wait for children
+            account: ACCOUNT_ID,
         };
 
         // Take Profit Order: LIMIT SELL
@@ -366,6 +371,7 @@ export class IBKRService {
             tif: TimeInForce.GTC,
             parentId: parentOrderId,
             transmit: false,
+            account: ACCOUNT_ID,
         };
 
         // Stop Loss Order: STOP SELL
@@ -378,6 +384,7 @@ export class IBKRService {
             tif: TimeInForce.GTC,
             parentId: parentOrderId,
             transmit: true, // Transmit all orders now
+            account: ACCOUNT_ID,
         };
 
         try {

@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Settings, Maximize2, Minimize2, TrendingDown, BarChart2, DollarSign, Activity, Zap, RotateCcw } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Settings, Maximize2, Minimize2, TrendingDown, BarChart2, DollarSign, Activity, Zap, RotateCcw, Info } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { fetchRecommendations, fetchPrices, fetchIndices, fetchTradeLogs, API_URL } from '../api/client';
 import type { TradeLog } from '../api/client';
 import { TickerImage } from './TickerImage';
+import { TradingInfoModal } from './TradingInfoModal';
 
 
 
@@ -31,6 +32,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
     const [tradeLogs, setTradeLogs] = useState<TradeLog[]>([]);
     const [tradeHover, setTradeHover] = useState<{ symbol: string, x: number, y: number } | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
     // Persistent Filter States
     const [showExtraHours, setShowExtraHours] = useState(() => {
@@ -275,6 +277,7 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
     };
 
     return (
+        <>
         <div className="flex flex-col h-full min-h-0 bg-bg-primary font-sans relative">
             {/* Launch Button Floating - Compact */}
             {selectedSymbols.size > 0 && (
@@ -387,6 +390,15 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
 
                         {/* Controls Group */}
                         <div className="flex items-center gap-2">
+                            {/* Strategy Info Button */}
+                            <button
+                                onClick={() => setIsInfoModalOpen(true)}
+                                className="w-8 h-8 flex items-center justify-center bg-accent-primary/10 hover:bg-accent-primary/20 text-accent-primary rounded-lg transition-all border border-accent-primary/30"
+                                title="Trading Strategy Info"
+                            >
+                                <Info className="w-4 h-4" />
+                            </button>
+
                             {/* Trading Config Button */}
                             {onOpenTradingModal && (
                                 <button
@@ -839,5 +851,12 @@ export function RecommendationsTable({ selectedDate, onRowClick, onDataLoaded, m
                 </table>
             </div >
         </div >
+
+        {/* Trading Info Modal */ }
+    <TradingInfoModal
+        isOpen={isInfoModalOpen}
+        onClose={() => setIsInfoModalOpen(false)}
+    />
+        </>
     );
 }
