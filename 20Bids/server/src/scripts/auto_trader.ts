@@ -18,7 +18,7 @@ import { PrismaClient } from "@prisma/client";
 import { getIBKRService } from "../services/ibkr_service";
 import { fetchRealTimePrices } from "../services/polygon";
 import { Contract, Order, OrderAction, OrderType, SecType, TimeInForce } from "@stoqey/ib";
-import { sendOrdersNotification } from "../services/telegram";
+import { sendOrdersNotification, sendErrorNotification } from "../services/telegram";
 
 const prisma = new PrismaClient();
 
@@ -270,13 +270,13 @@ async function main() {
     }
 
     // 10. Build order list with live prices
-    const orders: { symbol: string; quantity: number; price: number }[] = [];
+    const orders: { symbol: string; quantity: number; price: number; probability: number }[] = [];
     for (const rec of sorted) {
         const livePrice = livePrices[rec.symbol]?.price || rec.price;
         const quantity = Math.floor(maxPerPosition / livePrice);
 
         if (quantity >= 1) {
-            orders.push({ symbol: rec.symbol, quantity, price: livePrice });
+            orders.push({ symbol: rec.symbol, quantity, price: livePrice, probability: rec.probabilityValue });
             console.log(`   ${rec.symbol}: ${quantity} shares @ $${livePrice.toFixed(2)} = $${(quantity * livePrice).toFixed(0)}`);
         }
     }
@@ -306,8 +306,15 @@ async function main() {
         quantity: o.quantity,
         limitPrice: Math.round(o.price * 0.8 * 100) / 100, // -20% limit
         marketPrice: o.price,
+        probability: o.probability,
     }));
     await sendOrdersNotification(telegramOrders);
+
+    // Notify if any orders failed
+    const failedCount = orders.length - successCount;
+    if (failedCount > 0) {
+        await sendErrorNotification(`${failedCount} órdenes fallaron. Revisa fondos o conexión IBKR.`);
+    }
 
     // Cleanup
     setTimeout(() => {
@@ -317,7 +324,8 @@ async function main() {
     }, 3000);
 }
 
-main().catch(err => {
+main().catch(async err => {
     console.error("Error:", err);
+    await sendErrorNotification(`Error crítico: ${err.message}`);
     process.exit(1);
 });

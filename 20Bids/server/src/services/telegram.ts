@@ -19,6 +19,7 @@ interface OrderInfo {
     quantity: number;
     limitPrice: number;
     marketPrice: number;
+    probability?: number;
 }
 
 export async function sendTelegramNotification(message: string): Promise<boolean> {
@@ -65,7 +66,8 @@ export async function sendOrdersNotification(orders: OrderInfo[]): Promise<boole
 
     for (const order of orders) {
         const discount = ((1 - order.limitPrice / order.marketPrice) * 100).toFixed(1);
-        message += `<b>${order.symbol}</b>\n`;
+        const prob = order.probability ? ` (${order.probability}%)` : '';
+        message += `<b>${order.symbol}</b>${prob}\n`;
         message += `  📊 ${order.quantity} acciones\n`;
         message += `  💰 Límite: $${order.limitPrice.toFixed(2)} (-${discount}%)\n`;
         message += `  📈 Mercado: $${order.marketPrice.toFixed(2)}\n\n`;
@@ -73,6 +75,12 @@ export async function sendOrdersNotification(orders: OrderInfo[]): Promise<boole
 
     message += `\n⚠️ Revisa y ajusta precios en IBKR`;
 
+    return sendTelegramNotification(message);
+}
+
+export async function sendErrorNotification(error: string): Promise<boolean> {
+    const now = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' });
+    const message = `❌ <b>20Bids Error</b>\n📅 ${now}\n\n${error}`;
     return sendTelegramNotification(message);
 }
 
@@ -90,3 +98,4 @@ export async function sendTradeExecutedNotification(
 
     return sendTelegramNotification(message);
 }
+
