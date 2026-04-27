@@ -1,10 +1,19 @@
 import express from 'express';
 import cors from 'cors';
+import http from 'http';
+import { WebSocketServer } from 'ws';
+import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { subDays, format } from 'date-fns';
 import { fetchRealTimePrices, fetchTickerDetails, fetchGroupedDaily, fetchDailyStats, getReferencePrice, fetchSectorPerformance, fetchMarketIndices, getIntradayStats, fetchTickerNews, fetchSocialSentiment } from './services/polygon';
+import { startPolygonWS, getLastPrice, getAllPrices, setActiveSymbols, priceEvents } from './services/polygon-ws';
+import { startIntradayPoller } from './services/intraday-poller';
 import { parse } from 'csv-parse/sync';
 import authRouter from './routes/auth';
+import revealsRouter from './routes/reveals';
+import watchlistRouter from './routes/watchlist';
+import notesRouter from './routes/notes';
+import pricesRouter from './routes/prices';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -21,6 +30,12 @@ app.use(express.text({ type: 'text/csv', limit: '10mb' }));
 
 // Auth Routes
 app.use('/api/auth', authRouter);
+
+// Mobile-companion routes (reveals, watchlist, notes, price history)
+app.use('/api/reveals', revealsRouter);
+app.use('/api/watchlist', watchlistRouter);
+app.use('/api/notes', notesRouter);
+app.use('/api/prices', pricesRouter);
 
 // Health Check for Render
 app.get('/', (req, res) => {
@@ -116,18 +131,10 @@ app.get('/api/recommendations', async (req, res) => {
         // Since list is usually < 20 tickers, it is fast enough.
 
         if (isToday && dbRecommendations.length > 0) {
-            console.log('[API] Triggering auto-refresh of intraday stats...');
-            await refreshIntradayData(dbRecommendations);
-
-            // Re-fetch updated data
-            dbRecommendations = await prisma.recommendation.findMany({
-                where: {
-                    date: {
-                        gte: startOfDay,
-                        lte: endOfDay
-                    }
-                }
-            });
+            // MVSO/peak refresh now runs in background via startIntradayPoller()
+            // every 30s — no longer triggered per-request. Tell the Polygon WS
+            // subscriber which symbols are active so it streams trades for them.
+            setActiveSymbols(dbRecommendations.map(r => r.symbol));
         }
 
         // If we have data from database, use it
@@ -140,11 +147,20 @@ app.get('/api/recommendations', async (req, res) => {
                 const enriched = dbRecommendations.map(rec => {
                     const rtPrice = realTimePrices[rec.symbol]; // It's a Record, not an Array
 
+                    // Layered freshness: REST snapshot fills the row, then if
+                    // a Polygon WS tick is even fresher we use that price.
+                    const wsTick = getLastPrice(rec.symbol);
+                    const livePrice = wsTick?.price ?? rtPrice?.price ?? rec.price;
+                    const refForChange = rec.refPrice1020 ?? rec.open;
+                    const liveChange = refForChange
+                        ? ((livePrice - refForChange) / refForChange) * 100
+                        : (rtPrice?.change ?? rec.changePercent);
+
                     return {
                         ...rec,
                         date: format(rec.date, 'yyyy-MM-dd'),
-                        price: rtPrice?.price || rec.price,
-                        changePercent: rtPrice?.change ?? rec.changePercent,
+                        price: livePrice,
+                        changePercent: liveChange,
                         volume: rtPrice?.volume || rec.volume
                     };
                 });
@@ -1519,8 +1535,56 @@ app.get('/api/trading/positions', async (req, res) => {
 //     }
 // });
 
-app.listen(Number(PORT), '0.0.0.0', () => {
+// --- HTTP server + WebSocket relay (real-time prices) ----------------
+// Mobile clients open `wss://<host>/ws/prices?token=<jwt>` and get:
+//   { type: 'snapshot', prices: [...] }   on connect
+//   { type: 'tick', symbol, price, ... }  per Polygon trade
+// Auth: same JWT secret used by /api/auth/* routes (passed in query string
+// because RN's WebSocket can't set custom headers).
+const server = http.createServer(app);
+const wss = new WebSocketServer({ noServer: true });
+
+server.on('upgrade', (req, socket, head) => {
+    if (!req.url?.startsWith('/ws/prices')) {
+        socket.destroy();
+        return;
+    }
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const token = url.searchParams.get('token');
+    if (!token) { socket.destroy(); return; }
+    try {
+        jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-change-in-production');
+    } catch {
+        socket.destroy();
+        return;
+    }
+    wss.handleUpgrade(req, socket, head, (client) => {
+        wss.emit('connection', client, req);
+    });
+});
+
+wss.on('connection', (client) => {
+    // Snapshot of the current cache so the client immediately sees fresh prices
+    // even if it connects between Polygon ticks.
+    try {
+        client.send(JSON.stringify({ type: 'snapshot', prices: getAllPrices() }));
+    } catch { /* broken socket */ }
+});
+
+// Forward each Polygon tick to all connected mobile clients.
+priceEvents.on('tick', (tick: any) => {
+    const msg = JSON.stringify({ type: 'tick', ...tick });
+    for (const client of wss.clients) {
+        if (client.readyState === client.OPEN) {
+            try { client.send(msg); } catch { /* ignore */ }
+        }
+    }
+});
+
+server.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
+    startPolygonWS();      // open the upstream WS to Polygon
+    startIntradayPoller(); // 30s background refresh of MVSO peaks
 
     // [DISABLED] Auto-Refresh Background Task
     // This was causing memory issues on Render's free tier.

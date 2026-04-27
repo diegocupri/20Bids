@@ -32,12 +32,14 @@
     "prisma": "^6.19.0",
     "socket.io": "^4.8.3",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "ws": "^8.20.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.5",
     "@types/multer": "^2.0.0",
+    "@types/ws": "^8.18.1",
     "nodemon": "^3.1.11"
   }
 }
