@@ -8,15 +8,50 @@ datasource db {
 }
 
 model User {
+  id           String      @id @default(uuid())
+  email        String      @unique
+  password     String      // Hashed password
+  name         String?
+  avatarUrl    String?
+  settings     Json?
+  plan         Plan        @default(FREE)
+  planRenewsAt DateTime?
+  riskProfile  Json?       // { mvso, vol, min, sl, notifications }
+  createdAt    DateTime    @default(now())
+  tags         Tag[]
+  watchlist    Watchlist[]
+  reveals      Reveal[]
+  notes        Note[]
+}
+
+enum Plan {
+  FREE
+  PRO
+}
+
+// Tracks per-day ticker reveals for FREE plan users (1 reveal/day cap).
+model Reveal {
   id        String   @id @default(uuid())
-  email     String   @unique
-  password  String   // Hashed password
-  name      String?
-  avatarUrl String?
-  settings  Json?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  symbol    String
+  date      DateTime @db.Date
   createdAt DateTime @default(now())
-  tags      Tag[]
-  watchlist Watchlist[]
+
+  @@unique([userId, symbol, date])
+  @@index([userId, date])
+}
+
+// User-private notes pinned to a ticker symbol (one per symbol per user).
+model Note {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  symbol    String
+  body      String
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, symbol])
 }
 
 model Recommendation {

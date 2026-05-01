@@ -541,3 +541,68 @@ export async function fetchSocialSentiment(ticker: string) {
         ]
     };
 }
+// Add this to the END of `server/src/services/polygon.ts`. It's purely additive.
+// Requires the existing POLYGON_API_KEY env var (already used by the file).
+
+
+const POLYGON_BASE = 'https://api.polygon.io';
+const API_KEY = process.env.POLYGON_API_KEY;
+
+export type AggregateRange = '1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL';
+
+interface RangeSpec {
+    multiplier: number;
+    timespan: 'minute' | 'hour' | 'day' | 'week' | 'month';
+    from: () => Date;
+    to?: () => Date;
+}
+
+function daysAgo(n: number): Date {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - n);
+    return d;
+}
+
+function startOfTodayET(): Date {
+    // Approximation: use 13:30 UTC ≈ 09:30 ET (EDT) market open.
+    const d = new Date();
+    d.setUTCHours(13, 30, 0, 0);
+    return d;
+}
+
+const RANGE_SPECS: Record<AggregateRange, RangeSpec> = {
+    '1D':  { multiplier: 5,  timespan: 'minute', from: startOfTodayET },
+    '1W':  { multiplier: 30, timespan: 'minute', from: () => daysAgo(7) },
+    '1M':  { multiplier: 1,  timespan: 'day',    from: () => daysAgo(30) },
+    '3M':  { multiplier: 1,  timespan: 'day',    from: () => daysAgo(90) },
+    '1Y':  { multiplier: 1,  timespan: 'week',   from: () => daysAgo(365) },
+    'ALL': { multiplier: 1,  timespan: 'month',  from: () => new Date(Date.UTC(2018, 0, 1)) },
+};
+
+function toDateOnly(d: Date): string {
+    return d.toISOString().slice(0, 10);
+}
+
+export async function fetchAggregates(symbol: string, range: AggregateRange): Promise<{
+    points: { t: number; c: number }[];
+    resolution: string;
+}> {
+    if (!API_KEY) {
+        throw new Error('POLYGON_API_KEY is not configured');
+    }
+
+    const spec = RANGE_SPECS[range];
+    const from = toDateOnly(spec.from());
+    const to = toDateOnly(spec.to ? spec.to() : new Date());
+
+    const url = `${POLYGON_BASE}/v2/aggs/ticker/${encodeURIComponent(symbol)}/range/${spec.multiplier}/${spec.timespan}/${from}/${to}`;
+
+    const { data } = await axios.get(url, {
+        params: { adjusted: 'true', sort: 'asc', limit: 5000, apiKey: API_KEY },
+    });
+
+    const results = Array.isArray(data?.results) ? data.results : [];
+    const points = results.map((row: any) => ({ t: row.t, c: row.c }));
+
+    return { points, resolution: `${spec.multiplier}${spec.timespan}` };
+}
