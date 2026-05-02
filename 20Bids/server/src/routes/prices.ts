@@ -33,7 +33,29 @@ router.get('/history', async (req: Request, res: Response) => {
             return;
         }
 
-        const { points, resolution } = await fetchAggregates(symbol, range);
+        let { points, resolution } = await fetchAggregates(symbol, range);
+
+        // 1D fallback: weekends + pre-market hours produce zero bars. Pull
+        // a wider window and serve only the latest day with data so the
+        // chart shows e.g. "last Friday" instead of "Chart unavailable".
+        if (range === '1D' && points.length === 0) {
+            const wider = await fetchAggregates(symbol, '1W');
+            if (wider.points.length) {
+                const groups = new Map<string, typeof wider.points>();
+                for (const p of wider.points) {
+                    const dayKey = new Date(p.t).toISOString().slice(0, 10);
+                    const arr = groups.get(dayKey) ?? [];
+                    arr.push(p);
+                    groups.set(dayKey, arr);
+                }
+                const latestDay = [...groups.keys()].sort().pop();
+                if (latestDay) {
+                    points = groups.get(latestDay)!;
+                    resolution = wider.resolution;
+                }
+            }
+        }
+
         const payload = { symbol, range, resolution, points };
 
         cache.set(key, { expires: Date.now() + ttlFor(range), payload });
