@@ -22,6 +22,37 @@ model User {
   watchlist    Watchlist[]
   reveals      Reveal[]
   notes        Note[]
+  pushTokens   PushToken[]
+}
+
+// One per device per user. We upsert by token (a single Expo token can only
+// belong to one user at a time — if a user logs out and another logs in on
+// the same device, the row gets re-assigned to the new userId).
+model PushToken {
+  id         String    @id @default(uuid())
+  token      String    @unique // "ExponentPushToken[xxxxx]"
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  platform   String    // "ios" | "android"
+  deviceName String?
+  appVersion String?
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+// Idempotency guard: prevents sending the same broadcast more than once
+// per (kind, date). When /api/external/ingest is called multiple times on
+// the same day for refreshes, only the FIRST one fires the push.
+model BroadcastLog {
+  id        String   @id @default(uuid())
+  kind      String   // "morning_bids" | future kinds
+  date      DateTime @db.Date
+  count     Int      // how many tokens received the broadcast
+  createdAt DateTime @default(now())
+
+  @@unique([kind, date])
 }
 
 enum Plan {

@@ -14,6 +14,8 @@ import revealsRouter from './routes/reveals';
 import watchlistRouter from './routes/watchlist';
 import notesRouter from './routes/notes';
 import pricesRouter from './routes/prices';
+import notificationsRouter from './routes/notifications';
+import { broadcastMorningBidsOnce } from './services/push';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -36,6 +38,7 @@ app.use('/api/reveals', revealsRouter);
 app.use('/api/watchlist', watchlistRouter);
 app.use('/api/notes', notesRouter);
 app.use('/api/prices', pricesRouter);
+app.use('/api/notifications', notificationsRouter);
 
 // Health Check for Render
 app.get('/', (req, res) => {
@@ -427,6 +430,27 @@ app.post('/api/external/ingest', async (req, res) => {
         }
 
         res.json({ success: true, count: successCount });
+
+        // --- Push notification trigger (fire-and-forget, after response) ---
+        // Only broadcast if (a) the ingested batch is for today, and (b) we
+        // haven't already broadcast today. broadcastMorningBidsOnce handles
+        // the idempotency guard via the BroadcastLog table — re-ingestions
+        // throughout the day for refreshes won't re-send the push.
+        try {
+            const todayIso = new Date().toISOString().slice(0, 10);
+            const hasTodaysBids = data.some((item: any) =>
+                typeof item.date === 'string' && item.date.startsWith(todayIso)
+            );
+            if (hasTodaysBids && successCount >= 5) {
+                const result = await broadcastMorningBidsOnce(new Date(todayIso), successCount);
+                if (result.fired) {
+                    console.log(`[Ingest] Morning push fired — ok ${result.ok}/${result.total}`);
+                }
+            }
+        } catch (notifErr) {
+            // Never let a push failure mask a successful ingest.
+            console.error('[Ingest] Push broadcast failed (ingest still ok):', notifErr);
+        }
 
     } catch (error) {
         console.error('[Ingest] Error:', error);
