@@ -223,7 +223,7 @@ async function main() {
             volume: { gte: config.minVolume },
             price: { gte: config.minPrice },
         },
-        select: { symbol: true, price: true, refPrice1020: true, probability: true },
+        select: { symbol: true, price: true, refPrice1020: true, probability: true, probabilityValue: true },
     });
 
     console.log(`\n📊 Found ${recommendations.length} recommendations with Vol > ${(config.minVolume / 1e6).toFixed(1)}M, Price > $${config.minPrice}`);
