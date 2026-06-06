@@ -60,6 +60,22 @@ enum Plan {
   PRO
 }
 
+// Password reset codes (6-digit numeric) sent via email by /auth/forgot-password.
+// We store the HASH of the code, never the code itself — same principle as
+// passwords. One active code per email; a new request invalidates the prior.
+// Codes expire after 60 minutes. After max 5 failed attempts the row is
+// cleared to prevent brute force.
+model PasswordResetToken {
+  id         String   @id @default(uuid())
+  email      String   @unique   // lookup by email; one active token per email
+  codeHash   String              // bcrypt hash of the 6-digit code
+  expiresAt  DateTime
+  attempts   Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
 // Tracks per-day ticker reveals for FREE plan users (1 reveal/day cap).
 model Reveal {
   id        String   @id @default(uuid())

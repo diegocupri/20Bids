@@ -91,68 +91,28 @@ async function placeAndWaitForOrder(
     initialPrice: number,
     config: { takeProfit: number; stopLoss: number }
 ): Promise<boolean> {
-    console.log(`\n🔵 [${symbol}] Starting order process...`);
+    console.log(`\n🔵 [${symbol}] Placing order...`);
 
-    for (let attempt = 1; attempt <= MAX_ORDER_RETRIES; attempt++) {
-        // Get fresh price from Polygon
-        const polygonPrices = await fetchRealTimePrices([symbol]);
-        const rawPrice = polygonPrices[symbol]?.price || initialPrice;
+    // Get fresh price from Polygon
+    const polygonPrices = await fetchRealTimePrices([symbol]);
+    const rawPrice = polygonPrices[symbol]?.price || initialPrice;
 
-        // Set limit price 20% BELOW market - user will manually adjust up when ready
-        const discountPercent = 20;
-        const limitPrice = Math.round(rawPrice * (1 - discountPercent / 100) * 100) / 100;
+    // Set limit price 20% BELOW market - user will manually adjust up when ready
+    const discountPercent = 20;
+    const limitPrice = Math.round(rawPrice * (1 - discountPercent / 100) * 100) / 100;
 
-        console.log(`   [${symbol}] Attempt ${attempt}/${MAX_ORDER_RETRIES} - LIMIT @ $${limitPrice.toFixed(2)} (-${discountPercent}% from $${rawPrice.toFixed(2)})`);
+    console.log(`   [${symbol}] LIMIT @ $${limitPrice.toFixed(2)} (-${discountPercent}% from $${rawPrice.toFixed(2)})`);
 
-        // Place the order
-        const orderResult = await ibkr.placeLimitBuyOrder(symbol, quantity, limitPrice);
+    // Place the order and KEEP IT OPEN (no canceling, no retrying)
+    const orderResult = await ibkr.placeLimitBuyOrder(symbol, quantity, limitPrice);
 
-        if (!orderResult.success) {
-            console.log(`   [${symbol}] ❌ Order placement failed: ${orderResult.error}`);
-            return false;
-        }
-
-        const orderId = orderResult.orderId;
-
-        // Wait and check status
-        await sleep(WAIT_SECONDS * 1000);
-
-        const status = ibkr.getOrderStatus(orderId);
-        const filled = status?.filled || 0;
-
-        if (filled > 0) {
-            // ORDER IS FILLING - KEEP IT OPEN, DON'T CANCEL, DON'T RETRY
-            console.log(`   [${symbol}] ✅ Order filling! ${filled}/${quantity} filled. KEEPING ORDER OPEN.`);
-
-            // Place TP/SL based on limit price
-            await ibkr.placeTPandSLOrders(symbol, quantity, limitPrice, config.takeProfit, config.stopLoss);
-
-            // Log to database
-            await prisma.tradeLog.create({
-                data: {
-                    symbol,
-                    quantity,
-                    entryPrice: limitPrice,
-                    takeProfitPrice: limitPrice * (1 + config.takeProfit / 100),
-                    stopLossPrice: limitPrice * (1 - config.stopLoss / 100),
-                    parentOrderId: orderId,
-                    tpOrderId: 0,
-                    slOrderId: 0,
-                    status: "FILLING",
-                }
-            });
-
-            return true; // SUCCESS - order is active and filling
-        } else {
-            // NO FILLS - cancel and retry with higher price
-            console.log(`   [${symbol}] No fills yet. Cancelling and retrying...`);
-            ibkr.cancelOrder(orderId);
-            await sleep(1000);
-        }
+    if (!orderResult.success) {
+        console.log(`   [${symbol}] ❌ Order rejected: ${orderResult.error}`);
+        return false;
     }
 
-    console.log(`   [${symbol}] ❌ Failed after ${MAX_ORDER_RETRIES} attempts with 0 fills.`);
-    return false;
+    console.log(`   [${symbol}] ✅ Order placed! ID: ${orderResult.orderId} - Pending in IBKR`);
+    return true; // Order is placed and stays open for manual adjustment
 }
 
 async function main() {

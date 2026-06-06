@@ -9,7 +9,7 @@ import { IBApi, EventName, ErrorCode, Contract, Order, OrderAction, OrderType, S
 const PORT = 7496; // LIVE trading (7497 for paper)
 const HOST = "127.0.0.1";
 const CLIENT_ID = 1;
-const ACCOUNT_ID = "U9444436"; // Live trading account
+const ACCOUNT_ID = "U11220991"; // Live trading account
 
 interface AccountSummary {
     accountId: string;

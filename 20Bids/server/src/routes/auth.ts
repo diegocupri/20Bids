@@ -1,9 +1,11 @@
 import express, { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { sendPasswordResetEmail } from '../services/email';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -269,6 +271,142 @@ router.post('/upgrade', authenticateToken, async (req: AuthRequest, res: Respons
     } catch (error) {
         console.error('Upgrade error:', error);
         res.status(500).json({ error: 'Failed to upgrade plan' });
+    }
+});
+
+// ============================================================================
+// PASSWORD RESET (forgot-password / reset-password)
+// ============================================================================
+// Flow:
+//   1. POST /auth/forgot-password { email }
+//      → if user exists, generate a 6-digit code, hash it, store with 60-min
+//        expiry, email the raw code via Resend. Always returns 200 even when
+//        the email doesn't exist (prevents account enumeration).
+//   2. POST /auth/reset-password { email, code, newPassword }
+//      → verify code against the hashed stored value, reject after 5 wrong
+//        attempts, update the user's password, return a fresh JWT so the
+//        user is logged in automatically.
+// ============================================================================
+
+const RESET_CODE_EXPIRY_MIN = 60;
+const RESET_CODE_MAX_ATTEMPTS = 5;
+
+/** Generate a 6-digit numeric code (zero-padded). 1M possibilities; combined
+ * with the 5-attempt cap that's ~5/1M chance of a successful blind guess. */
+function generateResetCode(): string {
+    // crypto.randomInt is uniform — Math.random is not, especially under load.
+    return crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
+}
+
+// FORGOT PASSWORD — request a reset code via email.
+router.post('/forgot-password', async (req: Request, res: Response) => {
+    try {
+        const { email } = req.body as { email?: string };
+        if (!email || typeof email !== 'string') {
+            res.status(400).json({ error: 'Email is required' });
+            return;
+        }
+
+        const normalized = email.trim().toLowerCase();
+        const user = await prisma.user.findUnique({ where: { email: normalized } });
+
+        // Account enumeration defense: ALWAYS respond 200, even when the
+        // user doesn't exist. Otherwise a 404 vs 200 leaks which emails are
+        // registered. Genuine users still get the email.
+        if (user) {
+            const code = generateResetCode();
+            const codeHash = await bcrypt.hash(code, 10);
+            const expiresAt = new Date(Date.now() + RESET_CODE_EXPIRY_MIN * 60_000);
+
+            // Upsert by email — issuing a new code invalidates the prior one.
+            await prisma.passwordResetToken.upsert({
+                where: { email: normalized },
+                create: { email: normalized, codeHash, expiresAt, attempts: 0 },
+                update: { codeHash, expiresAt, attempts: 0 },
+            });
+
+            try {
+                await sendPasswordResetEmail(user.email, code);
+            } catch (err) {
+                // Email delivery failed — surface a 500 so the client can
+                // tell the user to retry. The token was already stored, so
+                // a retry from the user will re-issue and re-send.
+                console.error('Reset email send failed:', err);
+                res.status(500).json({ error: 'Failed to send email. Try again.' });
+                return;
+            }
+        }
+
+        res.json({ ok: true });
+    } catch (error) {
+        console.error('Forgot-password error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// RESET PASSWORD — exchange a valid reset code for a new password + JWT.
+router.post('/reset-password', async (req: Request, res: Response) => {
+    try {
+        const { email, code, newPassword } = req.body as {
+            email?: string; code?: string; newPassword?: string;
+        };
+        if (!email || !code || !newPassword) {
+            res.status(400).json({ error: 'email, code and newPassword are required' });
+            return;
+        }
+        if (typeof newPassword !== 'string' || newPassword.length < 8) {
+            res.status(400).json({ error: 'Password must be at least 8 characters' });
+            return;
+        }
+
+        const normalized = email.trim().toLowerCase();
+        const token = await prisma.passwordResetToken.findUnique({ where: { email: normalized } });
+
+        // Same generic message on every "code didn't validate" path so the
+        // client can't distinguish "no such code" / "expired" / "wrong code".
+        // The only path with a different message is "too many attempts",
+        // which the user genuinely needs to know.
+        if (!token) {
+            res.status(400).json({ error: 'Invalid or expired code' });
+            return;
+        }
+        if (token.expiresAt.getTime() < Date.now()) {
+            await prisma.passwordResetToken.delete({ where: { email: normalized } });
+            res.status(400).json({ error: 'Invalid or expired code' });
+            return;
+        }
+        if (token.attempts >= RESET_CODE_MAX_ATTEMPTS) {
+            await prisma.passwordResetToken.delete({ where: { email: normalized } });
+            res.status(429).json({ error: 'Too many attempts. Request a new code.' });
+            return;
+        }
+
+        const valid = await bcrypt.compare(code, token.codeHash);
+        if (!valid) {
+            await prisma.passwordResetToken.update({
+                where: { email: normalized },
+                data: { attempts: { increment: 1 } },
+            });
+            res.status(400).json({ error: 'Invalid or expired code' });
+            return;
+        }
+
+        // Code valid — update password + nuke the reset token (single-use).
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        const user = await prisma.user.update({
+            where: { email: normalized },
+            data: { password: hashedPassword },
+            select: USER_PUBLIC_SELECT,
+        });
+        await prisma.passwordResetToken.delete({ where: { email: normalized } });
+
+        // Auto-login: issue a fresh JWT so the user lands in the app
+        // immediately, no extra sign-in step.
+        const jwtToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+        res.json({ token: jwtToken, user: publicizeAvatar(user, req) });
+    } catch (error) {
+        console.error('Reset-password error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
