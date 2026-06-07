@@ -11,7 +11,23 @@ const prisma = new PrismaClient();
 type Ref = string | { id: string } | null | undefined;
 const idOf = (r: Ref): string | undefined => (typeof r === 'string' ? r : r?.id);
 interface SessionLike { client_reference_id?: string | null; customer?: Ref; subscription?: Ref; }
-interface SubLike { id: string; customer: Ref; status: string; current_period_end: number; }
+interface SubLike {
+  id: string;
+  customer: Ref;
+  status: string;
+  // Newer Stripe API versions (2025+/"dahlia") moved current_period_end off
+  // the top-level subscription onto its items, so we check both places.
+  current_period_end?: number;
+  items?: { data?: Array<{ current_period_end?: number }> };
+}
+
+/** Safely derive the renewal date from a subscription across API versions.
+ * Returns null (never an Invalid Date) so Prisma never throws on a bad value. */
+function renewDate(sub: SubLike): Date | null {
+  const ts = sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end;
+  if (typeof ts === 'number' && isFinite(ts) && ts > 0) return new Date(ts * 1000);
+  return null;
+}
 
 /** Public base URL for Stripe redirect targets. Stripe requires real
  * http(s) URLs for success/cancel — so we point them at our own /return
@@ -156,10 +172,12 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
           if (subId) {
             try {
               const sub = await stripe().subscriptions.retrieve(subId) as unknown as SubLike;
-              renewsAt = new Date(sub.current_period_end * 1000);
+              renewsAt = renewDate(sub);
             } catch { /* ignore */ }
           }
-          await prisma.user.update({
+          // updateMany (not update) so a non-matching id can't throw P2025
+          // and 500 the webhook — we log the count instead.
+          const r = await prisma.user.updateMany({
             where: { id: userId },
             data: {
               plan: 'PRO',
@@ -168,6 +186,7 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
               stripeSubscriptionId: subId ?? undefined,
             },
           });
+          console.log(`[billing] checkout.session.completed → marked ${r.count} user(s) PRO (id=${userId})`);
         }
         break;
       }
@@ -181,7 +200,7 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
           where: { stripeCustomerId: customerId },
           data: {
             plan: isActive ? 'PRO' : 'FREE',
-            planRenewsAt: isActive ? new Date(sub.current_period_end * 1000) : null,
+            planRenewsAt: isActive ? renewDate(sub) : null,
             stripeSubscriptionId: isActive ? sub.id : null,
           },
         });
