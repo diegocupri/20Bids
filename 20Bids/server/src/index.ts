@@ -15,6 +15,7 @@ import watchlistRouter from './routes/watchlist';
 import notesRouter from './routes/notes';
 import pricesRouter from './routes/prices';
 import notificationsRouter from './routes/notifications';
+import billingRouter, { stripeWebhookHandler } from './routes/billing';
 import { broadcastMorningBidsOnce } from './services/push';
 
 const app = express();
@@ -27,6 +28,10 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key']
 }));
+// Stripe webhook MUST receive the raw body to verify the signature, so it
+// is mounted BEFORE express.json() with a raw body parser scoped to its path.
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), stripeWebhookHandler);
+
 app.use(express.json());
 app.use(express.text({ type: 'text/csv', limit: '10mb' }));
 
@@ -39,6 +44,7 @@ app.use('/api/watchlist', watchlistRouter);
 app.use('/api/notes', notesRouter);
 app.use('/api/prices', pricesRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api/billing', billingRouter);
 
 // Health Check for Render
 app.get('/', (req, res) => {

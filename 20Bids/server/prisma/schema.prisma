@@ -17,6 +17,8 @@ model User {
   plan         Plan        @default(FREE)
   planRenewsAt DateTime?
   riskProfile  Json?       // { mvso, vol, min, sl, notifications }
+  stripeCustomerId     String?  @unique   // Stripe Customer id (cus_...)
+  stripeSubscriptionId String?            // active subscription id (sub_...)
   createdAt    DateTime    @default(now())
   tags         Tag[]
   watchlist    Watchlist[]

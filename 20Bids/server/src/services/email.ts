@@ -3,7 +3,7 @@
  *
  * Configure in production:
  *   RESEND_API_KEY  — generated at https://resend.com/api-keys
- *   EMAIL_FROM      — verified sender, e.g. "20Bids <noreply@clintell.io>"
+ *   EMAIL_FROM      — verified sender, e.g. "20Bids <noreply@20bids.com>"
  *
  * In dev (no key), all send* functions just log the message to console — so
  * you can still test the flow locally without burning quota or needing a
@@ -13,7 +13,7 @@
 import { Resend } from 'resend';
 
 const apiKey = process.env.RESEND_API_KEY;
-const fromAddress = process.env.EMAIL_FROM || '20Bids <noreply@clintell.io>';
+const fromAddress = process.env.EMAIL_FROM || '20Bids <noreply@20bids.com>';
 
 // Lazy-init the client so importing this file in tests doesn't require the
 // env var (only the first send() call does).
