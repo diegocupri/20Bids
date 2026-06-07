@@ -27,7 +27,21 @@ function baseUrl(req: Request): string {
 // (a payment link is the same URL for everyone). prefilled_email saves them
 // a step. NOTE: the 7-day trial must be configured ON the payment link /
 // price in the Stripe dashboard, since we can't set trial_period_days here.
-const STRIPE_PAYMENT_LINK = process.env.STRIPE_PAYMENT_LINK || '';
+//
+// STRIPE_PAYMENT_LINK_TEST is a TEMPORARY override for live test charges:
+// set it to a cheap test link to validate a real card payment, then DELETE
+// the var to fall back to the real link. The production link
+// (STRIPE_PAYMENT_LINK) is never overwritten, so there's no re-typing risk.
+// ⚠️ If STRIPE_PAYMENT_LINK_TEST is left set in production, real customers
+// pay the test price — delete it as soon as the test is done.
+function activePaymentLink(): string {
+  const testLink = process.env.STRIPE_PAYMENT_LINK_TEST;
+  if (testLink) {
+    console.warn('[billing] Using STRIPE_PAYMENT_LINK_TEST override — delete this env var after testing.');
+    return testLink;
+  }
+  return process.env.STRIPE_PAYMENT_LINK || '';
+}
 
 // CREATE CHECKOUT — returns a hosted URL to pay. Prefers the no-code Payment
 // Link if configured, otherwise builds a Checkout Session via the API.
@@ -42,9 +56,10 @@ router.post('/checkout', authenticateToken, async (req: AuthRequest, res: Respon
     if (user.plan === 'PRO') { res.status(400).json({ error: 'Already PRO' }); return; }
 
     // --- Path A: no-code Payment Link -----------------------------------
-    if (STRIPE_PAYMENT_LINK) {
-      const sep = STRIPE_PAYMENT_LINK.includes('?') ? '&' : '?';
-      const url = `${STRIPE_PAYMENT_LINK}${sep}client_reference_id=${encodeURIComponent(userId)}`
+    const paymentLink = activePaymentLink();
+    if (paymentLink) {
+      const sep = paymentLink.includes('?') ? '&' : '?';
+      const url = `${paymentLink}${sep}client_reference_id=${encodeURIComponent(userId)}`
         + `&prefilled_email=${encodeURIComponent(user.email)}`;
       res.json({ url });
       return;
