@@ -151,7 +151,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
 // @ts-ignore
 router.put('/profile', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-        const { name, avatarUrl, password, settings, riskProfile } = req.body;
+        const { name, email, avatarUrl, password, settings, riskProfile } = req.body;
         const userId = req.user?.id;
 
         if (!userId) {
@@ -161,6 +161,18 @@ router.put('/profile', authenticateToken, async (req: AuthRequest, res: Response
 
         const updateData: any = {};
         if (name) updateData.name = name;
+        // Email change — normalise + guard uniqueness (it's the login id).
+        if (email && typeof email === 'string') {
+            const normalized = email.trim().toLowerCase();
+            if (normalized && normalized !== '') {
+                const clash = await prisma.user.findUnique({ where: { email: normalized } });
+                if (clash && clash.id !== userId) {
+                    res.status(400).json({ error: 'That email is already in use' });
+                    return;
+                }
+                updateData.email = normalized;
+            }
+        }
         if (avatarUrl) updateData.avatarUrl = avatarUrl;
         if (password) {
             updateData.password = await bcrypt.hash(password, 10);
