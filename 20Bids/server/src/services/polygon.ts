@@ -573,7 +573,7 @@ function toDateOnly(d: Date): string {
 }
 
 export async function fetchAggregates(symbol: string, range: AggregateRange): Promise<{
-    points: { t: number; c: number }[];
+    points: { t: number; o: number; h: number; l: number; c: number }[];
     resolution: string;
 }> {
     if (!API_KEY) {
@@ -603,7 +603,10 @@ export async function fetchAggregates(symbol: string, range: AggregateRange): Pr
     });
 
     const results = Array.isArray(data?.results) ? data.results : [];
-    const points = results.map((row: any) => ({ t: row.t, c: row.c }));
+    // Full OHLC per bar — the mobile fullscreen chart renders candlesticks,
+    // and a close-only series hides intra-bar wicks (the post-10:20 peaks
+    // behind the Result metric live in `h`, not in any close).
+    const points = results.map((row: any) => ({ t: row.t, o: row.o, h: row.h, l: row.l, c: row.c }));
 
     return { points, resolution: `${spec.multiplier}${spec.timespan}` };
 }
