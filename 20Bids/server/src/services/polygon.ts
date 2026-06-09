@@ -23,9 +23,10 @@ function isMarketOpen() {
     // Weekend check
     if (day === 0 || day === 6) return false;
 
-    // Hours check (9:30 - 15:30)
+    // Hours check (9:30 - 16:00). Was 15:30 — half an hour short of the
+    // close and inconsistent with intraday-poller's version.
     const time = hour * 100 + minute;
-    return time >= 930 && time < 1530;
+    return time >= 930 && time < 1600;
 }
 
 const BASE_URL = 'https://api.polygon.io';
@@ -73,8 +74,9 @@ export async function getReferencePrice(ticker: string, dateStr: string): Promis
                 const barET = new Date(barDate.toLocaleString("en-US", { timeZone: "America/New_York" }));
                 const h = barET.getHours();
                 const m = barET.getMinutes();
-                // Return first bar at or after 10:20
-                return (h > 10) || (h === 10 && m >= 20);
+                // First REGULAR-SESSION bar at/after 10:20 (h < 16 keeps a
+                // halted name from matching an after-hours bar).
+                return h < 16 && ((h > 10) || (h === 10 && m >= 20));
             });
 
             if (targetRef) {
@@ -115,81 +117,64 @@ export async function getIntradayStats(ticker: string, dateStr: string): Promise
             const bars = res.data.results;
 
             const calculateMvso = (targetHour: number, targetMinute: number) => {
+                // Entry = CLOSE of the first REGULAR-SESSION bar at/after the
+                // target time. The `h < 16` bound matters for halted/illiquid
+                // names: without it, a stock with no prints between the target
+                // and the close would match its first AFTER-HOURS bar and the
+                // ref would silently be an extended-hours price.
                 const refBarIndex = bars.findIndex((bar: any) => {
                     const barDate = new Date(bar.t);
                     const barET = new Date(barDate.toLocaleString("en-US", { timeZone: "America/New_York" }));
                     const h = barET.getHours();
                     const m = barET.getMinutes();
-                    return (h > targetHour) || (h === targetHour && m >= targetMinute);
+                    return h < 16 && ((h > targetHour) || (h === targetHour && m >= targetMinute));
                 });
 
                 if (refBarIndex === -1) return null;
                 const refPrice = bars[refBarIndex].c;
 
-                // Calculate HIGH AFTER entry time and finding LOW until that High (MAE)
+                // Scan the post-entry regular session (next bar → 15:59 ET;
+                // the 16:00 closing-auction bar is intentionally excluded —
+                // the strategy's exit convention is "before the close").
+                // Track BOTH the peak high and the session low after entry.
                 let maxHighAfter = -Infinity;
                 let highBarIndex = -1;
+                let sessionLowAfterEntry = Infinity;
 
-                // 1. Find the Peak High and its timestamp/index
-                // START SCAN FROM NEXT BAR (refBarIndex + 1) because we enter at Close of refBar.
                 for (let i = refBarIndex + 1; i < bars.length; i++) {
                     const b = bars[i];
-
-                    // Simple timezone-agnostic check: 16:00 ET is usually close.
-                    // But to be safe vs timezone parsing issues, let's trust the data is within the single day requested.
-                    // We only stop if we are sure it's past 16:00 ET.
-                    // 16:00 ET = 20:00 UTC (Standard) or 21:00 UTC (Daylight)
-                    // Let's use the explicit conversion again but log if we are skipping
-
                     const bDate = new Date(b.t);
                     const bET = new Date(bDate.toLocaleString("en-US", { timeZone: "America/New_York" }));
-
-                    // Debug specific ticker
-                    if (ticker === 'APLD' && i % 60 === 0) {
-                        console.log(`[APLD Debug] Scanning bar ${i} at ${bET.toLocaleTimeString()} (h=${bET.getHours()}), High=${b.h}, Max=${maxHighAfter}`);
-                    }
-
-                    if (bET.getHours() >= 16) break; // Stop at market close
+                    if (bET.getHours() >= 16) break; // stop at market close
 
                     if (b.h > maxHighAfter) {
                         maxHighAfter = b.h;
                         highBarIndex = i;
                     }
+                    if (b.l < sessionLowAfterEntry) sessionLowAfterEntry = b.l;
                 }
                 const highPost = maxHighAfter === -Infinity ? refPrice : maxHighAfter;
-                if (ticker === 'APLD') console.log(`[APLD Debug] Final HighPost=${highPost}, Ref=${refPrice}`);
 
-                // 2. Find Lowest Low between Entry and Peak High
-                // WE ALSO START SCAN FROM NEXT BAR
-                let minLowBeforePeak = Infinity;
-
-                if (highBarIndex !== -1) {
-                    // Iterate from refBarIndex + 1 up to highBarIndex
+                // lowBeforePeak = max adverse excursion (MAE):
+                //   • Winning path (peak above entry): the lowest low between
+                //     entry and the peak — the drawdown a trader sat through
+                //     before the move paid off.
+                //   • Losing path (no bar above entry): the session low after
+                //     entry. The old code returned ~refPrice here (the "low
+                //     before" a peak that never happened), reporting ~zero
+                //     drawdown on exactly the days a stop-loss would have
+                //     fired — which made the SL simulation in /api/stats
+                //     systematically overstate performance.
+                let lowBeforePeak: number;
+                if (highBarIndex !== -1 && maxHighAfter > refPrice) {
+                    let minLowBeforePeak = Infinity;
                     for (let j = refBarIndex + 1; j <= highBarIndex; j++) {
-                        if (bars[j].l < minLowBeforePeak) {
-                            minLowBeforePeak = bars[j].l;
-                        }
+                        if (bars[j].l < minLowBeforePeak) minLowBeforePeak = bars[j].l;
                     }
+                    lowBeforePeak = minLowBeforePeak === Infinity ? refPrice : minLowBeforePeak;
+                } else {
+                    lowBeforePeak = sessionLowAfterEntry === Infinity ? refPrice : sessionLowAfterEntry;
                 }
-
-                // If highBarIndex is -1 (no higher high found), we still might want "minLow" for the rest of the day?
-                // But the logic is "Low Before Peak". If no Peak > Entry, then "Peak" is Entry (refPrice).
-                // If Peak == refPrice, then "Low Before Peak" range is empty (start > end)?
-                // In that case, minLowBeforePeak remains Infinity, which falls back to refPrice below.
-
-                // Correction: If maxHighAfter <= refPrice, then we effectively have NO profit. 
-                // In that case highPost = refPrice. 
-                // And highBarIndex might be -1 if loop didn't find anything higher.
-                // If highBarIndex is -1, loop doesn't run. minLowBeforePeak = Infinity. 
-                // Fallback -> refPrice. This implies 0 drawdown, which is wrong if price tanked.
-
-                // Ideally, if no profit, we want MaxDD to be the lowest point of the session?
-                // But sticking to "Low Before Peak" as strictly MAE_on_MFE path.
-                // If MFE is 0, MAE is effectively undefined or just the session low?
-                // Let's stick to the existing logic structure but fixing the loop bounds.
-
-                // If we didn't find a valid peak or range, fallback to refPrice
-                const lowBeforePeak = minLowBeforePeak === Infinity ? refPrice : minLowBeforePeak;
 
                 return { refPrice, highPost, lowBeforePeak };
             };
@@ -563,15 +548,19 @@ function daysAgo(n: number): Date {
     return d;
 }
 
-function startOfTodayET(): Date {
-    // Approximation: use 13:30 UTC ≈ 09:30 ET (EDT) market open.
-    const d = new Date();
-    d.setUTCHours(13, 30, 0, 0);
-    return d;
+/** Epoch ms of a given ET wall-clock time on TODAY's ET date, DST-aware
+ * (IANA roundtrip — no fixed offset; the old startOfTodayET hardcoded
+ * 13:30 UTC, which is an hour off during EST). */
+function etTodayMs(hour: number, minute: number): number {
+    const now = new Date();
+    const ny = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const utc = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const offsetMs = ny.getTime() - utc.getTime(); // −4h EDT / −5h EST
+    return Date.UTC(ny.getFullYear(), ny.getMonth(), ny.getDate(), hour, minute) - offsetMs;
 }
 
 const RANGE_SPECS: Record<AggregateRange, RangeSpec> = {
-    '1D':  { multiplier: 5,  timespan: 'minute', from: startOfTodayET },
+    '1D':  { multiplier: 5,  timespan: 'minute', from: () => new Date() /* unused — 1D uses ms session bounds below */ },
     '1W':  { multiplier: 30, timespan: 'minute', from: () => daysAgo(7) },
     '1M':  { multiplier: 1,  timespan: 'day',    from: () => daysAgo(30) },
     '3M':  { multiplier: 1,  timespan: 'day',    from: () => daysAgo(90) },
@@ -592,8 +581,20 @@ export async function fetchAggregates(symbol: string, range: AggregateRange): Pr
     }
 
     const spec = RANGE_SPECS[range];
-    const from = toDateOnly(spec.from());
-    const to = toDateOnly(spec.to ? spec.to() : new Date());
+    // 1D: bound to the REGULAR session (09:30–16:00 ET) using epoch-ms
+    // from/to (Polygon accepts ms in the path). The old date-only strings
+    // returned the FULL extended session — premarket from 04:00 ET and
+    // after-hours to 20:00 — which visibly disagreed with the RTH-only
+    // MVSO stats and confused the 1D chart.
+    let from: string | number;
+    let to: string | number;
+    if (range === '1D') {
+        from = etTodayMs(9, 30);
+        to = etTodayMs(16, 0);
+    } else {
+        from = toDateOnly(spec.from());
+        to = toDateOnly(spec.to ? spec.to() : new Date());
+    }
 
     const url = `${POLYGON_BASE}/v2/aggs/ticker/${encodeURIComponent(symbol)}/range/${spec.multiplier}/${spec.timespan}/${from}/${to}`;
 

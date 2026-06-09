@@ -401,38 +401,67 @@ app.post('/api/external/ingest', async (req, res) => {
             // Convert Date
             const date = new Date(item.date);
 
-            // Upsert
-            await prisma.recommendation.upsert({
-                where: {
-                    symbol_date: { symbol: item.symbol, date: date }
-                },
-                update: {
-                    ...item,
-                    date: date // Ensure date type correctness
-                },
-                create: {
-                    ...item,
-                    date: date,
-                    name: item.name || item.symbol,
-                    price: item.price || 0,
-                    changePercent: item.changePercent || 0,
-                    volume: item.volume || 0,
-                    relativeVol: item.relativeVol || 1,
-                    marketCap: item.marketCap || 0,
-                    sector: item.sector || 'Unknown',
-                    analystRating: item.analystRating || 'Neutral',
-                    type: item.type || 'Long',
-                    probability: item.probability || 'Medium',
-                    time: item.time || '10:20',
-                    stopLoss: item.stopLoss || 0,
-                    priceTarget: item.priceTarget || 0,
-                    thesis: item.thesis || 'Algorithmic Entry',
-                    sentiment: item.sentiment || 'Neutral',
-                    rsi: item.rsi || 50,
-                    beta: item.beta || 1
-                }
-            });
-            successCount++;
+            // Strip the Polygon-COMPUTED columns from the payload before the
+            // upsert. Upstream's `high` is the DAILY high (including the
+            // 09:30–10:20 window), while our `high` column stores the
+            // post-10:20 peak computed by the intraday poller / backfill.
+            // Spreading the raw payload overwrote those computed values on
+            // every re-ingest — permanently for past dates (the poller only
+            // repairs TODAY during market hours) — silently inflating MVSO.
+            const {
+                high: _high,
+                refPrice1020: _r1020,
+                lowBeforePeak: _lbp,
+                refPrice1120: _r1120,
+                highPost1120: _h1120,
+                refPrice1220: _r1220,
+                highPost1220: _h1220,
+                ...safe
+            } = item;
+
+            try {
+                await prisma.recommendation.upsert({
+                    where: {
+                        symbol_date: { symbol: item.symbol, date: date }
+                    },
+                    update: {
+                        ...safe,
+                        date: date // Ensure date type correctness
+                    },
+                    create: {
+                        ...safe,
+                        date: date,
+                        name: item.name || item.symbol,
+                        price: item.price || 0,
+                        changePercent: item.changePercent || 0,
+                        volume: item.volume || 0,
+                        relativeVol: item.relativeVol || 1,
+                        marketCap: item.marketCap || 0,
+                        sector: item.sector || 'Unknown',
+                        analystRating: item.analystRating || 'Neutral',
+                        type: item.type || 'Long',
+                        probability: item.probability || 'Medium',
+                        time: item.time || '10:20',
+                        // PRICE levels (≈ open×0.95 / open×1.10), not percents.
+                        // A literal 0 used to leak through when upstream omitted
+                        // them and rendered as a nonsense "$0.00" in the app.
+                        stopLoss: item.stopLoss || (item.open ? item.open * 0.95 : 0),
+                        priceTarget: item.priceTarget || (item.open ? item.open * 1.1 : 0),
+                        thesis: item.thesis || 'Algorithmic Entry',
+                        sentiment: item.sentiment || 'Neutral',
+                        rsi: item.rsi || 50,
+                        beta: item.beta || 1,
+                        // Seed `high` so brand-new rows are never empty; the
+                        // poller/backfill replaces it with the real post-10:20
+                        // peak within seconds during market hours.
+                        high: item.high ?? item.open ?? item.price ?? 0
+                    }
+                });
+                successCount++;
+            } catch (itemErr) {
+                // One bad item must not 500 the whole batch after partial writes.
+                console.error(`[Ingest] Upsert failed for ${item.symbol} ${item.date}:`, (itemErr as any)?.message);
+            }
         }
 
         res.json({ success: true, count: successCount });
@@ -1191,7 +1220,13 @@ app.post('/api/recommendations/upload', upload.array('files'), async (req, res) 
                             }
                             // Use actual volume from Polygon if available
                             actualVolume = stats.volume || volume;
-                            high = stats.high || open;
+                            // NOTE: deliberately NOT seeding `high` from
+                            // stats.high — that's the DAILY high (including
+                            // 09:30–10:20), while the `high` column stores the
+                            // post-10:20 peak. If getIntradayStats below fails,
+                            // `high` stays at `open` (0% MVSO, conservative)
+                            // instead of silently inflating MVSO with the
+                            // daily-high definition.
                         }
                     } catch (err) {
                         console.warn(`Could not fetch daily stats for ${symbol} on ${dateStr}`);

@@ -34,7 +34,14 @@ async function refreshToday() {
                     data: {
                         high: stats.mvso1020.highPost,
                         refPrice1020: stats.mvso1020.refPrice,
-                        lowBeforePeak: stats.mvso1020.lowBeforePeak
+                        lowBeforePeak: stats.mvso1020.lowBeforePeak,
+                        // Keep ALL writers in sync with the poller — this
+                        // script used to omit the 11:20/12:20 columns,
+                        // leaving them stale after a manual refresh.
+                        refPrice1120: stats.mvso1120?.refPrice,
+                        highPost1120: stats.mvso1120?.highPost,
+                        refPrice1220: stats.mvso1220?.refPrice,
+                        highPost1220: stats.mvso1220?.highPost
                     }
                 });
                 const mvso = ((stats.mvso1020.highPost - stats.mvso1020.refPrice) / stats.mvso1020.refPrice) * 100;
