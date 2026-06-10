@@ -21,6 +21,7 @@ const USER_PUBLIC_SELECT = {
     settings: true,
     plan: true,
     planRenewsAt: true,
+    planCancelAtPeriodEnd: true,
     riskProfile: true,
 } as const;
 

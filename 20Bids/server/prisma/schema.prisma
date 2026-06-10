@@ -16,6 +16,10 @@ model User {
   settings     Json?
   plan         Plan        @default(FREE)
   planRenewsAt DateTime?
+  // True while a PRO subscription is set to lapse at period end (user hit
+  // "cancel" in the Stripe portal but still has paid-up access). The app
+  // shows "Canceled · access until <date>" instead of "Renews <date>".
+  planCancelAtPeriodEnd Boolean @default(false)
   riskProfile  Json?       // { mvso, vol, min, sl, notifications }
   stripeCustomerId     String?  @unique   // Stripe Customer id (cus_...)
   stripeSubscriptionId String?            // active subscription id (sub_...)

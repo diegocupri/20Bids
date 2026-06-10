@@ -19,6 +19,9 @@ interface SubLike {
   // the top-level subscription onto its items, so we check both places.
   current_period_end?: number;
   items?: { data?: Array<{ current_period_end?: number }> };
+  // Set when the user cancels in the portal but keeps access until the
+  // period end — the sub stays status=active with this flag raised.
+  cancel_at_period_end?: boolean;
 }
 
 /** Safely derive the renewal date from a subscription across API versions.
@@ -184,6 +187,7 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
               planRenewsAt: renewsAt,
               stripeCustomerId: customerId ?? undefined,
               stripeSubscriptionId: subId ?? undefined,
+              planCancelAtPeriodEnd: false, // fresh subscription
             },
           });
           console.log(`[billing] checkout.session.completed → marked ${r.count} user(s) PRO (id=${userId})`);
@@ -202,6 +206,9 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
             plan: isActive ? 'PRO' : 'FREE',
             planRenewsAt: isActive ? renewDate(sub) : null,
             stripeSubscriptionId: isActive ? sub.id : null,
+            // Cancel-at-period-end keeps status=active until the date hits —
+            // surface it so the app can show "Canceled · access until X".
+            planCancelAtPeriodEnd: isActive ? (sub.cancel_at_period_end ?? false) : false,
           },
         });
         break;
@@ -212,7 +219,7 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
         if (!customerId) break;
         await prisma.user.updateMany({
           where: { stripeCustomerId: customerId },
-          data: { plan: 'FREE', planRenewsAt: null, stripeSubscriptionId: null },
+          data: { plan: 'FREE', planRenewsAt: null, stripeSubscriptionId: null, planCancelAtPeriodEnd: false },
         });
         break;
       }
