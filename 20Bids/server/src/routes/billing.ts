@@ -233,4 +233,60 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
   }
 }
 
+/**
+ * Admin reconciliation — pull each Stripe customer's subscription truth
+ * (status, cancel_at_period_end, period end) into the User row.
+ *
+ * Why: webhook-derived state drifts when an event lands while an OLDER
+ * handler is deployed — e.g. cancellations that happened before the
+ * planCancelAtPeriodEnd column existed never set the flag, and no new
+ * webhook will arrive until the subscription changes again. Re-runnable
+ * and idempotent. Protected by the same x-api-key as /api/external/ingest.
+ */
+router.post('/admin/sync-subs', async (req: Request, res: Response) => {
+  const apiKey = req.headers['x-api-key'];
+  if (apiKey !== (process.env.UPLOAD_API_KEY || 'dev-api-key-change-in-production')) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  try {
+    const users = await prisma.user.findMany({
+      where: { stripeCustomerId: { not: null } },
+      select: { id: true, email: true, stripeCustomerId: true, stripeSubscriptionId: true },
+    });
+    const results: Array<Record<string, unknown>> = [];
+    for (const u of users) {
+      let sub: SubLike | null = null;
+      if (u.stripeSubscriptionId) {
+        try {
+          sub = await stripe().subscriptions.retrieve(u.stripeSubscriptionId) as unknown as SubLike;
+        } catch { /* stale id — fall through to the customer lookup */ }
+      }
+      if (!sub && u.stripeCustomerId) {
+        const list = await stripe().subscriptions.list({ customer: u.stripeCustomerId, status: 'all', limit: 5 });
+        const subs = (list.data ?? []) as unknown as SubLike[];
+        sub = subs.find((s) => s.status === 'active' || s.status === 'trialing') ?? subs[0] ?? null;
+      }
+      if (!sub) { results.push({ email: u.email, result: 'no-subscription' }); continue; }
+
+      const isActive = sub.status === 'active' || sub.status === 'trialing';
+      const cape = isActive ? !!(sub as any).cancel_at_period_end : false;
+      await prisma.user.update({
+        where: { id: u.id },
+        data: {
+          plan: isActive ? 'PRO' : 'FREE',
+          planRenewsAt: isActive ? renewDate(sub) : null,
+          planCancelAtPeriodEnd: cape,
+          stripeSubscriptionId: isActive ? sub.id : null,
+        },
+      });
+      results.push({ email: u.email, status: sub.status, cancelAtPeriodEnd: cape });
+    }
+    res.json({ synced: results.length, results });
+  } catch (err: any) {
+    console.error('[billing] sync-subs failed:', err?.message ?? err);
+    res.status(500).json({ error: 'sync failed' });
+  }
+});
+
 export default router;
