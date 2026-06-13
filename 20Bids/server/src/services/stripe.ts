@@ -26,5 +26,6 @@ export function stripe(): StripeClient {
 
 export const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID || '';
 export const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
-/** 7-day free trial then the recurring price kicks in. */
-export const TRIAL_DAYS = 7;
+/** 14-day free trial then the recurring price kicks in. Kept in sync with the
+ * Apple IAP intro offer (App Store Connect → 14 days) so iOS and Stripe match. */
+export const TRIAL_DAYS = 14;
