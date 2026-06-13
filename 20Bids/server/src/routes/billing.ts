@@ -289,4 +289,56 @@ router.post('/admin/sync-subs', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * RevenueCat webhook — the source of truth for iOS In-App Purchase state.
+ * RevenueCat is configured (dashboard → Integrations → Webhooks) to POST here
+ * with an Authorization header equal to RC_WEBHOOK_AUTH. `app_user_id` is our
+ * User.id (the app calls Purchases.logIn(user.id) at startup), so we map the
+ * event straight onto the user's plan — mirroring the Stripe webhook logic.
+ *
+ *   INITIAL_PURCHASE / RENEWAL / UNCANCELLATION / PRODUCT_CHANGE → PRO
+ *   CANCELLATION (auto-renew off, still paid up)                 → PRO + cancelAtPeriodEnd
+ *   EXPIRATION / (terminal) BILLING_ISSUE                        → FREE
+ */
+router.post('/revenuecat-webhook', async (req: Request, res: Response) => {
+  const expected = process.env.RC_WEBHOOK_AUTH;
+  if (!expected || req.headers['authorization'] !== expected) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  try {
+    const event = (req.body as any)?.event ?? {};
+    const userId: string | undefined = event.app_user_id;
+    const type: string = event.type ?? '';
+    // Anonymous ids ($RCAnonymousID:...) never matched a real account.
+    if (!userId || userId.startsWith('$RCAnonymousID')) { res.json({ ok: true, skipped: 'anon' }); return; }
+
+    const expMs = typeof event.expiration_at_ms === 'number' ? event.expiration_at_ms : null;
+    const renews = expMs && expMs > 0 ? new Date(expMs) : null;
+
+    const PRO_TYPES = ['INITIAL_PURCHASE', 'RENEWAL', 'UNCANCELLATION', 'PRODUCT_CHANGE', 'NON_RENEWING_PURCHASE'];
+    const FREE_TYPES = ['EXPIRATION', 'SUBSCRIPTION_PAUSED'];
+
+    let data: Record<string, unknown> | null = null;
+    if (type === 'CANCELLATION') {
+      // Auto-renew turned off — keep PRO until the period actually ends.
+      data = { plan: 'PRO', planRenewsAt: renews, planCancelAtPeriodEnd: true };
+    } else if (PRO_TYPES.includes(type)) {
+      data = { plan: 'PRO', planRenewsAt: renews, planCancelAtPeriodEnd: false };
+    } else if (FREE_TYPES.includes(type)) {
+      data = { plan: 'FREE', planRenewsAt: null, planCancelAtPeriodEnd: false };
+    }
+    // BILLING_ISSUE / TRANSFER / TEST etc. → acknowledge without changing plan.
+
+    if (data) {
+      const r = await prisma.user.updateMany({ where: { id: userId }, data });
+      console.log(`[billing] revenuecat ${type} → ${JSON.stringify(data)} (matched ${r.count} user, id=${userId})`);
+    }
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error('[billing] revenuecat-webhook error:', err?.message ?? err);
+    res.status(500).json({ error: 'webhook failed' });
+  }
+});
+
 export default router;
