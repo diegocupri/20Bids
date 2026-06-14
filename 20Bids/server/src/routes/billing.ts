@@ -301,8 +301,13 @@ router.post('/admin/sync-subs', async (req: Request, res: Response) => {
  *   EXPIRATION / (terminal) BILLING_ISSUE                        → FREE
  */
 router.post('/revenuecat-webhook', async (req: Request, res: Response) => {
-  const expected = process.env.RC_WEBHOOK_AUTH;
-  if (!expected || req.headers['authorization'] !== expected) {
+  // Tolerant compare: ignore a leading "Bearer " and surrounding whitespace on
+  // BOTH the configured secret and the incoming header, so it matches whether
+  // the value was stored with or without the "Bearer " prefix.
+  const norm = (s?: string) => (s ?? '').trim().replace(/^Bearer\s+/i, '');
+  const expected = norm(process.env.RC_WEBHOOK_AUTH);
+  const got = norm(req.headers['authorization'] as string | undefined);
+  if (!expected || got !== expected) {
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
