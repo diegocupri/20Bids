@@ -22,8 +22,12 @@ const USER_PUBLIC_SELECT = {
     plan: true,
     planRenewsAt: true,
     planCancelAtPeriodEnd: true,
+    isTester: true,
     riskProfile: true,
 } as const;
+
+/** Minimal but real email format check (something@something.tld). */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Convert a stored avatar (which may be a giant `data:image/...;base64,...`
@@ -49,10 +53,17 @@ function publicizeAvatar<T extends { id: string; avatarUrl: string | null }>(
 // REGISTER
 router.post('/register', async (req: Request, res: Response) => {
     try {
-        const { email, password, name } = req.body;
+        const { password, name } = req.body;
+        // Normalize + validate the email — registration must be a real email
+        // (no garbage usernames; needed for password reset + receipts).
+        const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
 
         if (!email || !password) {
             res.status(400).json({ error: 'Email and password are required' });
+            return;
+        }
+        if (!EMAIL_RE.test(email)) {
+            res.status(400).json({ error: 'Enter a valid email address' });
             return;
         }
 
@@ -268,6 +279,15 @@ router.post('/upgrade', authenticateToken, async (req: AuthRequest, res: Respons
         const userId = req.user?.id;
         if (!userId) {
             res.status(401).json({ error: 'Unauthorized' });
+            return;
+        }
+
+        // The free PRO flip is a TESTER tool only. Real users must pay via
+        // Stripe/Apple (plan is set by those webhooks). Without this gate any
+        // logged-in user could grant themselves PRO by calling this endpoint.
+        const me = await prisma.user.findUnique({ where: { id: userId }, select: { isTester: true } });
+        if (!me?.isTester) {
+            res.status(403).json({ error: 'Not allowed' });
             return;
         }
 

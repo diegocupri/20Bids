@@ -20,6 +20,10 @@ model User {
   // "cancel" in the Stripe portal but still has paid-up access). The app
   // shows "Canceled · access until <date>" instead of "Renews <date>".
   planCancelAtPeriodEnd Boolean @default(false)
+  // Internal testers (us). Gates the Profile "Tester" tools (free PRO toggle,
+  // demo data) and the /auth/upgrade freebie. Regular users can't self-grant
+  // PRO — they go through Stripe/Apple.
+  isTester     Boolean     @default(false)
   riskProfile  Json?       // { mvso, vol, min, sl, notifications }
   stripeCustomerId     String?  @unique   // Stripe Customer id (cus_...)
   stripeSubscriptionId String?            // active subscription id (sub_...)
