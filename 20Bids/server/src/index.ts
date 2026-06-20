@@ -46,6 +46,71 @@ app.use('/api/prices', pricesRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/billing', billingRouter);
 
+// --- Public marketing endpoint -----------------------------------------
+// Last CLOSED session (the previous trading day) for the Framer landing
+// page. No auth, CORS already open, 5-min cache. Returns a compact summary
+// + top movers so the site can show "yesterday's results" as social proof.
+//   GET /api/public/last-session
+app.get('/api/public/last-session', async (_req, res) => {
+    try {
+        res.set('Cache-Control', 'public, max-age=300');
+        const mvso = (r: any): number | null =>
+            (r.refPrice1020 && r.refPrice1020 > 0 && r.high && r.high > 0)
+                ? ((r.high - r.refPrice1020) / r.refPrice1020) * 100
+                : null;
+
+        // Most recent session strictly before today (UTC midnight) = last close.
+        const todayUTC = new Date();
+        todayUTC.setUTCHours(0, 0, 0, 0);
+        let anchor = await prisma.recommendation.findFirst({
+            where: { date: { lt: todayUTC } },
+            orderBy: { date: 'desc' },
+            select: { date: true },
+        });
+        if (!anchor) {
+            anchor = await prisma.recommendation.findFirst({ orderBy: { date: 'desc' }, select: { date: true } });
+        }
+        if (!anchor) { res.json({ available: false }); return; }
+
+        const recs = await prisma.recommendation.findMany({
+            where: { date: anchor.date },
+            select: { symbol: true, name: true, sector: true, probabilityValue: true, refPrice1020: true, high: true },
+        });
+        const scored = recs.map(r => ({ ...r, result: mvso(r) })).filter(r => r.result !== null);
+        const dateStr = new Date(anchor.date).toISOString().slice(0, 10);
+        const winners = scored.filter(r => (r.result as number) >= 0.5).length;
+        const hitRate = scored.length ? Math.round((winners / scored.length) * 100) : null;
+        const avgScore = recs.length
+            ? Math.round(recs.reduce((a, r) => a + (r.probabilityValue || 0), 0) / recs.length)
+            : null;
+        const topMovers = [...scored]
+            .sort((a, b) => (b.result as number) - (a.result as number))
+            .slice(0, 8)
+            .map(r => ({
+                symbol: r.symbol,
+                name: r.name,
+                sector: r.sector,
+                score: r.probabilityValue,
+                result: Math.round((r.result as number) * 100) / 100, // intraday peak % vs 10:20 ref
+            }));
+
+        res.json({
+            available: true,
+            date: dateStr,
+            bids: recs.length,
+            winners,
+            hitRate,            // % of picks that reached >= +0.5% after the 10:20 ET entry
+            avgScore,
+            topMovers,
+            metric: 'Peak % move vs the 10:20 ET entry price (intraday excursion, not realized P&L).',
+            disclaimer: 'Past performance does not guarantee future results. Not investment advice.',
+        });
+    } catch (error) {
+        console.error('[public/last-session] error:', error);
+        res.status(500).json({ error: 'Failed to load last session' });
+    }
+});
+
 // Health Check for Render
 app.get('/', (req, res) => {
     res.send('20Bids API is running');
