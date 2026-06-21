@@ -111,6 +111,113 @@ app.get('/api/public/last-session', async (_req, res) => {
     }
 });
 
+// Last 5 CLOSED sessions for the Framer landing page. Same metric + format
+// as /last-session (hit rate, picks, avg score, peak-% movers) but spanning
+// a week: a per-day track-record table + the Top 10 picks across all 5 days.
+// No auth, CORS open, 5-min cache.
+//   GET /api/public/recent-sessions   (optional ?days=5, capped 1..10)
+app.get('/api/public/recent-sessions', async (req, res) => {
+    try {
+        res.set('Cache-Control', 'public, max-age=300');
+        const mvso = (r: any): number | null =>
+            (r.refPrice1020 && r.refPrice1020 > 0 && r.high && r.high > 0)
+                ? ((r.high - r.refPrice1020) / r.refPrice1020) * 100
+                : null;
+
+        const days = Math.min(10, Math.max(1, parseInt(String(req.query.days ?? '5'), 10) || 5));
+
+        // The N most recent DISTINCT session dates strictly before today (UTC
+        // midnight). Falls back to all-time if there is nothing before today.
+        const todayUTC = new Date();
+        todayUTC.setUTCHours(0, 0, 0, 0);
+        let dateRows = await prisma.recommendation.findMany({
+            where: { date: { lt: todayUTC } },
+            distinct: ['date'],
+            orderBy: { date: 'desc' },
+            take: days,
+            select: { date: true },
+        });
+        if (dateRows.length === 0) {
+            dateRows = await prisma.recommendation.findMany({
+                distinct: ['date'],
+                orderBy: { date: 'desc' },
+                take: days,
+                select: { date: true },
+            });
+        }
+        if (dateRows.length === 0) { res.json({ available: false }); return; }
+
+        const dates = dateRows.map(d => d.date);
+        const recs = await prisma.recommendation.findMany({
+            where: { date: { in: dates } },
+            select: { date: true, symbol: true, name: true, sector: true, probabilityValue: true, refPrice1020: true, high: true },
+        });
+
+        // Group by date string, compute the same per-session summary as the
+        // single-day endpoint.
+        const byDate = new Map<string, typeof recs>();
+        for (const r of recs) {
+            const k = new Date(r.date).toISOString().slice(0, 10);
+            if (!byDate.has(k)) byDate.set(k, []);
+            byDate.get(k)!.push(r);
+        }
+
+        const allScored: { symbol: string; name: string; sector: string | null; score: number | null; result: number; date: string }[] = [];
+
+        const sessions = [...byDate.entries()]
+            .sort((a, b) => (a[0] < b[0] ? 1 : -1)) // newest first
+            .map(([dateStr, dayRecs]) => {
+                const scored = dayRecs
+                    .map(r => ({ ...r, result: mvso(r) }))
+                    .filter(r => r.result !== null) as (typeof dayRecs[number] & { result: number })[];
+                const winners = scored.filter(r => r.result >= 0.5).length;
+                const hitRate = scored.length ? Math.round((winners / scored.length) * 100) : null;
+                const avgScore = dayRecs.length
+                    ? Math.round(dayRecs.reduce((a, r) => a + (r.probabilityValue || 0), 0) / dayRecs.length)
+                    : null;
+                const best = scored.reduce<{ symbol: string; result: number } | null>(
+                    (b, r) => (!b || r.result > b.result ? { symbol: r.symbol, result: Math.round(r.result * 100) / 100 } : b),
+                    null,
+                );
+                for (const r of scored) {
+                    allScored.push({
+                        symbol: r.symbol, name: r.name, sector: r.sector,
+                        score: r.probabilityValue, result: Math.round(r.result * 100) / 100, date: dateStr,
+                    });
+                }
+                return { date: dateStr, bids: dayRecs.length, winners, hitRate, avgScore, topMover: best };
+            });
+
+        // Top 10 picks across the whole window, by peak % move.
+        const topPicks = [...allScored]
+            .sort((a, b) => b.result - a.result)
+            .slice(0, 10);
+
+        // Aggregate totals across the window.
+        const totalPicks = sessions.reduce((a, s) => a + s.bids, 0);
+        const scoredCount = allScored.length;
+        const totalWinners = allScored.filter(r => r.result >= 0.5).length;
+        const hitRate = scoredCount ? Math.round((totalWinners / scoredCount) * 100) : null;
+        const avgScore = recs.length
+            ? Math.round(recs.reduce((a, r) => a + (r.probabilityValue || 0), 0) / recs.length)
+            : null;
+
+        res.json({
+            available: true,
+            days: sessions.length,
+            range: { from: sessions[sessions.length - 1]?.date ?? null, to: sessions[0]?.date ?? null },
+            totals: { sessions: sessions.length, picks: totalPicks, winners: totalWinners, hitRate, avgScore },
+            sessions,   // newest first: { date, bids, winners, hitRate, avgScore, topMover }
+            topPicks,   // top 10 across the window: { symbol, name, sector, score, result, date }
+            metric: 'Peak % move vs the 10:20 ET entry price (intraday excursion, not realized P&L).',
+            disclaimer: 'Past performance does not guarantee future results. Not investment advice.',
+        });
+    } catch (error) {
+        console.error('[public/recent-sessions] error:', error);
+        res.status(500).json({ error: 'Failed to load recent sessions' });
+    }
+});
+
 // Health Check for Render
 app.get('/', (req, res) => {
     res.send('20Bids API is running');
