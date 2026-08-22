@@ -93,10 +93,40 @@ export async function getReferencePrice(ticker: string, dateStr: string): Promis
     return null;
 }
 
+/** Waypoints for one entry time.
+ *  - closePost:    the REAL post-entry regular-session close. `Recommendation.price`
+ *                  holds the 09:30 open on historical rows, so it must never be
+ *                  used as a backtest exit.
+ *  - lowAfterPeak: lowest low after the peak — lets a post-peak stop be detected.
+ *  - peakAt:       the minute of the peak (was computed and discarded).
+ *  - firstCross:   gain level -> minutes after entry of the FIRST touch.
+ *  - entryPath:    price at fixed minute offsets after entry.
+ *  - low30/high30: extremes of the first 30 minutes after entry. */
+export interface IntradayWaypoints {
+    refPrice: number;
+    highPost: number;
+    lowBeforePeak: number;
+    closePost: number | null;
+    lowAfterPeak: number | null;
+    peakAt: Date | null;
+    firstCross: Record<string, number>;
+    /** level -> max adverse excursion (%) BEFORE that level was first touched. */
+    maeBeforeCross: Record<string, number>;
+    /** minutes after entry -> price, at 5-minute steps up to +30. Lets a
+     *  client-side simulator reprice a DELAYED entry without re-downloading
+     *  the minute bars. */
+    entryPath: Record<string, number>;
+    /** Lowest low / highest high within +30 min of entry. A below-ref LIMIT
+     *  order only fills if the tape actually traded there, which neither
+     *  lowBeforePeak (spans entry→peak) nor highPost (full session) can say. */
+    low30: number | null;
+    high30: number | null;
+}
+
 export async function getIntradayStats(ticker: string, dateStr: string): Promise<{
-    mvso1020: { refPrice: number, highPost: number, lowBeforePeak: number } | null,
-    mvso1120: { refPrice: number, highPost: number, lowBeforePeak: number } | null,
-    mvso1220: { refPrice: number, highPost: number, lowBeforePeak: number } | null
+    mvso1020: IntradayWaypoints | null,
+    mvso1120: IntradayWaypoints | null,
+    mvso1220: IntradayWaypoints | null
 } | null> {
     const API_KEY = process.env.POLYGON_API_KEY;
     if (!API_KEY) return null;
@@ -140,6 +170,39 @@ export async function getIntradayStats(ticker: string, dateStr: string): Promise
                 let maxHighAfter = -Infinity;
                 let highBarIndex = -1;
                 let sessionLowAfterEntry = Infinity;
+                // The real post-entry CLOSE. Historical rows store the 09:30
+                // OPEN in `price` (the CSV backfill writes `price: open`), so
+                // the backtest was settling ~38% of trades against a price from
+                // 50 minutes BEFORE entry. This is the honest exit.
+                let closePost: number | null = null;
+                // First time each gain level is touched, in minutes after entry.
+                // A running maximum censors the first touch, so it has to be
+                // recorded while walking the bars — this is what makes
+                // "time to target" answerable at all.
+                const CROSS_LEVELS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 5];
+                const firstCross: Record<string, number> = {};
+                // Max adverse excursion BEFORE each level is first touched.
+                // This is what makes exit ORDER decidable: a stop only really
+                // fired if the price fell to −SL *before* reaching +TP.
+                // `lowBeforePeak` alone cannot answer that — it spans entry to
+                // the PEAK, which is often hours after the TP already filled,
+                // so it booked winners as stop-outs.
+                const maeBeforeCross: Record<string, number> = {};
+                let runMinLow = Infinity;
+                // Entry path: the price a LATE entry would have paid, sampled
+                // every PATH_STEP minutes. An offset is filled by the first bar
+                // in [off, off + PATH_STEP) — a market order sent at +off fills
+                // on the next print, not on a print that already happened. If
+                // the tape is silent for a whole bucket the offset stays MISSING
+                // rather than being forward-filled from minutes later, which
+                // would quote a price no order could have got.
+                const PATH_STEP = 5;
+                const PATH_OFFSETS = [5, 10, 15, 20, 25, 30];
+                const entryPath: Record<string, number> = {};
+                // Extremes of the same +30 window, for limit-order fill checks.
+                let low30 = Infinity;
+                let high30 = -Infinity;
+                const entryT = bars[refBarIndex].t;
 
                 for (let i = refBarIndex + 1; i < bars.length; i++) {
                     const b = bars[i];
@@ -147,13 +210,59 @@ export async function getIntradayStats(ticker: string, dateStr: string): Promise
                     const bET = new Date(bDate.toLocaleString("en-US", { timeZone: "America/New_York" }));
                     if (bET.getHours() >= 16) break; // stop at market close
 
+                    const mins = Math.round((b.t - entryT) / 60000);
+                    if (mins <= 30) {
+                        if (b.l < low30) low30 = b.l;
+                        if (b.h > high30) high30 = b.h;
+                    }
+                    for (const off of PATH_OFFSETS) {
+                        const key = String(off);
+                        if (entryPath[key] === undefined && mins >= off && mins < off + PATH_STEP) {
+                            entryPath[key] = b.c;
+                        }
+                    }
+
                     if (b.h > maxHighAfter) {
                         maxHighAfter = b.h;
                         highBarIndex = i;
                     }
                     if (b.l < sessionLowAfterEntry) sessionLowAfterEntry = b.l;
+                    closePost = b.c; // last regular-session bar wins
+
+                    // Update the running low BEFORE testing the cross: within
+                    // the crossing bar we cannot know whether the low or the
+                    // high came first, so we assume the dip did. That biases
+                    // toward booking a stop — the conservative direction.
+                    if (b.l < runMinLow) runMinLow = b.l;
+
+                    for (const lvl of CROSS_LEVELS) {
+                        const key = String(lvl);
+                        if (firstCross[key] === undefined && b.h >= refPrice * (1 + lvl / 100)) {
+                            firstCross[key] = mins;
+                            maeBeforeCross[key] = runMinLow === Infinity
+                                ? 0
+                                : ((refPrice - runMinLow) / refPrice) * 100;
+                        }
+                    }
                 }
                 const highPost = maxHighAfter === -Infinity ? refPrice : maxHighAfter;
+
+                // The minute of the peak. This was already computed and thrown
+                // away; keeping it is what unlocks peak-timing analysis.
+                const peakAt = highBarIndex !== -1 ? new Date(bars[highBarIndex].t) : null;
+
+                // Lowest low AFTER the peak. Without it a trade that peaks
+                // below TP, collapses through the stop and recovers into the
+                // close is booked at the close instead of at -SL.
+                let lowAfterPeak: number | null = null;
+                if (highBarIndex !== -1) {
+                    for (let j = highBarIndex + 1; j < bars.length; j++) {
+                        const b = bars[j];
+                        const bET = new Date(new Date(b.t).toLocaleString("en-US", { timeZone: "America/New_York" }));
+                        if (bET.getHours() >= 16) break;
+                        if (lowAfterPeak === null || b.l < lowAfterPeak) lowAfterPeak = b.l;
+                    }
+                }
 
                 // lowBeforePeak = max adverse excursion (MAE):
                 //   • Winning path (peak above entry): the lowest low between
@@ -176,15 +285,18 @@ export async function getIntradayStats(ticker: string, dateStr: string): Promise
                     lowBeforePeak = sessionLowAfterEntry === Infinity ? refPrice : sessionLowAfterEntry;
                 }
 
-                return { refPrice, highPost, lowBeforePeak };
+                return {
+                    refPrice, highPost, lowBeforePeak,
+                    closePost: closePost ?? null,
+                    lowAfterPeak,
+                    peakAt,
+                    firstCross,
+                    maeBeforeCross,
+                    entryPath,
+                    low30: low30 === Infinity ? null : low30,
+                    high30: high30 === -Infinity ? null : high30,
+                };
             };
-
-            // Return signature need update too
-            // But strict return type is defined in Promise<{...}> earlier. 
-            // I should return compatible object, or update the return type definition in the next step.
-            // Actually, I can just return it and Typescript might infer or error if explicit.
-            // Looking at lines 93-96, return type is explicit. I need to update that too.
-            // I'll do it in a separate edit or MultiReplace. I'll use replace_file_content for the logic block first.
 
             return {
                 mvso1020: calculateMvso(10, 20), // High AFTER 10:20
@@ -223,6 +335,119 @@ export async function fetchTickerDetails(ticker: string) {
         console.error(`Error fetching details for ${ticker}:`, (e as any).message);
     }
     return null;
+}
+
+/** Issuer reference data from the same /v3/reference/tickers endpoint
+ *  fetchTickerDetails uses, but the *company* half of it: the long
+ *  description plus the fields that hang off it. */
+export interface CompanyProfile {
+    name: string | null;
+    description: string | null;      // full paragraph, untrimmed
+    homepageUrl: string | null;
+    totalEmployees: number | null;
+    listDate: string | null;         // "YYYY-MM-DD", as Polygon sends it
+}
+
+// Process-lifetime cache, same shape as tickerDetailsCache above. A profile
+// with a NULL description is cached too: that is Polygon's real answer for
+// ETFs and many small caps, and re-asking every time would burn the reference
+// quota on symbols that will never have one.
+let companyProfileCache: Record<string, CompanyProfile> = {};
+
+// The reference endpoint is rate-limited harder than aggregates (5 req/min on
+// the free tier). The batch loops elsewhere in this file pace with a sleep
+// between fixed-size batches, which only works because those callers control
+// the fan-out; profile calls arrive one symbol at a time from the backfill and
+// from request handlers, so the pacing has to live here.
+const PROFILE_MIN_INTERVAL_MS = 200;
+let profileGate: Promise<unknown> = Promise.resolve();
+
+function paceProfileCall<T>(fn: () => Promise<T>): Promise<T> {
+    const run = profileGate.then(fn);
+    // The next caller waits for this one *and* the interval regardless of
+    // outcome — a burst of 429s is exactly when the queue must not drain fast.
+    profileGate = run
+        .then(() => undefined, () => undefined)
+        .then(() => new Promise(resolve => setTimeout(resolve, PROFILE_MIN_INTERVAL_MS)));
+    return run;
+}
+
+/** Fetch a company profile. Returns null when the REQUEST failed (network,
+ *  429, 404) — the caller must treat that as "unknown, retry later". A
+ *  resolved object with `description: null` is a real, cacheable answer:
+ *  Polygon knows the symbol and simply has no description for it. */
+export async function fetchCompanyProfile(ticker: string): Promise<CompanyProfile | null> {
+    const API_KEY = process.env.POLYGON_API_KEY;
+    if (!API_KEY) return null;
+    if (companyProfileCache[ticker]) return companyProfileCache[ticker];
+
+    try {
+        const url = `${BASE_URL}/v3/reference/tickers/${ticker}`;
+        console.log(`[Polygon] Fetching company profile for ${ticker}`);
+        const res = await paceProfileCall(() => axios.get(url, { params: { apiKey: API_KEY } }));
+
+        const r = res.data?.results;
+        if (!r) return null;
+
+        const description = typeof r.description === 'string' && r.description.trim()
+            ? r.description.trim()
+            : null;
+
+        const profile: CompanyProfile = {
+            name: r.name ?? null,
+            description,
+            homepageUrl: r.homepage_url ?? null,
+            totalEmployees: typeof r.total_employees === 'number' ? r.total_employees : null,
+            listDate: typeof r.list_date === 'string' ? r.list_date : null,
+        };
+        companyProfileCache[ticker] = profile;
+        return profile;
+    } catch (e) {
+        console.error(`Error fetching company profile for ${ticker}:`, (e as any).message);
+        return null;
+    }
+}
+
+// Periods that do NOT end a sentence. Polygon's descriptions are dense with
+// these ("Apple Inc. designs…"), and a naive split on ". " decapitates the
+// very first sentence of most rows.
+const NON_TERMINAL_ABBREV = /\b(?:Inc|Corp|Cos|Co|Ltd|LLC|LP|PLC|AG|NV|SA|Bros|Mfg|Dept|Div|Est|No|St|Jr|Sr|Dr|Mr|Ms|vs|etc|approx|U\.S|U\.K|E\.U|Ph\.D)\./g;
+// Stand-in for a masked period while the text is being sliced. NUL cannot
+// occur in Polygon's prose, so the unmask at the end is lossless.
+const ABBREV_DOT = '\u0000';
+
+/** Cut a Polygon description down to the lede the card shows.
+ *  Trimming lives here, on the read path, NOT in the column: the stored text
+ *  is the full paragraph, so changing "3 sentences" to "2" or adding a
+ *  "read more" is a deploy, not a re-fetch of the whole universe. */
+export function shortDescription(
+    full: string | null | undefined,
+    maxSentences = 3,
+    // A Polygon sentence averages ~130 chars, so 400 is a backstop against a
+    // run-on first sentence — not the usual cut. Keeping it above 3×130 means
+    // a normal lede ends on a period instead of an ellipsis.
+    maxChars = 400
+): string | null {
+    if (!full) return null;
+    const text = full.replace(/\s+/g, ' ').trim();
+    if (!text) return null;
+
+    // Mask abbreviation periods (and single-letter initials) so the sentence
+    // matcher can't break on them, then unmask after slicing.
+    const masked = text
+        .replace(NON_TERMINAL_ABBREV, m => m.split('.').join(ABBREV_DOT))
+        .replace(/\b([A-Z])\./g, `$1${ABBREV_DOT}`);
+
+    // No lookbehind: tsconfig targets es2016 and TS rejects it.
+    const sentences = masked.match(/[^.!?]+[.!?]+(\s|$)/g);
+    let out = (sentences ? sentences.slice(0, maxSentences).join('') : masked).trim();
+    out = out.split(ABBREV_DOT).join('.');
+
+    if (out.length > maxChars) {
+        const cut = out.lastIndexOf(' ', maxChars);
+        out = out.slice(0, cut > 0 ? cut : maxChars).replace(/[\s,;:.]+$/, '') + '…';
+    }
+    return out;
 }
 
 export async function fetchGroupedDaily(date: string) {
@@ -552,9 +777,15 @@ function daysAgo(n: number): Date {
  * (IANA roundtrip — no fixed offset; the old startOfTodayET hardcoded
  * 13:30 UTC, which is an hour off during EST). */
 function etTodayMs(hour: number, minute: number): number {
-    const now = new Date();
-    const ny = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-    const utc = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+    return etSessionMs(new Date(), hour, minute);
+}
+
+/** Epoch ms for a given ET wall-clock time on a given DAY. Same DST-safe
+ * offset trick as etTodayMs, but for an arbitrary date — needed so a 1D chart
+ * can be pinned to a past session instead of always meaning "today". */
+function etSessionMs(day: Date, hour: number, minute: number): number {
+    const ny = new Date(day.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const utc = new Date(day.toLocaleString('en-US', { timeZone: 'UTC' }));
     const offsetMs = ny.getTime() - utc.getTime(); // −4h EDT / −5h EST
     return Date.UTC(ny.getFullYear(), ny.getMonth(), ny.getDate(), hour, minute) - offsetMs;
 }
@@ -572,7 +803,7 @@ function toDateOnly(d: Date): string {
     return d.toISOString().slice(0, 10);
 }
 
-export async function fetchAggregates(symbol: string, range: AggregateRange): Promise<{
+export async function fetchAggregates(symbol: string, range: AggregateRange, date?: string): Promise<{
     points: { t: number; o: number; h: number; l: number; c: number }[];
     resolution: string;
 }> {
@@ -589,8 +820,11 @@ export async function fetchAggregates(symbol: string, range: AggregateRange): Pr
     let from: string | number;
     let to: string | number;
     if (range === '1D') {
-        from = etTodayMs(9, 30);
-        to = etTodayMs(16, 0);
+        // With an explicit date, bound THAT session; otherwise today's. Noon
+        // UTC anchors the day safely on either side of a DST switch.
+        const day = date ? new Date(`${date}T12:00:00Z`) : new Date();
+        from = etSessionMs(day, 9, 30);
+        to = etSessionMs(day, 16, 0);
     } else {
         from = toDateOnly(spec.from());
         to = toDateOnly(spec.to ? spec.to() : new Date());
@@ -609,4 +843,78 @@ export async function fetchAggregates(symbol: string, range: AggregateRange): Pr
     const points = results.map((row: any) => ({ t: row.t, o: row.o, h: row.h, l: row.l, c: row.c }));
 
     return { points, resolution: `${spec.multiplier}${spec.timespan}` };
+}
+
+/* ===========================================================================
+ * Market context for the Reliability crosses (added 2026-07-27).
+ *
+ * Two range fetches per symbol, not one per pick: Polygon serves a whole date
+ * range in a single aggregates call, and a symbol that appears fifty times in
+ * the record would otherwise cost fifty round trips for data that overlaps
+ * almost completely.
+ * ======================================================================== */
+
+export interface DailyBar { t: number; o: number; h: number; l: number; c: number; v: number; day: string }
+
+/** Adjusted daily bars, inclusive, oldest first. `day` is the ET session date,
+ *  which is what every caller actually keys on. */
+export async function fetchDailyRange(symbol: string, from: string, to: string): Promise<DailyBar[]> {
+    if (!API_KEY) throw new Error('POLYGON_API_KEY is not configured');
+    const url = `${POLYGON_BASE}/v2/aggs/ticker/${encodeURIComponent(symbol)}/range/1/day/${from}/${to}`;
+    const { data } = await axios.get(url, {
+        params: { adjusted: 'true', sort: 'asc', limit: 50000, apiKey: API_KEY },
+    });
+    const rows = Array.isArray(data?.results) ? data.results : [];
+    return rows.map((r: any) => ({
+        t: r.t, o: r.o, h: r.h, l: r.l, c: r.c, v: r.v ?? 0,
+        // Daily bars are stamped at ET midnight, so the UTC date can be the
+        // previous day. Formatting through the ET zone is the only way to get
+        // the session label the rest of the system uses.
+        day: new Date(r.t).toLocaleDateString('en-CA', { timeZone: 'America/New_York' }),
+    }));
+}
+
+/** Volume traded between 09:30 and 10:20 ET, per session, over a date range.
+ *  Returns a map of `YYYY-MM-DD` → shares. Built from 5-minute bars: ten bars
+ *  a session, so a year of range is ~2.5k bars and fits one request. */
+export async function fetchOpeningVolumeRange(
+    symbol: string, from: string, to: string,
+): Promise<Map<string, number>> {
+    if (!API_KEY) throw new Error('POLYGON_API_KEY is not configured');
+    const url = `${POLYGON_BASE}/v2/aggs/ticker/${encodeURIComponent(symbol)}/range/5/minute/${from}/${to}`;
+    const { data } = await axios.get(url, {
+        params: { adjusted: 'true', sort: 'asc', limit: 50000, apiKey: API_KEY },
+    });
+    const rows = Array.isArray(data?.results) ? data.results : [];
+    const out = new Map<string, number>();
+    for (const r of rows) {
+        const d = new Date(r.t);
+        const et = new Date(d.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+        const mins = et.getHours() * 60 + et.getMinutes();
+        // [09:30, 10:20). The 10:15 bar covers 10:15–10:20 and is the last one
+        // that closes at or before the reference, so premarket and anything
+        // after the entry are both excluded.
+        if (mins < 9 * 60 + 30 || mins >= 10 * 60 + 20) continue;
+        const day = d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+        out.set(day, (out.get(day) ?? 0) + (r.v ?? 0));
+    }
+    return out;
+}
+
+/** Wilder's ATR over `period` sessions ending at index `end` (exclusive), as a
+ *  PERCENT of the last close before `end`. Percent, not dollars: the whole
+ *  point is to compare a $4 stock's daily range with a $400 one's. */
+export function atrPercent(bars: DailyBar[], end: number, period = 14): number | null {
+    if (end < period + 1) return null;
+    let sum = 0;
+    for (let i = end - period; i < end; i++) {
+        const prev = bars[i - 1];
+        const b = bars[i];
+        if (!prev || !b) return null;
+        sum += Math.max(b.h - b.l, Math.abs(b.h - prev.c), Math.abs(b.l - prev.c));
+    }
+    const atr = sum / period;
+    const ref = bars[end - 1]?.c;
+    if (!ref || ref <= 0) return null;
+    return (atr / ref) * 100;
 }

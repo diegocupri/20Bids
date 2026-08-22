@@ -106,6 +106,59 @@ router.post('/checkout', authenticateToken, async (req: AuthRequest, res: Respon
   }
 });
 
+// INVOICES — the payment history behind Settings > Plan & billing.
+//
+// Read straight from Stripe rather than mirrored into our database: Stripe is
+// the system of record for money, and a local copy would be a second source of
+// truth that silently drifts on every refund, proration or failed retry.
+//
+// Degrades to an empty list on purpose. A developer machine has no STRIPE_*
+// keys and a FREE user has no customer id; neither is an error, and a 500 here
+// would break a Settings tab over a section that simply has nothing to show.
+// @ts-ignore (AuthRequest)
+router.get('/invoices', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) { res.status(401).json({ error: 'Unauthorized' }); return; }
+
+    if (!process.env.STRIPE_SECRET_KEY) {
+      res.json({ invoices: [], reason: 'billing-not-configured' });
+      return;
+    }
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { stripeCustomerId: true },
+    });
+    if (!user?.stripeCustomerId) {
+      res.json({ invoices: [], reason: 'no-customer' });
+      return;
+    }
+
+    const list = await stripe().invoices.list({
+      customer: user.stripeCustomerId,
+      limit: 24,
+    });
+    res.json({
+      invoices: list.data.map((i) => ({
+        id: i.id,
+        // Stripe dates are seconds; the client wants milliseconds.
+        created: i.created * 1000,
+        // ...and amounts are minor units.
+        amount: (i.amount_paid ?? i.amount_due ?? 0) / 100,
+        currency: (i.currency ?? 'eur').toUpperCase(),
+        status: i.status ?? 'unknown',
+        number: i.number ?? null,
+        pdf: i.invoice_pdf ?? null,
+        url: i.hosted_invoice_url ?? null,
+      })),
+    });
+  } catch (err: any) {
+    console.error('[billing] invoices:', err?.message ?? err);
+    // Same reasoning: the tab renders, the section says it could not load.
+    res.json({ invoices: [], reason: 'error' });
+  }
+});
+
 // BILLING PORTAL — manage / cancel the subscription.
 // @ts-ignore (AuthRequest)
 router.post('/portal', authenticateToken, async (req: AuthRequest, res: Response) => {

@@ -5,7 +5,7 @@ import { WebSocketServer } from 'ws';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { subDays, format } from 'date-fns';
-import { fetchRealTimePrices, fetchTickerDetails, fetchGroupedDaily, fetchDailyStats, getReferencePrice, fetchSectorPerformance, fetchMarketIndices, getIntradayStats, fetchTickerNews, fetchSocialSentiment } from './services/polygon';
+import { fetchRealTimePrices, fetchTickerDetails, fetchGroupedDaily, fetchDailyStats, getReferencePrice, fetchSectorPerformance, fetchMarketIndices, getIntradayStats, fetchTickerNews, fetchSocialSentiment, shortDescription } from './services/polygon';
 import { startPolygonWS, getLastPrice, getAllPrices, setActiveSymbols, priceEvents } from './services/polygon-ws';
 import { startIntradayPoller } from './services/intraday-poller';
 import { parse } from 'csv-parse/sync';
@@ -261,6 +261,16 @@ async function refreshIntradayData(recommendations: any[]) {
                         high: stats.mvso1020?.highPost, // Day High for main MVSO
                         refPrice1020: stats.mvso1020?.refPrice,
                         lowBeforePeak: stats.mvso1020?.lowBeforePeak, // NEW: Max Adverse Excursion
+                        // Backtest-grade waypoints. closePost1020 is the real
+                        // exit price; `price` is the 09:30 open on historical rows.
+                        closePost1020: stats.mvso1020?.closePost ?? undefined,
+                        lowAfterPeak: stats.mvso1020?.lowAfterPeak ?? undefined,
+                        peakAt: stats.mvso1020?.peakAt ?? undefined,
+                        firstCross: stats.mvso1020?.firstCross ?? undefined,
+                        maeBeforeCross: stats.mvso1020?.maeBeforeCross ?? undefined,
+                        entryPath: stats.mvso1020?.entryPath ?? undefined,
+                        low30: stats.mvso1020?.low30 ?? undefined,
+                        high30: stats.mvso1020?.high30 ?? undefined,
                         refPrice1120: stats.mvso1120?.refPrice,
                         highPost1120: stats.mvso1120?.highPost,
                         refPrice1220: stats.mvso1220?.refPrice,
@@ -320,9 +330,24 @@ app.get('/api/recommendations', async (req, res) => {
 
         // If we have data from database, use it
         if (dbRecommendations.length > 0) {
+            const symbols = dbRecommendations.map(r => r.symbol);
+
+            // Company descriptions live in their own table keyed by symbol, so
+            // this is ONE query for the whole page (`IN` on the primary key),
+            // not one per row — no N+1. The rows are then matched in memory,
+            // the same way the tag lookup below already works. Symbols with no
+            // Company row yet (never backfilled) simply resolve to null.
+            const companies = await prisma.company.findMany({
+                where: { symbol: { in: symbols } },
+                select: { symbol: true, description: true }
+            });
+            // Trim once here rather than per row inside both branches.
+            const descriptions = new Map(
+                companies.map(c => [c.symbol, shortDescription(c.description)])
+            );
+
             // Enrich with real-time prices if today
             if (isToday) {
-                const symbols = dbRecommendations.map(r => r.symbol);
                 const realTimePrices = await fetchRealTimePrices(symbols);
 
                 const enriched = dbRecommendations.map(rec => {
@@ -350,7 +375,11 @@ app.get('/api/recommendations', async (req, res) => {
                 const allTags = await prisma.tag.findMany();
                 const result = enriched.map(rec => {
                     const tag = allTags.find(t => t.symbol === rec.symbol);
-                    return { ...rec, userTag: tag?.color };
+                    return {
+                        ...rec,
+                        userTag: tag?.color,
+                        companyDescription: descriptions.get(rec.symbol) ?? null
+                    };
                 });
 
                 return res.json(result);
@@ -365,7 +394,11 @@ app.get('/api/recommendations', async (req, res) => {
                 const allTags = await prisma.tag.findMany();
                 const result = formatted.map(rec => {
                     const tag = allTags.find(t => t.symbol === rec.symbol);
-                    return { ...rec, userTag: tag?.color };
+                    return {
+                        ...rec,
+                        userTag: tag?.color,
+                        companyDescription: descriptions.get(rec.symbol) ?? null
+                    };
                 });
 
                 return res.json(result);

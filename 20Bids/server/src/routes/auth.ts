@@ -24,6 +24,11 @@ const USER_PUBLIC_SELECT = {
     planCancelAtPeriodEnd: true,
     isTester: true,
     riskProfile: true,
+    company: true,
+    jobTitle: true,
+    country: true,
+    phone: true,
+    timezone: true,
 } as const;
 
 /** Minimal but real email format check (something@something.tld). */
@@ -163,7 +168,10 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
 // @ts-ignore
 router.put('/profile', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-        const { name, email, avatarUrl, password, settings, riskProfile } = req.body;
+        const {
+            name, email, avatarUrl, password, settings, riskProfile,
+            company, jobTitle, country, phone, timezone,
+        } = req.body;
         const userId = req.user?.id;
 
         if (!userId) {
@@ -191,6 +199,12 @@ router.put('/profile', authenticateToken, async (req: AuthRequest, res: Response
         }
         if (settings !== undefined) updateData.settings = settings;
         if (riskProfile !== undefined) updateData.riskProfile = riskProfile;
+        // Optional text fields. `!== undefined` rather than truthiness so an
+        // empty string CLEARS the field — with a truthy check the user could
+        // fill these in and never take them out again.
+        for (const [k, v] of Object.entries({ company, jobTitle, country, phone, timezone })) {
+            if (v !== undefined) updateData[k] = typeof v === 'string' ? v.trim().slice(0, 120) || null : null;
+        }
 
         const user = await prisma.user.update({
             where: { id: userId },

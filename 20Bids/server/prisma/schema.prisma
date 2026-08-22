@@ -25,6 +25,13 @@ model User {
   // PRO — they go through Stripe/Apple.
   isTester     Boolean     @default(false)
   riskProfile  Json?       // { mvso, vol, min, sl, notifications }
+  // --- Optional profile fields (added 2026-07-27). All nullable: they are
+  // conveniences, and nothing in the product may require them.
+  company      String?
+  jobTitle     String?
+  country      String?
+  phone        String?
+  timezone     String?     // IANA zone; the product quotes ET everywhere today
   stripeCustomerId     String?  @unique   // Stripe Customer id (cus_...)
   stripeSubscriptionId String?            // active subscription id (sub_...)
   createdAt    DateTime    @default(now())
@@ -116,7 +123,10 @@ model Recommendation {
   symbol        String
   name          String
   date          DateTime
-  price         Float     // Real-time/closing price
+  // ⚠️ `price` holds the 09:30 OPEN on rows written by the CSV backfill
+  // (index.ts wrote `price: open`). It is NOT a close and must never be used
+  // as a backtest exit — use closePost1020 below.
+  price         Float     // Real-time price today; 09:30 OPEN on historical rows
   open          Float     @default(0) // Opening price
   high          Float     @default(0) // High price
   refPrice1020  Float?    // Reference price at 10:20 AM
@@ -125,6 +135,23 @@ model Recommendation {
   highPost1120  Float?    // Max Excursion after 11:20 AM
   refPrice1220  Float?    // Reference price at 12:20 PM
   highPost1220  Float?    // Max Excursion after 12:20 PM
+  // --- Backtest-grade waypoints (added 2026-07) ---------------------------
+  closePost1020 Float?    // TRUE post-10:20 regular-session close (the honest exit)
+  lowAfterPeak  Float?    // Lowest low AFTER the peak — detects post-peak stops
+  peakAt        DateTime? // Minute of the post-10:20 peak (unlocks time-to-target)
+  firstCross    Json?     // { "0.5": minutesAfterEntry, "1": …, "2": … }
+  maeBeforeCross Json?    // level -> max adverse excursion (%) BEFORE that level was touched
+  entryPath     Json?     // { "5": price, "10": …, … "30": … } — minutes after 10:20; lets the client sim price a DELAYED entry
+  low30         Float?    // Lowest low in the 30 min after 10:20 — decides whether a below-ref LIMIT order ever fills
+  high30        Float?    // Highest high in the same window
+  // --- Market context (added 2026-07-27) ----------------------------------
+  // Backfilled by scripts/backfill_market_context.ts. All nullable: a symbol
+  // Polygon has no history for keeps NULL and the charts drop it rather than
+  // treating a missing value as a zero.
+  atrPct        Float?    // ATR(14) over the 14 sessions BEFORE, as % of prior close
+  gapPct        Float?    // (open − prior close) / prior close × 100
+  rvol1020      Float?    // vol 09:30–10:20 ÷ mean of the same window over 20 prior sessions
+  spyDayPct     Float?    // SPY's return that session — the tape the pick ran in
   changePercent Float
   volume        Float
   relativeVol   Float
@@ -152,6 +179,34 @@ model Recommendation {
   // ibkrUnrealizedPNL Float?   @default(0)
 
   @@unique([symbol, date])
+}
+
+// Issuer-level reference data from Polygon /v3/reference/tickers/{symbol}.
+// Keyed by symbol and deliberately NOT hung off Recommendation: a description
+// belongs to the company, not to a session, so a column on Recommendation
+// would store the same 300-word paragraph once per bid per day (~250 copies
+// for a symbol that recurs for a year) and would have to be re-fetched on
+// every new bid. One row per symbol, fetched once, read by every bid.
+//
+// No FK from Recommendation.symbol: this table is filled lazily by the
+// backfill, so a constraint would reject every existing recommendation whose
+// issuer hasn't been fetched yet. The join is a symbol lookup in the route.
+model Company {
+  symbol         String    @id             // "AAPL" — same string Recommendation.symbol holds
+  name           String?                   // Polygon `results.name`, for reconciling renames
+  // FULL Polygon paragraph. Trimming happens at the response boundary
+  // (shortDescription in services/polygon.ts) so the UI's "2–3 sentences"
+  // rule can change without re-fetching the whole universe.
+  description    String?
+  homepageUrl    String?
+  totalEmployees Int?
+  listDate       DateTime? @db.Date        // IPO/list date; Polygon sends "YYYY-MM-DD"
+  // Last time Polygon ANSWERED, whether or not it had a description. ETFs and
+  // many small caps have none; without this the backfill would re-request
+  // those symbols on every run forever.
+  fetchedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 model Tag {

@@ -25,20 +25,32 @@ router.get('/history', async (req: Request, res: Response) => {
             res.status(400).json({ error: 'range must be one of 1D|1W|1M|3M|1Y|ALL' });
             return;
         }
+        // Optional: pin a 1D chart to one past session. Without it '1D' means
+        // "today", so opening a bid from an older session charted the WRONG day.
+        const date = (req.query.date as string | undefined)?.trim();
+        if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            res.status(400).json({ error: 'date must be YYYY-MM-DD' });
+            return;
+        }
 
-        const key = `${symbol}:${range}`;
+        // The date MUST be part of the cache key — otherwise a past session is
+        // served today's bars (or vice versa).
+        const key = `${symbol}:${range}:${date ?? 'live'}`;
         const hit = cache.get(key);
         if (hit && hit.expires > Date.now()) {
             res.json(hit.payload);
             return;
         }
 
-        let { points, resolution } = await fetchAggregates(symbol, range);
+        let { points, resolution } = await fetchAggregates(symbol, range, date);
 
         // 1D fallback: weekends + pre-market hours produce zero bars. Pull
         // a wider window and serve only the latest day with data so the
         // chart shows e.g. "last Friday" instead of "Chart unavailable".
-        if (range === '1D' && points.length === 0) {
+        // Only for the LIVE case: with an explicit date, an empty result means
+        // that day genuinely had no bars, and silently substituting another
+        // day would be a lie.
+        if (range === '1D' && !date && points.length === 0) {
             const wider = await fetchAggregates(symbol, '1W');
             if (wider.points.length) {
                 const groups = new Map<string, typeof wider.points>();

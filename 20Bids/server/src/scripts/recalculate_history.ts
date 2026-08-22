@@ -44,6 +44,14 @@ async function recalculateHistory() {
                             high: stats.mvso1020.highPost,
                             refPrice1020: stats.mvso1020.refPrice,
                             lowBeforePeak: stats.mvso1020.lowBeforePeak, // The corrected MaxDD metric
+                            closePost1020: stats.mvso1020.closePost ?? undefined,
+                            lowAfterPeak: stats.mvso1020.lowAfterPeak ?? undefined,
+                            peakAt: stats.mvso1020.peakAt ?? undefined,
+                            firstCross: stats.mvso1020.firstCross ?? undefined,
+                            maeBeforeCross: stats.mvso1020.maeBeforeCross ?? undefined,
+                            entryPath: stats.mvso1020.entryPath ?? undefined,
+                            low30: stats.mvso1020.low30 ?? undefined,
+                            high30: stats.mvso1020.high30 ?? undefined,
 
                             // Also update 11:20 / 12:20 if available
                             refPrice1120: stats.mvso1120?.refPrice,
