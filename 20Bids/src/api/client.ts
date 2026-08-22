@@ -73,14 +73,35 @@ export const fetchAnalysis = async (
     return response.json();
 };
 
+/** La cabecera x-api-key sale de VITE_UPLOAD_API_KEY, no del codigo.
+ *
+ *  Antes iba hardcodeada como 'dev-api-key-change-in-production', y funcionaba
+ *  por el peor motivo posible: el endpoint no comprobaba la clave en absoluto,
+ *  asi que cualquiera en internet podia inyectar recomendaciones. Ahora el
+ *  servidor la valida (requireAdmin), asi que tiene que ser la real — y la real
+ *  no se commitea. Ponla en `.env.local`, que ya esta cubierto por el
+ *  .gitignore de este repo (patron *.local):
+ *
+ *      VITE_UPLOAD_API_KEY=<el mismo valor que UPLOAD_API_KEY en Render>
+ *
+ *  Esta es la via por la que entran los picks diarios: si la clave falla, la
+ *  subida devuelve 401 y ese dia no hay picks. El throw de abajo lo dice en
+ *  claro en vez de dejarte un JSON de error silencioso. */
 export const uploadRecommendations = async (formData: FormData) => {
+    const apiKey = import.meta.env.VITE_UPLOAD_API_KEY;
+    if (!apiKey) {
+        throw new Error(
+            'Falta VITE_UPLOAD_API_KEY. Crea .env.local con VITE_UPLOAD_API_KEY=<UPLOAD_API_KEY de Render> y reinicia `npm run dev`.',
+        );
+    }
     const response = await fetch(`${API_URL}/recommendations/upload`, {
         method: 'POST',
-        headers: {
-            'x-api-key': 'dev-api-key-change-in-production' // In a real app, this should be handled better, but keeping it simple for now as per current setup
-        },
+        headers: { 'x-api-key': apiKey },
         body: formData
     });
+    if (response.status === 401 || response.status === 403) {
+        throw new Error('La API rechazo la clave de subida (401/403). VITE_UPLOAD_API_KEY no coincide con UPLOAD_API_KEY en Render.');
+    }
     return response.json();
 };
 
