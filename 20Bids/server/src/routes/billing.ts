@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { stripe, STRIPE_PRICE_ID, STRIPE_WEBHOOK_SECRET, TRIAL_DAYS } from '../services/stripe';
+import { env } from '../config/env';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -54,12 +55,15 @@ function baseUrl(req: Request): string {
 // ⚠️ If STRIPE_PAYMENT_LINK_TEST is left set in production, real customers
 // pay the test price — delete it as soon as the test is done.
 function activePaymentLink(): string {
-  const testLink = process.env.STRIPE_PAYMENT_LINK_TEST;
+  // env.STRIPE_PAYMENT_LINK_TEST is forced to '' when NODE_ENV=production, so
+  // a test link left behind in Render cannot charge a real customer the test
+  // price — the override only exists in dev. See config/env.ts.
+  const testLink = env.STRIPE_PAYMENT_LINK_TEST;
   if (testLink) {
     console.warn('[billing] Using STRIPE_PAYMENT_LINK_TEST override — delete this env var after testing.');
     return testLink;
   }
-  return process.env.STRIPE_PAYMENT_LINK || '';
+  return env.STRIPE_PAYMENT_LINK;
 }
 
 // CREATE CHECKOUT — returns a hosted URL to pay. Prefers the no-code Payment
@@ -298,7 +302,7 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
  */
 router.post('/admin/sync-subs', async (req: Request, res: Response) => {
   const apiKey = req.headers['x-api-key'];
-  if (apiKey !== (process.env.UPLOAD_API_KEY || 'dev-api-key-change-in-production')) {
+  if (apiKey !== env.UPLOAD_API_KEY) {
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }

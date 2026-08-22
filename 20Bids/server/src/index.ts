@@ -1,3 +1,6 @@
+// FIRST import on purpose: it reads and validates the environment, so it must
+// run before any module below can read process.env with a fallback.
+import { env, assertEnv } from './config/env';
 import express from 'express';
 import cors from 'cors';
 import http from 'http';
@@ -17,11 +20,13 @@ import pricesRouter from './routes/prices';
 import notificationsRouter from './routes/notifications';
 import billingRouter, { stripeWebhookHandler } from './routes/billing';
 import { broadcastMorningBidsOnce } from './services/push';
+import { authenticateToken, AuthRequest } from './middleware/auth';
+import { requireAdmin } from './middleware/requireAdmin';
 
 const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
-const API_KEY = process.env.UPLOAD_API_KEY || 'dev-api-key-change-in-production';
+const API_KEY = env.UPLOAD_API_KEY;
 
 app.use(cors({
     origin: '*', // Allow all origins (for now)
@@ -284,15 +289,56 @@ async function refreshIntradayData(recommendations: any[]) {
     }
 }
 
-// Get Recommendations
-app.get('/api/recommendations', async (req, res) => {
+// What a FREE user may see in a row they have NOT revealed today: enough to
+// draw the placeholder (score + sector) and nothing else. Built as a fresh
+// object rather than by deleting keys from `rec` — a whitelist can't leak a
+// column somebody adds to the schema next month, a blacklist can. Both the
+// identity (symbol/name) and the whole paid analysis (levels, targets, thesis,
+// backtest waypoints, market context) are nulled: the ticker of the day IS the
+// product, so leaving `symbol` in while the UI masks it would still give the
+// list away to anyone reading the JSON. `locked:true` tells the client to draw
+// the placeholder instead of recomputing the rule.
+function lockRow(rec: any) {
+    return {
+        id: rec.id,
+        date: rec.date,
+        locked: true,
+        probabilityValue: rec.probabilityValue, // teaser: the score is already on the locked row
+        sector: rec.sector,
+        type: rec.type,
+        time: rec.time,
+        // --- identity hidden ---
+        symbol: null, name: null,
+        // --- paid levels / analysis hidden ---
+        price: null, open: null, high: null,
+        refPrice1020: null, lowBeforePeak: null,
+        refPrice1120: null, highPost1120: null, refPrice1220: null, highPost1220: null,
+        closePost1020: null, lowAfterPeak: null, peakAt: null, firstCross: null,
+        maeBeforeCross: null, entryPath: null, low30: null, high30: null,
+        atrPct: null, gapPct: null, rvol1020: null, spyDayPct: null,
+        changePercent: null, volume: null, relativeVol: null, marketCap: null,
+        stopLoss: null, priceTarget: null, thesis: null, catalyst: null,
+        probability: null,
+        rsi: null, beta: null, earningsDate: null, analystRating: null, sentiment: null,
+        userTag: null, companyDescription: null,
+    };
+}
+
+// Get Recommendations  (AUTHENTICATED + per-plan redaction)
+app.get('/api/recommendations', authenticateToken, async (req, res) => {
     try {
+        const viewer = (req as AuthRequest).user;
+        if (!viewer?.id) {
+            res.status(401).json({ error: 'Unauthorized' });
+            return;
+        }
+
         const { date } = req.query;
         const dateStr = date ? (date as string) : format(new Date(), 'yyyy-MM-dd');
         const targetDate = new Date(dateStr);
         const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
 
-        console.log(`[API] Fetching recommendations for ${dateStr}`);
+        console.log(`[API] Fetching recommendations for ${dateStr} (user ${viewer.id})`);
 
         // Query database for recommendations on this date (Full Day Range)
         const startOfDay = new Date(targetDate);
@@ -301,7 +347,7 @@ app.get('/api/recommendations', async (req, res) => {
         const endOfDay = new Date(targetDate);
         endOfDay.setUTCHours(23, 59, 59, 999);
 
-        let dbRecommendations = await prisma.recommendation.findMany({
+        const dbRecommendations = await prisma.recommendation.findMany({
             where: {
                 date: {
                     gte: startOfDay,
@@ -312,102 +358,116 @@ app.get('/api/recommendations', async (req, res) => {
 
         console.log(`[API] Found ${dbRecommendations.length} recommendations in database`);
 
-        // AUTO-REFRESH LOGIC:
-        // If it is today, verify if we have missing MVSO data for active time windows.
-        // Or simply trigger a refresh every time (throttled by client polling).
-        // Since getIntradayStats is reasonably cheap (1 call per ticker), we can do it.
-        // To avoid blocking the UI response, we can fire this in background?
-        // No, user wants to SEE the data. We should await it OR return old data and background update.
-        // Let's await it for accuracy, but limit to small batches if needed.
-        // Since list is usually < 20 tickers, it is fast enough.
+        // Who is looking. We redact ONLY for a FREE non-tester viewing TODAY,
+        // which is the same rule the client used to apply on its own: history
+        // stays open (it is the free proof of the record) and PRO/testers see
+        // everything.
+        // Only looked up when it can change the answer: a historical date is
+        // never redacted, and the desktop timeline asks for ~60 of those on
+        // every load.
+        const me = isToday
+            ? await prisma.user.findUnique({
+                where: { id: viewer.id },
+                select: { plan: true, isTester: true },
+            })
+            : null;
+        // Fails CLOSED: a token whose user no longer exists (deleted account,
+        // still-valid 7-day JWT) can't establish a plan, and the safe reading
+        // of "no plan" is FREE, not PRO.
+        const redact = isToday && (!me || (me.plan === 'FREE' && !me.isTester));
 
-        if (isToday && dbRecommendations.length > 0) {
-            // MVSO/peak refresh now runs in background via startIntradayPoller()
-            // every 30s — no longer triggered per-request. Tell the Polygon WS
+        // Which symbols THIS user already spent a reveal on today. Same Reveal
+        // table (and the same 1/day cap) that routes/reveals.ts enforces.
+        let revealedSet = new Set<string>();
+        if (redact) {
+            const today = new Date();
+            today.setUTCHours(0, 0, 0, 0);
+            const reveals = await prisma.reveal.findMany({
+                where: { userId: viewer.id, date: today },
+                select: { symbol: true },
+            });
+            revealedSet = new Set(reveals.map(r => r.symbol));
+        }
+
+        if (dbRecommendations.length === 0) {
+            // If no data in database, return empty array
+            console.log('[API] No recommendations found for this date');
+            res.json([]);
+            return;
+        }
+
+        if (isToday) {
+            // MVSO/peak refresh runs in background via startIntradayPoller()
+            // every 30s — not triggered per-request. Tell the Polygon WS
             // subscriber which symbols are active so it streams trades for them.
             setActiveSymbols(dbRecommendations.map(r => r.symbol));
         }
 
-        // If we have data from database, use it
-        if (dbRecommendations.length > 0) {
-            const symbols = dbRecommendations.map(r => r.symbol);
+        const symbols = dbRecommendations.map(r => r.symbol);
 
-            // Company descriptions live in their own table keyed by symbol, so
-            // this is ONE query for the whole page (`IN` on the primary key),
-            // not one per row — no N+1. The rows are then matched in memory,
-            // the same way the tag lookup below already works. Symbols with no
-            // Company row yet (never backfilled) simply resolve to null.
-            const companies = await prisma.company.findMany({
-                where: { symbol: { in: symbols } },
-                select: { symbol: true, description: true }
-            });
-            // Trim once here rather than per row inside both branches.
-            const descriptions = new Map(
-                companies.map(c => [c.symbol, shortDescription(c.description)])
-            );
+        // Company descriptions live in their own table keyed by symbol, so
+        // this is ONE query for the whole page (`IN` on the primary key),
+        // not one per row — no N+1. The rows are then matched in memory,
+        // the same way the tag lookup below already works. Symbols with no
+        // Company row yet (never backfilled) simply resolve to null.
+        const companies = await prisma.company.findMany({
+            where: { symbol: { in: symbols } },
+            select: { symbol: true, description: true }
+        });
+        // Trim once here rather than per row inside both branches.
+        const descriptions = new Map(
+            companies.map(c => [c.symbol, shortDescription(c.description)])
+        );
+        const allTags = await prisma.tag.findMany();
 
+        let result: any[];
+        if (isToday) {
             // Enrich with real-time prices if today
-            if (isToday) {
-                const realTimePrices = await fetchRealTimePrices(symbols);
+            const realTimePrices = await fetchRealTimePrices(symbols);
 
-                const enriched = dbRecommendations.map(rec => {
-                    const rtPrice = realTimePrices[rec.symbol]; // It's a Record, not an Array
+            result = dbRecommendations.map(rec => {
+                const rtPrice = realTimePrices[rec.symbol]; // It's a Record, not an Array
 
-                    // Layered freshness: REST snapshot fills the row, then if
-                    // a Polygon WS tick is even fresher we use that price.
-                    const wsTick = getLastPrice(rec.symbol);
-                    const livePrice = wsTick?.price ?? rtPrice?.price ?? rec.price;
-                    const refForChange = rec.refPrice1020 ?? rec.open;
-                    const liveChange = refForChange
-                        ? ((livePrice - refForChange) / refForChange) * 100
-                        : (rtPrice?.change ?? rec.changePercent);
+                // Layered freshness: REST snapshot fills the row, then if
+                // a Polygon WS tick is even fresher we use that price.
+                const wsTick = getLastPrice(rec.symbol);
+                const livePrice = wsTick?.price ?? rtPrice?.price ?? rec.price;
+                const refForChange = rec.refPrice1020 ?? rec.open;
+                const liveChange = refForChange
+                    ? ((livePrice - refForChange) / refForChange) * 100
+                    : (rtPrice?.change ?? rec.changePercent);
+                const tag = allTags.find(t => t.symbol === rec.symbol);
 
-                    return {
-                        ...rec,
-                        date: format(rec.date, 'yyyy-MM-dd'),
-                        price: livePrice,
-                        changePercent: liveChange,
-                        volume: rtPrice?.volume || rec.volume
-                    };
-                });
-
-                // Fetch user tags
-                const allTags = await prisma.tag.findMany();
-                const result = enriched.map(rec => {
-                    const tag = allTags.find(t => t.symbol === rec.symbol);
-                    return {
-                        ...rec,
-                        userTag: tag?.color,
-                        companyDescription: descriptions.get(rec.symbol) ?? null
-                    };
-                });
-
-                return res.json(result);
-            } else {
-                // For historical dates, just return DB data
-                const formatted = dbRecommendations.map(rec => ({
+                return {
                     ...rec,
-                    date: format(rec.date, 'yyyy-MM-dd')
-                }));
-
-                // Fetch user tags
-                const allTags = await prisma.tag.findMany();
-                const result = formatted.map(rec => {
-                    const tag = allTags.find(t => t.symbol === rec.symbol);
-                    return {
-                        ...rec,
-                        userTag: tag?.color,
-                        companyDescription: descriptions.get(rec.symbol) ?? null
-                    };
-                });
-
-                return res.json(result);
-            }
+                    date: format(rec.date, 'yyyy-MM-dd'),
+                    price: livePrice,
+                    changePercent: liveChange,
+                    volume: rtPrice?.volume || rec.volume,
+                    userTag: tag?.color,
+                    companyDescription: descriptions.get(rec.symbol) ?? null
+                };
+            });
+        } else {
+            // For historical dates, just return DB data
+            result = dbRecommendations.map(rec => {
+                const tag = allTags.find(t => t.symbol === rec.symbol);
+                return {
+                    ...rec,
+                    date: format(rec.date, 'yyyy-MM-dd'),
+                    userTag: tag?.color,
+                    companyDescription: descriptions.get(rec.symbol) ?? null
+                };
+            });
         }
 
-        // If no data in database, return empty array
-        console.log('[API] No recommendations found for this date');
-        res.json([]);
+        // Redaction happens last, on the finished rows, so nothing an enrich
+        // step added can escape it either.
+        if (redact) {
+            result = result.map(r => (revealedSet.has(r.symbol) ? r : lockRow(r)));
+        }
+
+        res.json(result);
 
     } catch (error) {
         console.error('[API] Error fetching recommendations:', error);
@@ -440,7 +500,7 @@ app.get('/api/dates', async (req, res) => {
 });
 
 // Update Tag
-app.post('/api/tags', async (req, res) => {
+app.post('/api/tags', requireAdmin, async (req, res) => {
     const { symbol, color } = req.body;
     const userId = 'default-user'; // Simulated user
 
@@ -523,7 +583,7 @@ app.get('/api/indices', async (req, res) => {
 });
 
 // Get Ticker News
-app.get('/api/external/news', async (req, res) => {
+app.get('/api/external/news', authenticateToken, async (req, res) => {
     try {
         const ticker = req.query.ticker as string;
         if (!ticker) return res.status(400).json({ error: 'Ticker is required' });
@@ -537,7 +597,7 @@ app.get('/api/external/news', async (req, res) => {
 });
 
 // Get Social Sentiment
-app.get('/api/external/sentiment', async (req, res) => {
+app.get('/api/external/sentiment', authenticateToken, async (req, res) => {
     try {
         const ticker = req.query.ticker as string;
         if (!ticker) return res.status(400).json({ error: 'Ticker is required' });
@@ -551,7 +611,7 @@ app.get('/api/external/sentiment', async (req, res) => {
 });
 
 // Get MVSO History for Accuracy Calculation
-app.get('/api/stats/mvso-history', async (req, res) => {
+app.get('/api/stats/mvso-history', requireAdmin, async (req, res) => {
     try {
         const allRecs = await prisma.recommendation.findMany({
             select: {
@@ -700,7 +760,7 @@ app.post('/api/external/ingest', async (req, res) => {
 
 
 // TP/SL Optimization Endpoint - Grid Search for optimal parameters
-app.get('/api/stats/optimization', async (req, res) => {
+app.get('/api/stats/optimization', requireAdmin, async (req, res) => {
     try {
         console.log('[Optimization] Starting TP/SL grid search...');
 
@@ -939,7 +999,7 @@ app.get('/api/stats/optimization', async (req, res) => {
 
 
 // Detailed Analysis Endpoint (Intraday Focus)
-app.get('/api/stats/analysis', async (req, res) => {
+app.get('/api/stats/analysis', authenticateToken, async (req, res) => {
     try {
         // Parse Take Profit parameter (defaults to 100% = no limit)
         const takeProfit = parseFloat(req.query.tp as string) || 100;
@@ -1205,7 +1265,7 @@ app.get('/api/stats/analysis', async (req, res) => {
 
 // Admin: Refresh or Delete Intraday Data for a specific date
 // Dedicated Diagnostic Endpoint
-app.get('/api/admin/diagnose-ticker', async (req, res) => {
+app.get('/api/admin/diagnose-ticker', requireAdmin, async (req, res) => {
     try {
         const { symbol, date } = req.query;
         if (!symbol || !date) return res.status(400).json({ error: 'Missing symbol or date' });
@@ -1291,7 +1351,7 @@ async function refreshDailyData(dateStr: string) {
     return updatedCount;
 }
 
-app.post('/api/admin/refresh-day', async (req, res) => {
+app.post('/api/admin/refresh-day', requireAdmin, async (req, res) => {
     try {
         const { date, action } = req.query;
         if (!date) return res.status(400).json({ error: 'Date is required (YYYY-MM-DD)' });
@@ -1324,9 +1384,12 @@ app.post('/api/admin/refresh-day', async (req, res) => {
 
 // Upload Recommendations (File Upload with Polygon Enrichment)
 import multer from 'multer';
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024, files: 10 }, // 10 MB per CSV, 10 files max
+});
 
-app.post('/api/recommendations/upload', upload.array('files'), async (req, res) => {
+app.post('/api/recommendations/upload', requireAdmin, upload.array('files'), async (req, res) => {
     try {
         if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
             return res.status(400).json({ error: 'No files uploaded' });
@@ -1579,7 +1642,7 @@ app.post('/api/recommendations/upload', upload.array('files'), async (req, res) 
 });
 
 // Backfill 10:20 Data Endpoint
-app.post('/api/admin/backfill-1020', async (req, res) => {
+app.post('/api/admin/backfill-1020', requireAdmin, async (req, res) => {
     try {
         console.log('[Backfill] Starting backfill of 10:20 data...');
 
@@ -1650,7 +1713,7 @@ app.post('/api/admin/backfill-1020', async (req, res) => {
 // ==================== TRADING AUTOMATION ENDPOINTS ====================
 
 // Get trading config
-app.get('/api/trading/config', async (req, res) => {
+app.get('/api/trading/config', requireAdmin, async (req, res) => {
     try {
         let config = await prisma.tradingConfig.findFirst();
         if (!config) {
@@ -1679,7 +1742,7 @@ app.get('/api/trading/config', async (req, res) => {
 });
 
 // Update trading config
-app.put('/api/trading/config', async (req, res) => {
+app.put('/api/trading/config', requireAdmin, async (req, res) => {
     try {
         const {
             takeProfit, stopLoss, maxStocks, minVolume, minPrice,
@@ -1717,7 +1780,7 @@ app.put('/api/trading/config', async (req, res) => {
 });
 
 // Get trade logs
-app.get('/api/trading/logs', async (req, res) => {
+app.get('/api/trading/logs', requireAdmin, async (req, res) => {
     try {
         const logs = await prisma.tradeLog.findMany({
             orderBy: { executedAt: 'desc' },
@@ -1731,7 +1794,7 @@ app.get('/api/trading/logs', async (req, res) => {
 });
 
 // Get real-time IBKR positions and orders (requires IB Gateway running)
-app.get('/api/trading/positions', async (req, res) => {
+app.get('/api/trading/positions', requireAdmin, async (req, res) => {
     try {
         // Dynamic import to avoid errors when IBKR not installed
         const { getIBKRService } = await import('./services/ibkr_service');
@@ -1823,7 +1886,7 @@ server.on('upgrade', (req, socket, head) => {
     const token = url.searchParams.get('token');
     if (!token) { socket.destroy(); return; }
     try {
-        jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-change-in-production');
+        jwt.verify(token, env.JWT_SECRET);
     } catch {
         socket.destroy();
         return;
@@ -1852,6 +1915,7 @@ priceEvents.on('tick', (tick: any) => {
 });
 
 server.listen(Number(PORT), '0.0.0.0', () => {
+    assertEnv();           // fails loudly and early if a required var is missing
     console.log(`Server running on http://0.0.0.0:${PORT}`);
     startPolygonWS();      // open the upstream WS to Polygon
     startIntradayPoller(); // 30s background refresh of MVSO peaks

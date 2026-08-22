@@ -6,10 +6,12 @@ import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { sendPasswordResetEmail } from '../services/email';
+import { stripe } from '../services/stripe';
+import { env } from '../config/env';
 
 const router = express.Router();
 const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-prod';
+const JWT_SECRET = env.JWT_SECRET;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 const USER_PUBLIC_SELECT = {
@@ -477,6 +479,65 @@ router.post('/downgrade', authenticateToken, async (req: AuthRequest, res: Respo
     } catch (error) {
         console.error('Downgrade error:', error);
         res.status(500).json({ error: 'Failed to downgrade plan' });
+    }
+});
+
+// DELETE ACCOUNT — GDPR art. 17 (right to erasure) + App Store 5.1.1(v),
+// which requires an in-app path to delete the account, not an email request.
+// Authenticated and self-service only: the JWT identifies the account, so
+// there is no id in the path and one user can never delete another.
+// Irreversible.
+// @ts-ignore
+router.delete('/account', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: 'Unauthorized' });
+            return;
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, email: true, stripeSubscriptionId: true },
+        });
+        if (!user) {
+            res.status(404).json({ error: 'User not found' });
+            return;
+        }
+
+        // 1) Cancel the Stripe subscription first — otherwise we would keep
+        //    billing a card for an account that no longer exists. Best-effort
+        //    on purpose: a Stripe outage must not block an erasure request, so
+        //    the failure is logged and the deletion proceeds.
+        if (user.stripeSubscriptionId && env.STRIPE_SECRET_KEY) {
+            try {
+                await stripe().subscriptions.cancel(user.stripeSubscriptionId);
+            } catch (e: any) {
+                console.error(`[account-delete] Stripe cancel failed for ${userId}:`, e?.message ?? e);
+            }
+        }
+
+        // 2) Children first, then the user, in one transaction. Tag, Watchlist,
+        //    Reveal and Note have required relations with no onDelete cascade,
+        //    so deleting the User row first would be rejected (Restrict).
+        //    PushToken is SetNull in the schema, but an orphaned device token
+        //    is still personal data, so it goes too. PasswordResetToken has no
+        //    FK — it is keyed by email.
+        await prisma.$transaction([
+            prisma.tag.deleteMany({ where: { userId } }),
+            prisma.watchlist.deleteMany({ where: { userId } }),
+            prisma.reveal.deleteMany({ where: { userId } }),
+            prisma.note.deleteMany({ where: { userId } }),
+            prisma.pushToken.deleteMany({ where: { userId } }),
+            prisma.passwordResetToken.deleteMany({ where: { email: user.email } }),
+            prisma.user.delete({ where: { id: userId } }),
+        ]);
+
+        console.log(`[account-delete] User ${userId} fully deleted.`);
+        res.json({ deleted: true });
+    } catch (error) {
+        console.error('Delete account error:', error);
+        res.status(500).json({ error: 'Failed to delete account' });
     }
 });
 

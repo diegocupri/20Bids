@@ -40,6 +40,12 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 });
 
 // CREATE a reveal — enforces 1/day cap for FREE users.
+//
+// Accepts `{ recommendationId }` (current) or `{ symbol }` (legacy). The id is
+// the one a locked row can actually send: /api/recommendations now redacts the
+// symbol out of unrevealed rows, so a client asking to unlock one only knows
+// its uuid. Keeping the legacy field means server and client don't have to ship
+// in the same minute.
 // @ts-ignore
 router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
@@ -49,9 +55,28 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
             return;
         }
 
-        const { symbol } = req.body;
+        let { symbol } = req.body as { symbol?: string };
+        const { recommendationId } = req.body as { recommendationId?: string };
+
+        // Resolve the id server-side. Only a pick that exists TODAY can be
+        // revealed, so this can't be used to walk the historical corpus.
+        const today = todayUTC();
+        if (!symbol && recommendationId) {
+            const rec = await prisma.recommendation.findFirst({
+                where: {
+                    id: recommendationId,
+                    date: { gte: today, lt: new Date(today.getTime() + 86_400_000) },
+                },
+                select: { symbol: true },
+            });
+            if (!rec) {
+                res.status(404).json({ error: 'Recommendation not found for today' });
+                return;
+            }
+            symbol = rec.symbol;
+        }
         if (!symbol || typeof symbol !== 'string') {
-            res.status(400).json({ error: 'symbol is required' });
+            res.status(400).json({ error: 'symbol or recommendationId is required' });
             return;
         }
 
@@ -61,7 +86,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
             return;
         }
 
-        const date = todayUTC();
+        const date = today;
 
         // Idempotent: if already revealed today, return success.
         const existing = await prisma.reveal.findUnique({

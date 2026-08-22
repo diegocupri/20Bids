@@ -9,6 +9,7 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { sendPushToTokens, sendPushToAllOptedIn } from '../services/push';
+import { env } from '../config/env';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -116,7 +117,7 @@ router.post('/test', authenticateToken, async (req: AuthRequest, res: Response) 
  */
 router.post('/broadcast', async (req: Request, res: Response) => {
   const apiKey = req.headers['x-api-key'];
-  if (apiKey !== (process.env.UPLOAD_API_KEY || 'dev-api-key-change-in-production')) {
+  if (apiKey !== env.UPLOAD_API_KEY) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   const { title, body, data } = req.body as { title?: string; body?: string; data?: Record<string, unknown> };
