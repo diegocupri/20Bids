@@ -22,6 +22,7 @@ import billingRouter, { stripeWebhookHandler } from './routes/billing';
 import { broadcastMorningBidsOnce } from './services/push';
 import { authenticateToken, AuthRequest } from './middleware/auth';
 import { requireAdmin } from './middleware/requireAdmin';
+import { requireIngest } from './middleware/requireIngest';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -641,15 +642,8 @@ app.get('/api/stats/mvso-history', requireAdmin, async (req, res) => {
 });
 
 // --- External Data Ingestion Endpoint ---
-app.post('/api/external/ingest', async (req, res) => {
+app.post('/api/external/ingest', requireIngest, async (req, res) => {
     try {
-        // INGEST_API_KEY, no UPLOAD_API_KEY: esta ruta la llama el script de R
-        // en AWS y su clave se rota en otro sitio y en otro momento que la de
-        // los endpoints de admin. Ver src/config/env.ts.
-        const apiKey = req.headers['x-api-key'];
-        if (apiKey !== env.INGEST_API_KEY) {
-            return res.status(401).json({ error: 'Unauthorized' });
-        }
 
         const data = req.body;
         if (!Array.isArray(data)) {
@@ -1392,7 +1386,19 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024, files: 10 }, // 10 MB per CSV, 10 files max
 });
 
-app.post('/api/recommendations/upload', requireAdmin, upload.array('files'), async (req, res) => {
+/* La subida de CSV es una via de INGESTA de datos, no una operacion de admin.
+ * La cierra `requireIngest` (INGEST_API_KEY), la misma clave que
+ * /api/external/ingest, y no la de admin.
+ *
+ * Estuvo detras de `requireAdmin` unas horas y eso rompio la carga diaria:
+ * `20Bids/upload_data.R` postea aqui con la clave de ingesta, y al rotar
+ * UPLOAD_API_KEY empezo a recibir 401. Las dos vias de entrada de picks tienen
+ * el mismo nivel de confianza y ahora comparten credencial, asi que rotarla
+ * cubre las dos a la vez.
+ *
+ * `requireAdmin` corre ANTES de multer a proposito en el resto de rutas; aqui
+ * igual, para que un POST anonimo de 2 GB se rechace antes de bufferizar. */
+app.post('/api/recommendations/upload', requireIngest, upload.array('files'), async (req, res) => {
     try {
         if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
             return res.status(400).json({ error: 'No files uploaded' });
