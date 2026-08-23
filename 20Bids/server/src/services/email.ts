@@ -102,3 +102,50 @@ function renderPasswordResetEmail(code: string): string {
 </body>
 </html>`;
 }
+
+/**
+ * Operational alert to the person running 20Bids — not to a customer.
+ *
+ * Deliberately plain: no branding, no HTML template, no marketing shell. An
+ * ops alert is read on a phone at an awkward moment and the only things that
+ * matter are what broke and when. Anything else is in the way.
+ *
+ * Goes to ALERT_EMAIL, falling back to the verified sender's own address, so
+ * the alert has somewhere to land even before anyone configures it — an alert
+ * channel that needs configuring is a channel that isn't there the first time
+ * something breaks.
+ *
+ * Never throws: the caller is already handling a failure. It returns false so
+ * the caller can log that the alert itself didn't get out.
+ */
+export async function sendOpsAlertEmail(
+  title: string,
+  detail: string,
+  stamp: string
+): Promise<boolean> {
+  const to = process.env.ALERT_EMAIL
+    // "20Bids <noreply@20bids.com>" → "noreply@20bids.com"
+    || (fromAddress.match(/<([^>]+)>/)?.[1] ?? fromAddress);
+
+  if (!apiKey) {
+    console.warn(`[email] RESEND_API_KEY not set — would have alerted ${to}: ${title}`);
+    return false;
+  }
+
+  try {
+    const { error } = await client().emails.send({
+      from: fromAddress,
+      to: [to],
+      subject: `[20Bids] ${title}`,
+      text: `${title}\n${stamp}\n\n${detail}\n\n—\nAlerta automática del servidor de 20Bids.\nDestino configurable en ALERT_EMAIL.`,
+    });
+    if (error) {
+      console.error('[email] ops alert failed:', error);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('[email] ops alert threw:', (e as Error).message);
+    return false;
+  }
+}

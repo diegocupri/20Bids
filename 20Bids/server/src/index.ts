@@ -23,6 +23,8 @@ import { broadcastMorningBidsOnce } from './services/push';
 import { authenticateToken, AuthRequest } from './middleware/auth';
 import { requireAdmin } from './middleware/requireAdmin';
 import { requireIngest } from './middleware/requireIngest';
+import { alert, initSentry } from './services/alerts';
+import { startIngestWatchdog, ingestHealth } from './services/ingest-watchdog';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -571,6 +573,27 @@ app.get('/api/sectors', async (req, res) => {
 // Health Check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', version: '1.0.3' });
+});
+
+/**
+ * Salud de la carga diaria de picks, para un monitor externo.
+ *
+ * Devuelve 503 cuando la ultima sesion con datos tiene mas de 4 dias. Existe
+ * porque /api/health solo dice que el proceso responde, y el fallo real de este
+ * producto no es que la API se caiga: es que la API siga funcionando
+ * perfectamente sirviendo datos de la semana pasada.
+ *
+ * Publico a proposito y sin datos de negocio (una fecha y un conteo, que ya
+ * expone /api/public/last-session) para poder apuntarle un monitor gratuito
+ * sin credenciales.
+ */
+app.get('/api/health/ingest', async (req, res) => {
+    try {
+        const h = await ingestHealth();
+        res.status(h.ok ? 200 : 503).json(h);
+    } catch (e) {
+        res.status(500).json({ ok: false, error: 'check failed' });
+    }
 });
 
 app.get('/api/indices', async (req, res) => {
@@ -1913,6 +1936,63 @@ wss.on('connection', (client) => {
     } catch { /* broken socket */ }
 });
 
+/**
+ * Ultimo recurso para errores no capturados en una ruta.
+ *
+ * Va DESPUES de todas las rutas a proposito: Express reconoce un manejador de
+ * errores por tener cuatro argumentos, y solo lo invoca para lo que las rutas
+ * de arriba dejaron escapar.
+ *
+ * Sin esto, un throw en una ruta sin try/catch devolvia una pagina de error de
+ * Express con la traza —informacion del servidor filtrada al cliente— y no
+ * avisaba a nadie. Ahora el cliente recibe un JSON generico y el aviso sale por
+ * el canal de alertas.
+ */
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('[express] error no capturado en', req.method, req.path, err);
+
+    void alert({
+        title: `500 en ${req.method} ${req.path}`,
+        detail: `${err?.message ?? err}\n\n${err?.stack ?? '(sin traza)'}`,
+        // Por ruta, no por mensaje: si un endpoint se rompe se quiere UN aviso,
+        // no uno por cada cliente que lo llame.
+        dedupeKey: `route:${req.method}:${req.path}`,
+        error: err,
+    });
+
+    if (res.headersSent) return next(err);
+    res.status(500).json({ error: 'Internal server error' });
+});
+
+/**
+ * Una promesa rechazada sin catch mata el proceso en Node moderno. Antes de
+ * morir, avisa: si no, Render reinicia en silencio y el unico rastro queda en
+ * un log que nadie mira.
+ */
+process.on('unhandledRejection', (reason) => {
+    console.error('[process] unhandledRejection', reason);
+    void alert({
+        title: 'Promesa rechazada sin manejar',
+        detail: String((reason as any)?.stack ?? reason),
+        dedupeKey: 'unhandledRejection',
+        error: reason,
+    });
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('[process] uncaughtException', err);
+    void alert({
+        title: 'Excepcion no capturada — el proceso va a reiniciar',
+        detail: String(err?.stack ?? err),
+        dedupeKey: 'uncaughtException',
+        error: err,
+    });
+    // Se le da un segundo a la alerta para salir por la red y se sale con
+    // codigo 1: seguir vivo tras una excepcion no capturada deja el proceso en
+    // un estado que no se puede razonar. Render lo reinicia.
+    setTimeout(() => process.exit(1), 1000);
+});
+
 // Forward each Polygon tick to all connected mobile clients.
 priceEvents.on('tick', (tick: any) => {
     const msg = JSON.stringify({ type: 'tick', ...tick });
@@ -1928,6 +2008,8 @@ server.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
     startPolygonWS();      // open the upstream WS to Polygon
     startIntradayPoller(); // 30s background refresh of MVSO peaks
+    void initSentry();     // no-op sin SENTRY_DSN
+    startIngestWatchdog(); // avisa si un dia de mercado no entran picks
 
     // [DISABLED] Auto-Refresh Background Task
     // This was causing memory issues on Render's free tier.

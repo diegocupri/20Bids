@@ -8,7 +8,8 @@
     "build": "prisma generate && tsc",
     "start": "node dist/index.js",
     "db:push": "npx prisma db push --accept-data-loss",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "backup": "ts-node src/scripts/backup.ts"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +17,7 @@
   "type": "commonjs",
   "dependencies": {
     "@prisma/client": "^6.19.0",
+    "@sentry/node": "^10.70.0",
     "@stoqey/ib": "^1.5.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
