@@ -643,8 +643,11 @@ app.get('/api/stats/mvso-history', requireAdmin, async (req, res) => {
 // --- External Data Ingestion Endpoint ---
 app.post('/api/external/ingest', async (req, res) => {
     try {
+        // INGEST_API_KEY, no UPLOAD_API_KEY: esta ruta la llama el script de R
+        // en AWS y su clave se rota en otro sitio y en otro momento que la de
+        // los endpoints de admin. Ver src/config/env.ts.
         const apiKey = req.headers['x-api-key'];
-        if (apiKey !== API_KEY) {
+        if (apiKey !== env.INGEST_API_KEY) {
             return res.status(401).json({ error: 'Unauthorized' });
         }
 

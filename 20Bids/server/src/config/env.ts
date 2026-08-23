@@ -68,6 +68,20 @@ export const env = {
     STRIPE_WEBHOOK_SECRET: readRequired('STRIPE_WEBHOOK_SECRET'),
     RC_WEBHOOK_AUTH: readRequired('RC_WEBHOOK_AUTH'),
 
+    /** Clave SOLO para /api/external/ingest — la carga diaria de picks desde el
+     *  script de R en la instancia de AWS.
+     *
+     *  Existe separada de UPLOAD_API_KEY a proposito. Una sola clave protegia a
+     *  la vez la ingesta de datos y cosas de riesgo muy distinto: la config del
+     *  bot de trading con dinero real, los endpoints de admin (incluido el
+     *  borrado de un dia entero de recomendaciones) y el envio de push a todos
+     *  los usuarios. Rotar esa clave por seguridad rompia la carga de picks, y
+     *  no rotarla dejaba el bot expuesto. Separarlas quita esa disyuntiva.
+     *
+     *  Si no esta puesta, cae a UPLOAD_API_KEY para no romper nada al desplegar.
+     *  Rotala cuando puedas tocar el ~/.Renviron de la instancia. */
+    INGEST_API_KEY: process.env.INGEST_API_KEY || readRequired('UPLOAD_API_KEY'),
+
     // Optional — the features that use them degrade gracefully when unset.
     STRIPE_PRICE_ID: process.env.STRIPE_PRICE_ID ?? '',
     STRIPE_PAYMENT_LINK: process.env.STRIPE_PAYMENT_LINK ?? '',
