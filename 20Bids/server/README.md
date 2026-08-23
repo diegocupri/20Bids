@@ -244,7 +244,17 @@ Upload CSV files with recommendations. **Requires `x-api-key` header.**
 - Auto-enriches with Polygon.io data (daily stats, intraday stats)
 
 #### `POST /api/external/ingest`
-JSON-based data ingestion. **Requires `x-api-key` header.**
+**This is how the daily picks actually get in.** An R script on an AWS RStudio
+instance POSTs the day's rows here. See `../DEPLOYMENT_GUIDE.md` section 6 for
+the R code, the correct host (`two0bids-api.onrender.com` — note the "two") and
+how to test the key without writing anything.
+
+Requires the `x-api-key` header, matched against `UPLOAD_API_KEY`. Upserts on
+`(symbol, date)`, so re-sending a day updates instead of duplicating.
+
+If this returns 401, that day has no picks and **nothing anywhere raises an
+alarm** — there is no error monitoring and no alert for a session with zero
+rows. Worth fixing.
 ```json
 // Request: Array of recommendation objects
 [{ "symbol": "AAPL", "date": "2026-04-25", "high": 186, "refPrice1020": 184.8, ... }]
@@ -309,16 +319,44 @@ POLYGON_API_KEY="your_polygon_key"
 # Auth (required)
 JWT_SECRET="your-secret-key"
 
-# Data Ingestion (required for uploads)
-INGEST_API_KEY="your-api-key"
+# Data ingestion + admin endpoints (REQUIRED).
+# The variable is UPLOAD_API_KEY. This file used to call it INGEST_API_KEY,
+# which does not exist anywhere in the code — if you set that name, nothing
+# was protected. It guards /api/external/ingest (the daily pick load from the
+# R script on AWS), /api/recommendations/upload, the /api/admin/* routes, the
+# /api/trading/* routes, the push broadcast and the Stripe sub reconciler.
+UPLOAD_API_KEY="a real random secret, never the dev- default"
 
-# Telegram Notifications (optional)
+# Billing (REQUIRED — without these nobody who pays becomes PRO)
+STRIPE_SECRET_KEY="sk_live_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."   # must be from the SAME Stripe environment
+RC_WEBHOOK_AUTH="the RevenueCat webhook shared secret"
+# STRIPE_PRICE_ID / STRIPE_PAYMENT_LINK are optional (one of them is needed)
+# STRIPE_PAYMENT_LINK_TEST must NOT be set in production — it is ignored there
+# by code, but do not keep it around.
+
+# Password reset email (optional; without it the flow LOOKS fine, sends
+# nothing, and leaves the reset code in the Render logs)
+RESEND_API_KEY="re_..."
+EMAIL_FROM="..."
+
+# Telegram Notifications (optional — only used by the auto_trader script)
 TELEGRAM_BOT_TOKEN="your_bot_token"
 TELEGRAM_CHAT_ID="your_chat_id"
+
+# Environment. Set this explicitly in Render: src/config/env.ts only enforces
+# the required list when NODE_ENV === 'production'. Without it, a missing
+# secret silently becomes a dev placeholder.
+NODE_ENV=production
 
 # Server
 PORT=3001
 ```
+
+> `src/config/env.ts` validates all of this at boot and **throws** in
+> production if a required variable is missing or still holds a dev
+> placeholder. That is deliberate: a server that will not start is better than
+> one running on a secret published in this repository.
 
 ---
 

@@ -65,24 +65,43 @@ El frontend necesita saber la URL del backend.
    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
    ```
 
-## 6. Uso desde scripts externos (Python/Bots)
+## 6. Carga diaria de picks desde R (RStudio en AWS)
 
-Para enviar datos a tu nueva API en la nube:
+Esta es **la** via por la que entran los picks en produccion. Si esto falla, ese
+dia no hay producto.
 
-**Endpoint:** `POST https://20bids-api.onrender.com/api/external/ingest`
-**Headers:**
+**Endpoint:** `POST https://two0bids-api.onrender.com/api/external/ingest`
+
+> Ojo al host: es `two0bids`, con "two" escrito en letra. Este documento decia
+> `20bids-api.onrender.com` durante meses, que no existe.
+
+**Headers obligatorios:**
 - `Content-Type: application/json`
-- `x-api-key: mi_clave_secreta_123`
+- `x-api-key: <UPLOAD_API_KEY>` — el mismo valor que la variable `UPLOAD_API_KEY`
+  del panel de Render. Se llama asi en el codigo (`src/config/env.ts`), NO
+  `INGEST_API_KEY`, aunque el README del server diga lo contrario.
 
-**Ejemplo Python:**
-**Ejemplo R (usando `httr` y `jsonlite`):**
+**La clave se rotó el 2026-08-22.** Antes era `dev-api-key-change-in-production`,
+el valor por defecto que esta escrito en este repositorio publico — es decir,
+cualquiera podia inyectar picks en el historial. Si tu script sigue mandando esa
+cadena, recibe **401 y no carga nada**.
+
+**No la escribas en el .R.** Usa una variable de entorno, para que rotarla no
+exija tocar codigo:
+
+```r
+# ~/.Renviron en la instancia de AWS (una linea, y reinicia la sesion de R)
+#   BIDS_API_KEY=...
+```
+
+**Ejemplo R (`httr` + `jsonlite`):**
 ```r
 library(httr)
 library(jsonlite)
 
-# URL de tu API (cambiar localhost por la URL de Render cuando despliegues)
-url <- "https://20bids-api.onrender.com/api/external/ingest"
-api_key <- "dev-api-key-change-in-production"
+url <- "https://two0bids-api.onrender.com/api/external/ingest"
+api_key <- Sys.getenv("BIDS_API_KEY")
+if (!nzchar(api_key)) stop("Falta BIDS_API_KEY en ~/.Renviron")
 
 # Datos a enviar (Data Frame)
 df <- data.frame(
@@ -106,5 +125,40 @@ response <- POST(
   body = json_body
 )
 
+# Fallar RUIDOSAMENTE. Un 401 silencioso significa un dia sin picks, y hoy nada
+# avisa de eso: no hay monitorizacion de errores ni alerta si un dia no entra
+# ninguna fila.
+code <- status_code(response)
+if (code == 401) {
+  stop("401: la x-api-key esta caducada. Comprueba UPLOAD_API_KEY en Render y BIDS_API_KEY en ~/.Renviron")
+} else if (code >= 400) {
+  stop(sprintf("La ingesta fallo con HTTP %d: %s", code, content(response, "text", encoding = "UTF-8")))
+}
 print(content(response))
 ```
+
+### Comprobar la clave sin cargar nada
+
+El endpoint valida la cabecera **antes** de mirar el cuerpo, asi que un cuerpo
+que no es un array es una prueba inofensiva: no escribe nada.
+
+```bash
+curl -s -X POST -w "\n%{http_code}\n" -H "Content-Type: application/json" \
+  -H "x-api-key: TU_CLAVE" -d '{}' \
+  "https://two0bids-api.onrender.com/api/external/ingest"
+```
+
+- **400** (`"Expected an array"`) → la clave es correcta. Es lo que quieres ver.
+- **401** (`"Unauthorized"`) → la clave no coincide con `UPLOAD_API_KEY`.
+
+### Qué campos acepta
+
+`src/index.ts` (handler en `/api/external/ingest`) hace `upsert` por
+`(symbol, date)`, asi que reenviar el mismo dia **actualiza**, no duplica.
+Campos con valor por defecto si no los mandas: `thesis` → `'Algorithmic Entry'`,
+`sentiment` → `'Neutral'`, `stopLoss` → `open * 0.95`, `priceTarget` →
+`open * 1.10`, `rsi` → 50, `beta` → 1.
+
+Nota: `rsi`, `beta` y `analystRating` estan **constantes en las 2053 filas** del
+historial, o sea que nunca se han mandado de verdad. No se muestran en ninguna
+pantalla, asi que no es urgente — pero no te fies de ellos para nada.
