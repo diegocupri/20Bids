@@ -576,6 +576,39 @@ app.get('/api/health', (req, res) => {
 });
 
 /**
+ * TEMPORAL — diagnóstico del P1001 del 2026-09-18. Quitar al resolverlo.
+ *
+ * Dice qué DATABASE_URL está usando ESTE proceso sin revelarla: longitud,
+ * hash y host. Comparado con el hash de la cadena correcta calculado en
+ * local, distingue "Render tiene otra cadena" de "Render no llega a Neon",
+ * que es la duda que ha costado una hora de hipótesis a ciegas.
+ */
+app.get('/api/health/db', async (req, res) => {
+    const url = process.env.DATABASE_URL ?? '';
+    const { createHash } = await import('crypto');
+    let host: string | null = null;
+    try { host = new URL(url).host; } catch { /* no es URL */ }
+    const info: Record<string, unknown> = {
+        urlLength: url.length,
+        urlSha256: createHash('sha256').update(url).digest('hex').slice(0, 12),
+        host,
+        trailingWhitespace: /\s$/.test(url),
+        wrappedInQuotes: /^["']/.test(url),
+        nodeEnv: process.env.NODE_ENV,
+    };
+    try {
+        await prisma.$queryRaw`SELECT 1`;
+        res.json({ ...info, db: 'ok' });
+    } catch (e: any) {
+        res.status(503).json({
+            ...info, db: 'fail',
+            code: e?.code ?? null,
+            message: String(e?.message ?? e).replace(/\s+/g, ' ').slice(0, 500),
+        });
+    }
+});
+
+/**
  * Salud de la carga diaria de picks, para un monitor externo.
  *
  * Devuelve 503 cuando la ultima sesion con datos tiene mas de 4 dias. Existe
