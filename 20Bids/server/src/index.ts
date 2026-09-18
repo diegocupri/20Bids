@@ -576,12 +576,15 @@ app.get('/api/health', (req, res) => {
 });
 
 /**
- * TEMPORAL — diagnóstico del P1001 del 2026-09-18. Quitar al resolverlo.
+ * Qué DATABASE_URL está usando ESTE proceso, sin revelarla: longitud, hash y
+ * host, más el resultado de un SELECT 1.
  *
- * Dice qué DATABASE_URL está usando ESTE proceso sin revelarla: longitud,
- * hash y host. Comparado con el hash de la cadena correcta calculado en
- * local, distingue "Render tiene otra cadena" de "Render no llega a Neon",
- * que es la duda que ha costado una hora de hipótesis a ciegas.
+ * Nació el 2026-09-18 para un P1001 que costó una hora de hipótesis a ciegas
+ * (allowlist de IP, nombre del endpoint, pool de conexiones) cuando la causa
+ * era que la contraseña rotada en Neon nunca llegó a guardarse en Render.
+ * Comparar este hash con el de la cadena correcta lo decidió en un minuto.
+ * Se queda: es el primer paso documentado en CLAUDE.md para cualquier fallo
+ * de conexión a la base, y no expone nada que no sea público ya (el host).
  */
 app.get('/api/health/db', async (req, res) => {
     const url = process.env.DATABASE_URL ?? '';
