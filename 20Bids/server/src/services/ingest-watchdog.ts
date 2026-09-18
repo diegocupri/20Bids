@@ -68,7 +68,46 @@ async function marketWasOpen(date: string): Promise<boolean> {
     }
 }
 
+/**
+ * Sonda de conectividad, ANTES de cualquier filtro de horario.
+ *
+ * El 2026-09-18 produccion estuvo horas con la base inalcanzable (P1001: la
+ * contrasena rotada en Neon nunca llego a Render) y no salio ni un aviso: el
+ * vigilante hacia count() para saber si habia picks, count() reventaba, y el
+ * catch solo escribia en el log. Justo el fallo mas grave era el unico que no
+ * avisaba. Y en fin de semana ni siquiera llegaba a tocar la base.
+ *
+ * Por eso esto va primero y no mira el reloj: una base caida es urgente a
+ * cualquier hora. La dedupe es la de memoria del modulo de alertas (6 h),
+ * porque la de BroadcastLog vive en la base que precisamente no responde.
+ */
+async function probeDatabase(): Promise<boolean> {
+    try {
+        await prisma.$queryRaw`SELECT 1`;
+        return true;
+    } catch (e: any) {
+        await alert({
+            title: 'Base de datos inalcanzable',
+            detail:
+                `El servidor no consigue conectar con Postgres (Neon).\n\n` +
+                `${String(e?.message ?? e).replace(/\s+/g, ' ').slice(0, 400)}\n\n` +
+                `Que comprobar, en este orden:\n` +
+                `  1. Que DATABASE_URL en Render sea la cadena actual de Neon (Connect). ` +
+                `Si se roto la contrasena y no se actualizo aqui, es esto.\n` +
+                `  2. /api/health/db compara el hash de la cadena que usa el proceso.\n` +
+                `  3. Neon → Settings → Networking: que la IP de Render no este bloqueada.\n\n` +
+                `Mientras dure, TODA la app devuelve 500: nadie puede entrar.`,
+            dedupeKey: 'db-unreachable',
+            level: 'error',
+            error: e,
+        });
+        return false;
+    }
+}
+
 async function checkOnce(): Promise<void> {
+    if (!(await probeDatabase())) return;
+
     const { date, minutes, weekday } = marketNow();
 
     if (weekday === 0 || weekday === 6) return;      // fin de semana
