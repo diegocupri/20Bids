@@ -1685,18 +1685,46 @@ app.post('/api/recommendations/upload', requireIngest, upload.array('files'), as
                     totalSuccess++;
                 } catch (error: any) {
                     totalErrors++;
+                    // Una sola línea. Los mensajes de Prisma empiezan con un
+                    // salto de línea y ocupan varias: en el visor de logs de
+                    // Render, filtrando por "[Upload]", se veía la cabecera
+                    // con el mensaje aparentemente VACÍO y el texto real caía
+                    // en líneas que el filtro descartaba. Cuatro semanas así.
+                    const oneLine = String(error?.message ?? error).replace(/\s+/g, ' ').trim().slice(0, 600);
+                    const code = error?.code ? ` [${error.code}]` : '';
                     allErrors.push({
                         file: file.originalname,
                         symbol: (rec as any).Ticker || (rec as any).ticker || 'Unknown',
-                        error: error.message
+                        error: `${code} ${oneLine}`.trim()
                     });
-                    console.error(`[Upload] Error processing record in ${file.originalname}:`, error.message);
+                    console.error(`[Upload] Error processing record in ${file.originalname}${code}: ${oneLine}`);
                 }
             }
         }
 
-        res.json({
-            success: true,
+        // Fallar todos los registros ES un fallo de la subida, y hasta hoy se
+        // contestaba 200 con success:true. upload_data.R comprueba el código
+        // HTTP e imprimía "✅ Success!" cada mañana mientras la base llevaba
+        // cuatro semanas sin recibir un solo pick. Con 500, el script imprime
+        // el ❌ y el cuerpo con los errores, que es lo que tiene que pasar.
+        const totalFailure = totalErrors > 0 && totalSuccess === 0;
+        if (totalFailure) {
+            console.error(`[Upload] FALLO TOTAL: 0 de ${totalErrors} registros escritos. Primer error: ${allErrors[0]?.error ?? '?'}`);
+            void alert({
+                title: `Subida de picks fallida: 0 de ${totalErrors} registros`,
+                detail:
+                    `Ficheros: ${files.map(f => f.originalname).join(', ')}\n\n` +
+                    `Primer error: ${allErrors[0]?.error ?? '?'}\n\n` +
+                    `El script de R ha llamado y la API ha respondido, pero ningún registro se ha ` +
+                    `escrito en la base. Si el error es de validación de Prisma, el formato del CSV ` +
+                    `o un campo obligatorio ha cambiado.`,
+                dedupeKey: 'upload-total-failure',
+                level: 'error',
+            });
+        }
+
+        res.status(totalFailure ? 500 : 200).json({
+            success: totalErrors === 0,
             message: `Upload complete: ${totalSuccess} succeeded, ${totalErrors} failed across ${files.length} files`,
             successCount: totalSuccess,
             errorCount: totalErrors,
